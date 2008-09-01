@@ -64,7 +64,7 @@ if ($opt_f){
 
 
 
-
+my $any_matches = 0; # any matches at all?
 while (my $seq = $seqio->next_seq){
   # Record whether it matches or not, so we can -v it if necessary
   my $matches = 0;
@@ -99,8 +99,10 @@ while (my $seq = $seqio->next_seq){
     }
   } elsif ($displayId eq $seqname){# exact match
     $matches = 1;
+    $any_matches = 1;
   } elsif ($opt_r && $displayId =~ m/$seqname/){ #regular expression match
     $matches = 1;
+    $any_matches = 1;
   }
 
 
@@ -130,7 +132,9 @@ if ($opt_f){
     }
   }
 }
-
+elsif (!$any_matches){
+  print STDERR "WARNING: sequence '$seqname' not found in the fasta\n";
+}
 
 sub print_seq {
   my $seq = $_[0];
