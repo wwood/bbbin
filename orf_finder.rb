@@ -155,8 +155,6 @@ end
 
 # A simple script interface to iterate over a fasta file and return results
 if $0 == __FILE__
-  require 'rubygems'
-  gem 'bio'
   require 'bio'
   require 'optparse'
   
