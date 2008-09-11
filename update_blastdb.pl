@@ -40,8 +40,8 @@ use Pod::Usage;
 use File::stat;
 
 use constant VERSION => 1.2;
-use constant NCBI_FTP => "ftp.ncbi.nlm.nih.gov";
-use constant BLAST_DB_DIR => "/blast/db";
+use constant NCBI_FTP => "biomirror.aarnet.edu.au";
+use constant BLAST_DB_DIR => "/biomirror/blast";
 use constant USER => "anonymous";
 use constant PASSWORD => "anonymous";
 use constant DEBUG => 0;
