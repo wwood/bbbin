@@ -9,11 +9,13 @@ $original->alphabet('dna');
 
 #$line = <>;
 #chomp $line;
-$seq   = $original->next_seq();
+while (defined($seq   = $original->next_seq())){
 
 #Bio::Seq->new('-seq'=>"$line",
 #		      '-moltype' => 'dna');
 
 
 $aa = $seq->translate()->seq();
+print ">".$seq->display_id."\n";
 print "$aa\n";
+}
