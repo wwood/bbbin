@@ -5,7 +5,7 @@ use Bio::SeqIO;
 $original = Bio::SeqIO->new(-fh => \*STDIN,
 			    '-format' => 'fasta');
 
-$original->alphabet('protein');
+$original->alphabet('dna');
 
 #$line = <>;
 #chomp $line;
