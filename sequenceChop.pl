@@ -64,6 +64,11 @@ while ($cur_seq = $original->next_seq()) {
     print ">".$cur_seq->display_id()."_chopped_$start-$stop\n"
   }
 
+  # If the sequence is less than the stop, then just use the whole sequence
+  if ($stop > $cur_seq->length) {
+    $stop = $cur_seq->length;
+  }
+
 
   print $cur_seq->subseq($start,$stop);
   print "\n";
