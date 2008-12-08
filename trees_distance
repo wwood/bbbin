@@ -20,7 +20,7 @@ ln -s seqboot.outfile infile
 export f=/tmp/protdist.params
 echo 'M' >$f
 echo 'D' >>$f
-echo '10' >>$f
+echo '1000' >>$f
 echo 'Y' >>$f
 phylip protdist <$f
 mv outfile protdist.outfile
@@ -36,6 +36,7 @@ ln -s bionj.outfile intree
 phylip consense <<<y
 mv outfile consense.outfile
 mv outtree consense.outtree
+rm intree
 
 #convert the names on the tree back to sensible land
 cd ..

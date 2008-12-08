@@ -1,6 +1,6 @@
 #!/bin/bash
 
-trees_distance $1 &
-trees_parsimony $1 &
+trees_distance $1 >trees_distance.out &
+trees_parsimony $1 >trees_parsimony.out &
 
 
