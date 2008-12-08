@@ -1,0 +1,42 @@
+#!/bin/bash
+
+mkdir trees_distance
+sreformat phylip $1 >trees_distance/ununiqued.phylip
+cd trees_distance
+uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip
+
+# Do the boostrapping
+ln -s uniqued.phylip infile
+echo 'R' >/tmp/seqboot.params
+echo '1000' >>/tmp/seqboot.params
+echo 'Y' >>/tmp/seqboot.params
+echo '73' >>/tmp/seqboot.params
+phylip seqboot </tmp/seqboot.params
+mv outfile seqboot.outfile
+rm infile
+
+# create distance tree
+ln -s seqboot.outfile infile
+export f=/tmp/protdist.params
+echo 'M' >$f
+echo 'D' >>$f
+echo '10' >>$f
+echo 'Y' >>$f
+phylip protdist <$f
+mv outfile protdist.outfile
+rm infile
+
+# do a bionj tree
+echo 'protdist.outfile' >/tmp/bionj.params
+echo 'bionj.outfile' >>/tmp/bionj.params
+bionj </tmp/bionj.params
+
+# Make the consensus tree
+ln -s bionj.outfile intree
+phylip consense <<<y
+mv outfile consense.outfile
+mv outtree consense.outtree
+
+#convert the names on the tree back to sensible land
+cd ..
+ununiqify_tree.rb $1 trees_distance/uniqued.phylip trees_distance/consense.outtree >trees_distance/ununiqued.outtree

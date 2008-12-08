@@ -1,0 +1,41 @@
+#!/bin/bash
+
+mkdir trees_parsimony
+sreformat phylip $1 >trees_parsimony/ununiqued.phylip
+cd trees_parsimony
+uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip
+
+# Do the boostrapping
+ln -s uniqued.phylip infile
+echo 'R' >/tmp/seqboot.params
+echo '1000' >>/tmp/seqboot.params
+echo 'Y' >>/tmp/seqboot.params
+echo '73' >>/tmp/seqboot.params
+phylip seqboot </tmp/seqboot.params
+mv outfile seqboot.outfile
+rm infile
+
+# create parsimony trees
+ln -s seqboot.outfile infile
+export f=/tmp/protpars.params
+echo 'M' >$f
+echo 'D' >>$f
+echo '1000' >>$f
+echo '79' >>$f
+echo '1' >>$f
+echo 'Y' >>$f
+phylip protpars <$f
+mv outfile protpars.outfile
+mv outtree protpars.outtree
+rm infile
+
+# Make the consensus tree
+ln -s protpars.outtree intree
+phylip consense <<<y
+mv outfile consense.outfile
+mv outtree consense.outtree
+rm intree
+
+#convert the names on the tree back to sensible land
+cd ..
+ununiqify_tree.rb $1 trees_parsimony/uniqued.phylip trees_parsimony/consense.outtree >trees_parsimony/ununiqued.outtree

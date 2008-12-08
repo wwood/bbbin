@@ -33,6 +33,7 @@ ARGF.each do |line|
         name<< line[NAME_CHARS..(line.length-1)]
       end while taken_names[name]
       
+      taken_names[name] = true
       puts name
     end
   else
