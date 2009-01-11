@@ -13,7 +13,7 @@ else
 end
 
 
-cmd = "nice blastall -v10 -b10 -a 4 -p #{ARGV[0]} -i #{ARGV[1]} -d /blastdb/#{ARGV[2]} -m #{ARGV[3]} #{ARGV[4]} -o #{outputname}"
+cmd = "nice blastall -a 4 -p #{ARGV[0]} -i #{ARGV[1]} -d /blastdb/#{ARGV[2]} -m #{ARGV[3]} #{ARGV[4]} -o #{outputname}"
 
 # use old style XML because then bioruby can handle it
 # no need to anymore, now that the bioruby blast parser is fixed.

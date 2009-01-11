@@ -7,7 +7,7 @@
 require 'bio'
 
 Bio::FlatFile.open(ARGF).each do |seq|
-  if seq.seq != 'SEQUENCETOOSHORTTOBLASTBPAFTERQUALITYCLIPPING'
+  unless seq.seq.match(/SEQUENCETOOSHORTTOBLAST/i)
     puts seq.to_s
   end
 end

@@ -24,6 +24,8 @@ echo '1000' >>$f
 echo '79' >>$f
 echo '1' >>$f
 echo 'Y' >>$f
+echo '2' >>$f # Turn of indications because it wastes disk space and I think causes it to fail as well.
+echo '3' >>$f # Turn of tree writing to outfile because that isn't needed and wastes disk space
 phylip protpars <$f
 mv outfile protpars.outfile
 mv outtree protpars.outtree
