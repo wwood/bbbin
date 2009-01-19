@@ -1,43 +1,77 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-mkdir trees_parsimony
-sreformat phylip $1 >trees_parsimony/ununiqued.phylip
-cd trees_parsimony
-uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip
+require 'tempfile'
+require 'optparse'
+
+# Parse cmd line options
+USAGE = "Usage: trees_distance [-r <repetitions] <fasta_multiple_sequence_alignment>"
+options = {
+  :repetitions => 1000
+}
+OptionParser.new do |opts|
+  opts.banner = USAGE
+
+  opts.on("-r", "--repetitions [REPETITIONS]", Integer, "Number of bootstrap repetitions to do") do |v|
+    options[:repetitions] = v
+  end
+end.parse!
+p options
+
+if ARGV.length != 1
+  $stderr.puts USAGE
+  exit
+end
+fasta_file_input = ARGV[0]
+
+Dir.mkdir 'trees_parsimony'
+system("sreformat phylip #{fasta_file_input} >trees_parsimony/ununiqued.phylip")
+Dir.chdir 'trees_parsimony'
+system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
 
 # Do the boostrapping
-ln -s uniqued.phylip infile
-echo 'R' >/tmp/seqboot.params
-echo '1000' >>/tmp/seqboot.params
-echo 'Y' >>/tmp/seqboot.params
-echo '73' >>/tmp/seqboot.params
-phylip seqboot </tmp/seqboot.params
-mv outfile seqboot.outfile
-rm infile
+system('ln -s uniqued.phylip infile')
+Tempfile.open('trees_parsimony.seqboot.params') do |tempfile|
+  tempfile.puts 'R'
+  tempfile.puts options[:repetitions] #1000 by default
+  tempfile.puts 'Y'
+  tempfile.puts '73'
+  tempfile.close
+
+  system("phylip seqboot <#{tempfile.path}")
+end
+system('mv outfile seqboot.outfile')
+system('rm infile')
 
 # create parsimony trees
-ln -s seqboot.outfile infile
-export f=/tmp/protpars.params
-echo 'M' >$f
-echo 'D' >>$f
-echo '1000' >>$f
-echo '79' >>$f
-echo '1' >>$f
-echo 'Y' >>$f
-echo '2' >>$f # Turn of indications because it wastes disk space and I think causes it to fail as well.
-echo '3' >>$f # Turn of tree writing to outfile because that isn't needed and wastes disk space
-phylip protpars <$f
-mv outfile protpars.outfile
-mv outtree protpars.outtree
-rm infile
+system('ln -s seqboot.outfile infile')
+Tempfile.open('trees_parsimony.protpars.params') do |tempfile|
+  tempfile.puts 'M'
+  tempfile.puts 'D'
+  tempfile.puts options[:repetitions] #1000 by default
+  tempfile.puts '79'
+  tempfile.puts '1'
+  tempfile.puts '2' # Turn of indications because it wastes disk space and I think causes it to fail as well.
+  tempfile.puts '3' # Turn of tree writing to outfile because that isn't needed and wastes disk space
+  tempfile.puts 'Y'
+  tempfile.close
+
+  system("phylip protpars <#{tempfile.path}")
+end
+system('mv outfile protpars.outfile')
+system('mv outtree protpars.outtree')
+system('rm infile')
 
 # Make the consensus tree
-ln -s protpars.outtree intree
-phylip consense <<<y
-mv outfile consense.outfile
-mv outtree consense.outtree
-rm intree
+system('ln -s protpars.outtree intree')
+Tempfile.open('trees_parsimony.consense.params') do |tempfile|
+  tempfile.puts 'y'
+  tempfile.close
+  system("phylip consense <#{tempfile.path}")
+end
+system('mv outfile consense.outfile')
+system('mv outtree consense.outtree')
+system('rm intree')
 
 #convert the names on the tree back to sensible land
-cd ..
-ununiqify_tree.rb $1 trees_parsimony/uniqued.phylip trees_parsimony/consense.outtree >trees_parsimony/ununiqued.outtree
+Dir.chdir '..'
+system("ununiqify_tree.rb #{fasta_file_input} trees_parsimony/uniqued.phylip trees_parsimony/consense.outtree >trees_parsimony/ununiqued.outtree")

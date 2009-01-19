@@ -1,13 +1,27 @@
 #!/usr/bin/env ruby
 
 require 'tempfile'
+require 'optparse'
+
+# Parse cmd line options
+USAGE = "Usage: trees_distance [-r <repetitions] <fasta_multiple_sequence_alignment>"
+options = {
+  :repetitions => 1000
+}
+OptionParser.new do |opts|
+  opts.banner = USAGE
+  
+  opts.on("-r", "--repetitions [REPETITIONS]", Integer, "Number of bootstrap repetitions to do") do |v|
+    options[:repetitions] = v
+  end
+end.parse!
+p options
 
 if ARGV.length != 1
-  $stderr.puts "Usage: trees_distance <fasta_multiple_sequence_alignment>"
+  $stderr.puts USAGE
   exit
 end
 fasta_file_input = ARGV[0]
-
 
 system('mkdir trees_distance') or raise
 system("sreformat phylip #{fasta_file_input} >trees_distance/ununiqued.phylip")
@@ -18,7 +32,7 @@ system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
 system('ln -s uniqued.phylip infile')
 Tempfile.open('trees_distance.seqboot.params') do |tempfile|
   tempfile.puts 'R'
-  tempfile.puts '1000' #1000
+  tempfile.puts options[:repetitions] #1000 by default
   tempfile.puts 'Y'
   tempfile.puts '73'
   tempfile.close #required. Maybe because it doesn't flush otherwise?
@@ -29,11 +43,12 @@ system('mv outfile seqboot.outfile') or raise Exception, $?.inspect
 system('rm infile') or raise Exception, $?.inspect
 
 # create distance tree
+puts "Running protdist"
 system('ln -s seqboot.outfile infile')
 Tempfile.open('trees_distance.protdist.params') do |tempfile|
   tempfile.puts 'M'
   tempfile.puts 'D'
-  tempfile.puts '1000' #1000
+  tempfile.puts options[:repetitions] #1000 by default
   tempfile.puts 'Y'
   tempfile.close #required. Maybe because it doesn't flush otherwise?
   
@@ -48,12 +63,16 @@ Tempfile.open('trees_distance.bionj.params') do |tempfile|
   tempfile.puts 'bionj.outfile'
   tempfile.close #required. Maybe because it doesn't flush otherwise?
   
-  system("bionj <#{tempfile.path}")
+  system("bionj <#{tempfile.path}") or raise Exception, $?
 end
 
 # Make the consensus tree
 system('ln -s bionj.outfile intree')
-system('phylip consense <<<y')
+Tempfile.open('trees_distance.consense.params') do |tempfile|
+  tempfile.puts 'y'
+  tempfile.close
+  system("phylip consense <#{tempfile.path}")
+end
 system('mv outfile consense.outfile')
 system('mv outtree consense.outtree')
 system('rm intree')

@@ -1,6 +1,38 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-trees_distance $1 >trees_distance.out &
-trees_parsimony $1 >trees_parsimony.out &
+require 'optparse'
+
+require 'rubygems'
+require 'peach'
+
+USAGE = "Usage: trees [-r <repetitions] <fasta_multiple_sequence_alignment>"
+options = {
+  :repetitions => 1000
+}
+OptionParser.new do |opts|
+  opts.banner = USAGE
+
+  opts.on("-r", "--repetitions [REPETITIONS]", Integer, "Number of bootstrap repetitions to do for NJ and parsimony methods") do |v|
+    options[:repetitions] = v
+  end
+end.parse!
+
+if ARGV.length != 1
+  $stderr.puts USAGE
+  exit
+end
+fasta_file_input = ARGV[0]
+
+distance_options = ''
+distance_options = "#{distance_options} -r #{options[:repetitions]}" if options[:repetitions]
+parsimony_options = distance_options
+commands = [
+  "trees_distance #{distance_options} #{fasta_file_input} >trees_distance.out",
+  "trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out"
+]
+
+commands.peach do |command|
+  system(command) or raise Exception, $?
+end
 
 
