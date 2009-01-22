@@ -82,25 +82,24 @@ tree.each_node do |node|
   # Add in the ensembl name at the beginning
   changed = false
   ENSEMBL_SPECIES_HASH.each do |short, long|
-    if newname.match(/^#{short}/)
+    if newname.match(/^#{short}P\d/)
       changed = true
-      newname = "#{long} #{newname.split(' ')[0]}"
+      newname = "#{long} #{newname.split(/[ \/]/)[0]}"
     end
   end
   unless changed # Only do human if I have to
     ENSEMBLE_HUMAN_HASH.each do |short, long|
-      if newname.match(/^#{short}/)
+      if newname.match(/^#{short}P\d/)
         changed = true
-        newname = "#{long} #{newname.split(' ')[0]}"
+        newname = "#{long} #{newname.split(/[ \/]/)[0]}"
       end
     end
   end
   
   # Advise if name didn't change
   if changed
-    
   else
-    newname = newname.split(' ')[0]
+    newname = newname.split(/[ \/]/)[0]
     $stderr.puts "Unable to find species name for entry id #{newname}"
   end
   node.name = newname
