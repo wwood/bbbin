@@ -178,7 +178,7 @@ if $0 == __FILE__
     ].join("\t")
   end
   
-  Bio::FlatFile.auto(ARGF).each do |seq|
+  Bio::FlatFile.open(ARGV[0]).each do |seq|
     result = runner.calculate(seq.seq)
     if options['s']
       puts [
