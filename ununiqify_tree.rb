@@ -8,6 +8,10 @@
 
 require 'bio'
 
+if ARGV.length != 3
+  $stderr.puts "Usage: ununiqify_tree.rb <fasta> <uniqued_phylip_file> <tree>"
+end
+
 # read the fasta and the phylip files, making a hash between them
 fasta_seqs = Bio::FlatFile.open(ARGV[0]).entries
 phylip_seqs = Bio::FlatFile.open(Bio::Phylip::PhylipFormat, ARGV[1]).entries[0].alignment.to_fastaformat_array
