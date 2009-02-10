@@ -18,7 +18,7 @@ if ($#ARGV == 0){
 
 while(defined($cur = $original->next_seq()))
 {
-  #print out name, then reversed sequence
+  #print out name, then reversed and complemented sequence
   print ">";
   print $cur->id();
   print "_revcom\n";
