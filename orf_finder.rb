@@ -9,11 +9,11 @@ module Orf
   
   class OrfFinder
     # Translate in both directions (by default is false, and only the forward direction is counted)
-    attr_accessor :translate_both_directions
+#    attr_accessor :translate_both_directions
     
-    def initialize
-      @translate_both_directions = false
-    end
+#    def initialize
+#      @translate_both_directions = false
+#    end
     
     # return an array of filled out OrfThread objects. Each OrfThread is itself an array of orfs.
     # maximal orfs are returned. That is, 'MMYStop' will return MMYStop, not MYStop.
@@ -29,12 +29,12 @@ module Orf
         regular.translate(2),
         regular.translate(3)
       ]
-      if @translate_both_directions
-        revcom = regular.revcom
-        trans.push revcom.translate(1)
-        trans.push revcom.translate(2)
-        trans.push revcom.translate(3)
-      end
+#      if @translate_both_directions
+#        revcom = regular.revcom
+#        trans.push revcom.translate(1)
+#        trans.push revcom.translate(2)
+#        trans.push revcom.translate(3)
+#      end
     
       phase_offset = 0
       thread_array = []
@@ -191,21 +191,22 @@ if $0 == __FILE__
   end
   
   
-  options = ARGV.getopts("fhb") #f for fasta, no arguments required. h is for help. b is for translate in both directions
+#  options = ARGV.getopts("fhb") #f for fasta, no arguments required. h is for help. b is for translate in both directions
+  options = ARGV.getopts("fh") #f for fasta, no arguments required. h is for help. b is for translate in both directions
   if ARGV.length > 1 or options[:h]
     $stderr.puts "Usage: orf_finder.rb [-f] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. The output is the length of the longest ORF found in each sequence."
     $stderr.puts "-f: fasta. output a fasta file of the longest orfs found."
-    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
+#    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
     return
   end
   
   # first argument or failing that, stdin to input the fasta file
   input = ARGV.length == 1 ? ARGV[0] : $stdin
   
-  if options[:b]
-    finder.translate_both_directions = true
-  end
+#  if options[:b]
+#    finder.translate_both_directions = true
+#  end
   
   # if fasta is wanted as output, do that
   if options['f']
