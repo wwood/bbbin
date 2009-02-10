@@ -15,39 +15,112 @@ require 'bio'
 # Ensembl species taken from ensembl/modules/Bio/EnsEMBL/Registry.pm
 # Ensembl version 52 (December 2009)
 # transformed manually to hash form
-ENSEMBL_SPECIES_HASH = {'ENSRNO'=>'Rattus norvegicus',
-  'ENSMUS'=>'Mus musculus',
-  'ENSGAL'=>'Gallus gallus',
-  'ENSBTA'=>'Bos taurus',
-  'ENSDAR'=>'Danio rerio',
-  'ENSCAF'=>'Canis familiaris',
-  'ENSPTR'=>'Pan troglodytes',
-  'ENSCPO'=>'Cavia porcellus',
-  'ENSCIN'=>'Ciona intestinalis',
-  'ENSCSAV'=>'Ciona savignyi',
-  'ENSDNO'=>'Dasypus novemcinctus',
-  'ENSETE'=>'Echinops telfairi',
-  'ENSEEU'=>'Erinaceus europaeus',
-  'ENSFCA'=>'Felis catus',
-  'ENSGAC'=>'Gasterosteus aculeatus',
-  'ENSLAF'=>'Loxodonta africana',
-  'ENSMMU'=>'Macaca mulatta',
-  'ENSMOD'=>'Monodelphis domestica',
-  'ENSMLU'=>'Myotis lucifugus',
-  'ENSOAN'=>'Ornithorhynchus anatinus',
-  'ENSOCU'=>'Oryctolagus cuniculus',
-  'ENSORL'=>'Oryzias latipes',
-  'ENSSAR'=>'Otolemur garnettii',
-  'ENSSTO'=>'Spermophilus tridecemlineatus',
-  'ENSTBE'=>'Tupaia belangeri',
-  'SINFRU'=>'Takifugu rubripes',
-  'ENSXET'=>'Xenopus tropicalis'
+ENSEMBL_SPECIES_HASH = {'ENSRNO'=>['Rat','Rattus norvegicus'],
+  'ENSMUS'=>['Mouse','Mus musculus'],
+  'ENSGAL'=>['Chicken','Gallus gallus'],
+  'ENSBTA'=>['Cow','Bos taurus'],
+  'ENSDAR'=>['Zebrafish','Danio rerio'],
+  'ENSCAF'=>['Dog','Canis familiaris'],
+  'ENSPTR'=>['Chimpanzee','Pan troglodytes'],
+  'ENSCPO'=>['Guinea pig','Cavia porcellus'],
+  'ENSCIN'=>['C. intestinalis','Ciona intestinalis'],
+  'ENSCSAV'=>['C. savignyi','Ciona savignyi'],
+  'ENSDNO'=>['Armadillo','Dasypus novemcinctus'],
+  'ENSETE'=>['Lesser hedgehog tenrec','Echinops telfairi'],
+  'ENSEEU'=>['Hedgehog','Erinaceus europaeus'],
+  'ENSFCA'=>['Cat','Felis catus'],
+  'ENSGAC'=>['Stickleback','Gasterosteus aculeatus'],
+  'ENSLAF'=>['Elephant','Loxodonta africana'],
+  'ENSMMU'=>['Macaque','Macaca mulatta'],
+  'ENSMOD'=>['Opossum','Monodelphis domestica'],
+  'ENSMLU'=>['Microbat','Myotis lucifugus'],
+  'ENSOAN'=>['Platypus','Ornithorhynchus anatinus'],
+  'ENSOCU'=>['Rabbit','Oryctolagus cuniculus'],
+  'ENSORL'=>['Medaka','Oryzias latipes'],
+  'ENSSAR'=>['Shrew','Sorex araneus'],
+  'ENSSTO'=>['Squirrel','Spermophilus tridecemlineatus'],
+  'ENSTBE'=>['Tree shrew','Tupaia belangeri'],
+  'SINFRU'=>['Fugu','Takifugu rubripes'],
+  'ENSXET'=>['Frog','Xenopus tropicalis'],
+  # Below added manually when
+  'ENSPCA'=>['Hyrax','Procavia capensis'],
+  'ENSOPR'=>['Pika','Ochotona princeps'],
+  'ENSDOR'=>['Kangaroo rat','Dipodomys ordii'],
+  'ENSECA'=>['Horse','Equus caballus'],
+  'ENSPVA'=>['Megabat','Pteropus vampyrus'],
+  'ENSTTR'=>['Dolphin','Tursiops truncatus'],
+  'ENSMIC'=>['Mouse lemur','Microcebus murinus'],
+  'ENSOGA'=>['Bushbaby','Otolemur garnettii'],
+  'ENSTRU'=>['Fugu','Takifugu rubripes'],
+  'ENSTNI'=>['Tetraodon','Tetraodon nigroviridis'],
+  'ENSTSY'=>['Tarsier','Tarsius syrichta'],
+  'ENSVPA'=>['Alpaca','Vicugna pacos'],
+  'ENSPPY'=>['Orangutan','Pongo pygmaeus'],
+  'ENSGGO'=>['Gorilla','gorilla gorilla'],
+  'ENS'=>['Human','Homo sapiens']
 }
-ENSEMBLE_HUMAN_HASH = {'ENS'=>'Homo sapiens'}
+ENSEMBL_OTHER_HASH = {
+  /^YEL\d/ => ['Yeast','Saccharomyces cerevisiae'],
+  /^T\d/ => ['Worm','Caenorhabditis elegans'],
+  /^FBpp\d/ => ['Fly','Drosophila melanogaster'],
+  /^AAEL\d/ => ['Aedes','Aedes aegypti'],
+  /^AGAP\d/ => ['Anopholes','Anopholes gambiae']
+}
 
+class TipLabel
+  def initialize(ensembl_name)
+    @ensembl_name = ensembl_name
+  end
+  
+  def to_s(use_common_names_only = false)
+    # Add in the ensembl name at the beginning
+    
+    # Try the normal species first
+    ENSEMBL_SPECIES_HASH.each do |short, long|
+      if @ensembl_name.match(/^#{short}P\d/)
+        if use_common_names_only
+          return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
+        else
+          return "#{long[0]} (#{long[1]}) #{@ensembl_name.split(/[ \/]/)[0]}"
+        end
+      end
+    end
+    
+    # If that fails (and therefore doesn't return)
+    # Try the other less standard codes
+    ENSEMBL_OTHER_HASH.each do |short, long|
+      if @ensembl_name.match(short)
+        if use_common_names_only
+          return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
+        else
+          return "#{long[0]} (#{long[1]}) #{@ensembl_name.split(/[ \/]/)[0]}"
+        end
+      end 
+    end
+  
+    # Advise if name didn't change
+    
+    return nil
+  end
+end
 
 # Below is probably not as DRY as it could be, given that ununiqify_tree.rb does
 # something pretty similar. Oh well.
+
+require 'optparse'
+
+# ununiqify_ensembl_tree.rb ../ensembl.cbm48.fa uniqued.phylip consense.outtree
+USAGE = "Usage: trees [-c] <fasta_multiple_sequence_alignment> <uniqued.phylip> <consense.outtree>"
+options = {
+  :common_names => false
+}
+OptionParser.new do |opts|
+  opts.banner = USAGE
+
+  opts.on("-c", "--common-names", "Print common names only, and not scientific names") do |v|
+    options[:common_names] = v
+  end
+end.parse!
 
 # read the fasta and the phylip files, making a hash between them
 fasta_seqs = Bio::FlatFile.open(ARGV[0]).entries
@@ -79,30 +152,14 @@ tree.each_node do |node|
     next
   end
   
-  # Add in the ensembl name at the beginning
-  changed = false
-  ENSEMBL_SPECIES_HASH.each do |short, long|
-    if newname.match(/^#{short}P\d/)
-      changed = true
-      newname = "#{long} #{newname.split(/[ \/]/)[0]}"
-    end
-  end
-  unless changed # Only do human if I have to
-    ENSEMBLE_HUMAN_HASH.each do |short, long|
-      if newname.match(/^#{short}P\d/)
-        changed = true
-        newname = "#{long} #{newname.split(/[ \/]/)[0]}"
-      end
-    end
-  end
+  # set the new name
+  newname = TipLabel.new(newname).to_s(options[:common_names])
   
-  # Advise if name didn't change
-  if changed
+  if newname
+    node.name = newname
   else
-    newname = newname.split(/[ \/]/)[0]
     $stderr.puts "Unable to find species name for entry id #{newname}"
   end
-  node.name = newname
 end
   
 puts tree.output(:newick)

@@ -5,7 +5,7 @@ require 'optparse'
 require 'rubygems'
 require 'peach'
 
-USAGE = "Usage: trees [-r <repetitions] <fasta_multiple_sequence_alignment>"
+USAGE = "Usage: trees [-r <repetitions>] <fasta_multiple_sequence_alignment>"
 options = {
   :repetitions => 1000
 }

@@ -30,6 +30,7 @@ ARGF.each do |line|
           name<< line[i..i]
         end
         name<< "#{number}"
+        name<< ' '
         name<< line[NAME_CHARS..(line.length-1)]
       end while taken_names[name]
       

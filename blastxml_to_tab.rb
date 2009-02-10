@@ -2,7 +2,19 @@
 
 require 'rubygems'
 require 'bio'
-
+#require 'optparse'
+#
+#USAGE = "Usage: blastxml_to_tab.rb [-d] <blastxml_file>"
+#options = {
+#  :debug => false
+#}
+#OptionParser.new do |opts|
+#  opts.banner = USAGE
+#
+#  opts.on("-d", "--debug", "Print out debug info") do |v|
+#    options[:debug] = v
+#  end
+#end.parse!
 
 #report = Bio::Blast::Report.new($stdin.readlines.join("\n"), :xml)
 
@@ -18,7 +30,6 @@ require 'bio'
     'HSP Hit to',
     'HSP e-value'
   ].join("\t")
-
 Bio::Blast.reports(ARGF) do |report|
   report.iterations.each do |iteration| 
     iteration.each {|hit|
