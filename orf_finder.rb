@@ -8,18 +8,33 @@ module Orf
   STOP_AMINO_ACID_CHAR = '*'
   
   class OrfFinder
+    # Translate in both directions (by default is false, and only the forward direction is counted)
+    attr_accessor :translate_both_directions
+    
+    def initialize
+      @translate_both_directions = false
+    end
+    
     # return an array of filled out OrfThread objects. Each OrfThread is itself an array of orfs.
     # maximal orfs are returned. That is, 'MMYStop' will return MMYStop, not MYStop.
-    # incomplete ORFs may also be included, if they fall out of the analysis
+    # incomplete ORFs may also be included, if they fall out of the analysis. Orfs in the reverse direction 
+    # are not included - to workaround repeat use Bio::Sequence::NA.complement() and resubmit to this class
     def generate_longest_orfs(nucleotide_sequence)
       thread = OrfThread.new
     
       # convert to more readable format
+      regular = Bio::Sequence::NA.new(nucleotide_sequence)
       trans = [
-        Bio::Sequence::NA.new(nucleotide_sequence).translate(1),
-        Bio::Sequence::NA.new(nucleotide_sequence).translate(2),
-        Bio::Sequence::NA.new(nucleotide_sequence).translate(3)
+        regular.translate(1),
+        regular.translate(2),
+        regular.translate(3)
       ]
+      if @translate_both_directions
+        revcom = regular.revcom
+        trans.push revcom.translate(1)
+        trans.push revcom.translate(2)
+        trans.push revcom.translate(3)
+      end
     
       phase_offset = 0
       thread_array = []
@@ -158,9 +173,9 @@ if $0 == __FILE__
   require 'bio'
   require 'optparse'
   
+  finder = Orf::OrfFinder.new
   
   def fasta_output(bioseq)
-    finder = Orf::OrfFinder.new
     bioseq.each do |seq|
       orf = finder.longest_orf(seq.seq)
       #skip empty sequences
@@ -176,16 +191,21 @@ if $0 == __FILE__
   end
   
   
-  options = ARGV.getopts("fh") #f for fasta, no arguments required. h is for help
+  options = ARGV.getopts("fhb") #f for fasta, no arguments required. h is for help. b is for translate in both directions
   if ARGV.length > 1 or options[:h]
     $stderr.puts "Usage: orf_finder.rb [-f] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. The output is the length of the longest ORF found in each sequence."
     $stderr.puts "-f: fasta. output a fasta file of the longest orfs found."
+    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
     return
   end
   
   # first argument or failing that, stdin to input the fasta file
   input = ARGV.length == 1 ? ARGV[0] : $stdin
+  
+  if options[:b]
+    finder.translate_both_directions = true
+  end
   
   # if fasta is wanted as output, do that
   if options['f']
@@ -204,7 +224,6 @@ if $0 == __FILE__
         'Longest Orf with Start Codon Sequence'
       ].join("\t")
     end
-    finder = Orf::OrfFinder.new
     Bio::FlatFile.auto(input).each do |seq|
       orf = finder.longest_orf(seq.seq)
       to_print = []
@@ -234,7 +253,7 @@ if $0 == __FILE__
         to_print.push orf.aa_sequence
       end
       
-            #must be a full orf
+      #must be a full orf
       orf = finder.longest_m_orf(seq.seq)
       if !orf
         to_print.push nil
