@@ -9,11 +9,11 @@ module Orf
   
   class OrfFinder
     # Translate in both directions (by default is false, and only the forward direction is counted)
-#    attr_accessor :translate_both_directions
+    #    attr_accessor :translate_both_directions
     
-#    def initialize
-#      @translate_both_directions = false
-#    end
+    #    def initialize
+    #      @translate_both_directions = false
+    #    end
     
     # return an array of filled out OrfThread objects. Each OrfThread is itself an array of orfs.
     # maximal orfs are returned. That is, 'MMYStop' will return MMYStop, not MYStop.
@@ -29,20 +29,20 @@ module Orf
         regular.translate(2),
         regular.translate(3)
       ]
-#      if @translate_both_directions
-#        revcom = regular.revcom
-#        trans.push revcom.translate(1)
-#        trans.push revcom.translate(2)
-#        trans.push revcom.translate(3)
-#      end
+      #      if @translate_both_directions
+      #        revcom = regular.revcom
+      #        trans.push revcom.translate(1)
+      #        trans.push revcom.translate(2)
+      #        trans.push revcom.translate(3)
+      #      end
     
       phase_offset = 0
       thread_array = []
-      trans.each do |seq|
+      trans.each do |amino_acid_sequence|
         thread = OrfThread.new
       
         # retrieve the first bit that doesn't start with an M character
-        if first = seq.match(/^([^M\*]*\*)/)
+        if first = amino_acid_sequence.match(/^([^M\*]*\*)/)
           o = Orf.new
           o.start = phase_offset + 3*first.offset(0)[0]
           o.stop = phase_offset + 3*first.offset(0)[1]-1
@@ -51,7 +51,7 @@ module Orf
         end
       
         # retrieve the full orfs
-        seq.scan(/(M.*?\*)/){ #do |match| doesn't work here - tests fail.
+        amino_acid_sequence.scan(/(M.*?\*)/){ #do |match| doesn't work here - tests fail.
           o = Orf.new
           o.start = phase_offset + 3*$~.offset(0)[0]
           o.stop = phase_offset + 3*$~.offset(0)[1]-1
@@ -60,7 +60,7 @@ module Orf
         }
       
         # retrieve the partial orf at the end if it exists
-        if last = seq.match(/(M[^\*]*)$/)
+        if last = amino_acid_sequence.match(/(M[^\*]*)$/)
           o = Orf.new
           o.start = phase_offset + 3*last.offset(0)[0]
           o.stop = phase_offset + 3*last.offset(0)[1]-1
@@ -71,6 +71,44 @@ module Orf
         phase_offset += 1
         thread_array.push thread
       end
+    
+      return thread_array
+    end
+    
+    # Like generate_longest_orfs but start from a protein sequence, not
+    # a nucleotide sequence
+    def generate_protein_orfs(amino_acid_sequence)
+      thread_array = []
+      thread = OrfThread.new
+      
+      # retrieve the first bit that doesn't start with an M character
+      if first = amino_acid_sequence.match(/^([^M\*]*\*)/)
+        o = Orf.new
+        o.start = first.offset(0)[0]
+        o.stop = first.offset(0)[1]-1
+        o.aa_sequence = first[1]
+        thread.push o
+      end
+      
+      # retrieve the full orfs
+      amino_acid_sequence.scan(/(M.*?\*)/){ #do |match| doesn't work here - tests fail.
+        o = Orf.new
+        o.start = $~.offset(0)[0]
+        o.stop = $~.offset(0)[1]-1
+        o.aa_sequence = $~.to_s
+        thread.push o
+      }
+      
+      # retrieve the partial orf at the end if it exists
+      if last = amino_acid_sequence.match(/(M[^\*]*)$/)
+        o = Orf.new
+        o.start = last.offset(0)[0]
+        o.stop = last.offset(0)[1]-1
+        o.aa_sequence = last[1]
+        thread.push o
+      end
+      
+      thread_array.push thread
     
       return thread_array
     end
@@ -109,6 +147,12 @@ module Orf
     # Longest ORF with a start codon, but not necessarilly a stop codon.
     def longest_m_orf(nucleotide_sequence)
       thread_array = generate_longest_orfs(nucleotide_sequence)
+      return longest_m_protein_orf_array(thread_array)
+    end
+    
+    # Probably only of use programmatically. Return the longest ORF starting
+    # with a Met given a OrfThread
+    def longest_m_protein_orf_array(thread_array)
       return nil if thread_array.empty?
       best = thread_array.flatten.max{|a,b| 
         if a.start? and b.start? # both are start. good. please continue
@@ -126,6 +170,11 @@ module Orf
       else
         return best
       end
+    end
+    
+    def longest_protein_m_orf(amino_acid_sequence)
+      thread_array = generate_protein_orfs(amino_acid_sequence)
+      return longest_m_protein_orf_array(thread_array)
     end
   end
 
@@ -191,22 +240,22 @@ if $0 == __FILE__
   end
   
   
-#  options = ARGV.getopts("fhb") #f for fasta, no arguments required. h is for help. b is for translate in both directions
+  #  options = ARGV.getopts("fhb") #f for fasta, no arguments required. h is for help. b is for translate in both directions
   options = ARGV.getopts("fh") #f for fasta, no arguments required. h is for help. b is for translate in both directions
   if ARGV.length > 1 or options[:h]
     $stderr.puts "Usage: orf_finder.rb [-f] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. The output is the length of the longest ORF found in each sequence."
     $stderr.puts "-f: fasta. output a fasta file of the longest orfs found."
-#    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
+    #    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
     return
   end
   
   # first argument or failing that, stdin to input the fasta file
   input = ARGV.length == 1 ? ARGV[0] : $stdin
   
-#  if options[:b]
-#    finder.translate_both_directions = true
-#  end
+  #  if options[:b]
+  #    finder.translate_both_directions = true
+  #  end
   
   # if fasta is wanted as output, do that
   if options['f']

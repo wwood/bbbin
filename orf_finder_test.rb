@@ -157,4 +157,13 @@ class OrfFinderTest < Test::Unit::TestCase
     assert_equal 3, o.length, o.aa_sequence
   end
   
+  def test_protein
+    finder = OrfFinder.new
+    
+    o = finder.longest_protein_m_orf('M*')
+    assert_equal 'M*', o.aa_sequence
+    
+    o = finder.longest_protein_m_orf('M*MEG')
+    assert_equal 'MEG', o.aa_sequence
+  end
 end
