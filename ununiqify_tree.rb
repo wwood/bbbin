@@ -10,6 +10,7 @@ require 'bio'
 
 if ARGV.length != 3
   $stderr.puts "Usage: ununiqify_tree.rb <fasta> <uniqued_phylip_file> <tree>"
+  exit
 end
 
 # read the fasta and the phylip files, making a hash between them
