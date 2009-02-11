@@ -116,6 +116,7 @@ module Orf
     # Return the Orf object representing the longest orf. It is possible the orf is a fragment,
     # if it encounters the end (or start) of the sequence while in an orf.
     def longest_orf(nucleotide_sequence)
+      raise Exception, "Buggy!!! Doesn't work when there is no start codon"
       thread_array = generate_longest_orfs(nucleotide_sequence)
       return nil if thread_array.empty?
       return thread_array.flatten.max
@@ -222,11 +223,36 @@ if $0 == __FILE__
   require 'bio'
   require 'optparse'
   
-  finder = Orf::OrfFinder.new
+  @finder = Orf::OrfFinder.new
   
-  def fasta_output(bioseq)
+  def fasta_output(bioseq, m_orfs_only=true)
     bioseq.each do |seq|
-      orf = finder.longest_orf(seq.seq)
+      orf = nil
+      if m_orfs_only
+        orf = @finder.longest_m_orf(seq.seq)
+      else
+        orf = @finder.longest_orf(seq.seq)
+      end
+      #skip empty sequences
+      next if !orf
+      
+      puts ">#{seq.entry_id}"
+      if orf
+        puts orf.aa_sequence
+      else
+        puts
+      end
+    end
+  end
+  
+  def protein_fasta_output(bioseq_amino_acid_sequence, m_orfs_only=true)
+    bioseq_amino_acid_sequence.each do |seq|
+      orf = nil
+      if m_orfs_only
+        orf = @finder.longest_protein_m_orf(seq.seq)
+      else
+        orf = @finder.longest_protein_orf(seq.seq)
+      end
       #skip empty sequences
       next if !orf
       
@@ -240,13 +266,15 @@ if $0 == __FILE__
   end
   
   
-  #  options = ARGV.getopts("fhb") #f for fasta, no arguments required. h is for help. b is for translate in both directions
-  options = ARGV.getopts("fh") #f for fasta, no arguments required. h is for help. b is for translate in both directions
-  if ARGV.length > 1 or options[:h]
+  #  options = ARGV.getopts("fhbp")
+  options = ARGV.getopts("fhpm")
+  if ARGV.length > 1 or options['h']
     $stderr.puts "Usage: orf_finder.rb [-f] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. The output is the length of the longest ORF found in each sequence."
-    $stderr.puts "-f: fasta. output a fasta file of the longest orfs found."
+    $stderr.puts "-f: fasta. Output a fasta file of the longest orfs found."
     #    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
+    $stderr.puts "-p: protein. Start from an amino acid sequence, not a nucleotide sequence"
+    $stderr.puts "-m: Only return ORFs starting with a Methionine. Doesn't make sense unless used with -f"
     return
   end
   
@@ -258,24 +286,31 @@ if $0 == __FILE__
   #  end
   
   # if fasta is wanted as output, do that
-  if options['f']
+  if options['f'] and options['p']
+    protein_fasta_output(Bio::FlatFile.auto(input))
+  elsif options['f']
     fasta_output(Bio::FlatFile.auto(input))
   else
+    # Output a summary
+    puts [
+      'Name',
+      'Longest ORF Length',
+      'Longest ORF Sequence',
+      'Longest Full ORF Length',
+      'Longest Full ORF Sequence',
+      'Longest Orf with Start Codon Length',
+      'Longest Orf with Start Codon Sequence'
+    ].join("\t")
 
-  
-    if !options[:f]
-      puts [
-        'Name',
-        'Longest ORF Length',
-        'Longest ORF Sequence',
-        'Longest Full ORF Length',
-        'Longest Full ORF Sequence',
-        'Longest Orf with Start Codon Length',
-        'Longest Orf with Start Codon Sequence'
-      ].join("\t")
-    end
     Bio::FlatFile.auto(input).each do |seq|
-      orf = finder.longest_orf(seq.seq)
+      orf = nil
+      if options['p']
+        orf = @finder.longest_protein_orf(seq.seq)
+      else
+        orf = @finder.longest_orf(seq.seq)          
+      end
+      
+      
       to_print = []
     
       # any old orf
@@ -294,7 +329,12 @@ if $0 == __FILE__
       end
     
       #must be a full orf
-      orf = finder.longest_full_orf(seq.seq)
+      if options['p']
+        raise Exception, "longest_full_protein_orf not yet implemented"
+        orf = @finder.longest_full_protein_orf(seq.seq)
+      else
+        orf = @finder.longest_full_orf(seq.seq)          
+      end
       if !orf
         to_print.push nil
         to_print.push nil
@@ -303,8 +343,13 @@ if $0 == __FILE__
         to_print.push orf.aa_sequence
       end
       
-      #must be a full orf
-      orf = finder.longest_m_orf(seq.seq)
+      #must be a full or
+      if options['p']
+        raise Exception, "longest_full_protein_orf not yet implemented"
+        orf = @finder.longest_m_protein_orf(seq.seq)
+      else
+        orf = @finder.longest_m_orf(seq.seq)          
+      end
       if !orf
         to_print.push nil
         to_print.push nil
@@ -316,11 +361,6 @@ if $0 == __FILE__
       puts to_print.join("\t")
     end
   end
-  
-  
-
-  
-  
 else #included as module
   require 'bio'
 end 
