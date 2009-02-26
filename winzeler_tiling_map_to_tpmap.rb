@@ -6,9 +6,6 @@
 
 # Taken from http://www.affymetrix.com/support/developer/powertools/changelog/gcos-agcc/tpmap.html
 
-require 'rubygems'
-require 'fastercsv'
-
 #seq_group_name group_name
 #version version
 puts "#seq_group_name PfalciparumTiling"
@@ -21,6 +18,7 @@ ARGF.each_line do |line|
     index += 1
     next
   end
+  
   row = line.strip.split("\t")
   
   raise unless row.length == 7
@@ -30,20 +28,23 @@ ARGF.each_line do |line|
   y = row[1]
 
   # sequences all have to be 25 apparently
-  next unless seq.length == 25 # ignore coz I don't think the tpmap2bpmap (and beyond?) can handle them
-  #  while seq.length < 25
-  #    seq += "X"
-  #  end
-  raise unless seq.length == 25
+  next if seq.length == 0
+
+  # bump the index if there is any sequence, because that is what
+  # sequenceNamer.pl is doing, and we want to line up with that
+  index += 1
+  i = index - 1
+
+  # ignore seqs with length != 25 coz I don't think the tpmap2bpmap (and beyond?) can handle them
+  # Cannot just add X's either because tpmap2bpmap can't handle those (tested)
+  next unless seq.length == 25
 
   puts [
     seq,
     'f',
-    "seq#{index}",
-    index,
+    "seq#{i}",
+    i,
     x,
     y
   ].join(' ')
-  
-  index += 1
 end
