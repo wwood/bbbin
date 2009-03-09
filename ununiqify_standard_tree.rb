@@ -11,63 +11,10 @@
 # things are more obvious in a tree
 
 require 'bio'
-
-# Ensembl species taken from ensembl/modules/Bio/EnsEMBL/Registry.pm
-# Ensembl version 52 (December 2009)
-# transformed manually to hash form
-ENSEMBL_SPECIES_HASH = {'ENSRNO'=>['Rat','Rattus norvegicus'],
-  'ENSMUS'=>['Mouse','Mus musculus'],
-  'ENSGAL'=>['Chicken','Gallus gallus'],
-  'ENSBTA'=>['Cow','Bos taurus'],
-  'ENSDAR'=>['Zebrafish','Danio rerio'],
-  'ENSCAF'=>['Dog','Canis familiaris'],
-  'ENSPTR'=>['Chimpanzee','Pan troglodytes'],
-  'ENSCPO'=>['Guinea pig','Cavia porcellus'],
-  'ENSCIN'=>['C. intestinalis','Ciona intestinalis'],
-  'ENSCSAV'=>['C. savignyi','Ciona savignyi'],
-  'ENSDNO'=>['Armadillo','Dasypus novemcinctus'],
-  'ENSETE'=>['Lesser hedgehog tenrec','Echinops telfairi'],
-  'ENSEEU'=>['Hedgehog','Erinaceus europaeus'],
-  'ENSFCA'=>['Cat','Felis catus'],
-  'ENSGAC'=>['Stickleback','Gasterosteus aculeatus'],
-  'ENSLAF'=>['Elephant','Loxodonta africana'],
-  'ENSMMU'=>['Macaque','Macaca mulatta'],
-  'ENSMOD'=>['Opossum','Monodelphis domestica'],
-  'ENSMLU'=>['Microbat','Myotis lucifugus'],
-  'ENSOAN'=>['Platypus','Ornithorhynchus anatinus'],
-  'ENSOCU'=>['Rabbit','Oryctolagus cuniculus'],
-  'ENSORL'=>['Medaka','Oryzias latipes'],
-  'ENSSAR'=>['Shrew','Sorex araneus'],
-  'ENSSTO'=>['Squirrel','Spermophilus tridecemlineatus'],
-  'ENSTBE'=>['Tree shrew','Tupaia belangeri'],
-  'SINFRU'=>['Fugu','Takifugu rubripes'],
-  'ENSXET'=>['Frog','Xenopus tropicalis'],
-  # Below added manually when
-  'ENSPCA'=>['Hyrax','Procavia capensis'],
-  'ENSOPR'=>['Pika','Ochotona princeps'],
-  'ENSDOR'=>['Kangaroo rat','Dipodomys ordii'],
-  'ENSECA'=>['Horse','Equus caballus'],
-  'ENSPVA'=>['Megabat','Pteropus vampyrus'],
-  'ENSTTR'=>['Dolphin','Tursiops truncatus'],
-  'ENSMIC'=>['Mouse lemur','Microcebus murinus'],
-  'ENSOGA'=>['Bushbaby','Otolemur garnettii'],
-  'ENSTRU'=>['Fugu','Takifugu rubripes'],
-  'ENSTNI'=>['Tetraodon','Tetraodon nigroviridis'],
-  'ENSTSY'=>['Tarsier','Tarsius syrichta'],
-  'ENSVPA'=>['Alpaca','Vicugna pacos'],
-  'ENSPPY'=>['Orangutan','Pongo pygmaeus'],
-  'ENSGGO'=>['Gorilla','gorilla gorilla'],
-  'ENS'=>['Human','Homo sapiens']
-}
-ENSEMBL_OTHER_HASH = {
-  /^YEL\d/ => ['Yeast','Saccharomyces cerevisiae'],
-  /^T\d/ => ['Worm','Caenorhabditis elegans'],
-  /^FBpp\d/ => ['Fly','Drosophila melanogaster'],
-  /^AAEL\d/ => ['Aedes','Aedes aegypti'],
-  /^AGAP\d/ => ['Anopholes','Anopholes gambiae']
-}
+require File.dirname(__FILE__) + '/ensembl'
 
 class TipLabel
+
   def initialize(ensembl_name)
     @ensembl_name = ensembl_name
   end
@@ -76,7 +23,7 @@ class TipLabel
     # Add in the ensembl name at the beginning
     
     # Try the normal species first
-    ENSEMBL_SPECIES_HASH.each do |short, long|
+    Bio::Ensembl::ENSEMBL_SPECIES_HASH.each do |short, long|
       if @ensembl_name.match(/^#{short}P\d/)
         if use_common_names_only
           return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
@@ -88,14 +35,36 @@ class TipLabel
     
     # If that fails (and therefore doesn't return)
     # Try the other less standard codes
-    ENSEMBL_OTHER_HASH.each do |short, long|
+    Bio::Ensembl::ENSEMBL_OTHER_HASH.each do |short, long|
       if @ensembl_name.match(short)
         if use_common_names_only
           return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
         else
           return "#{long[0]} (#{long[1]}) #{@ensembl_name.split(/[ \/]/)[0]}"
         end
-      end 
+      end
+    end
+
+    # Try JGI tree
+    Bio::JGI::JGI_SPECIES_HASH.each do |short, long|
+      if @ensembl_name.match(/^#{short}\d\|/)
+        if use_common_names_only
+          return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
+        else
+          return "#{long[0]} (#{long[1]}) #{@ensembl_name.split(/[ \/]/)[0]}"
+        end
+      end
+    end
+
+    # Try JGI tree
+    Bio::Misc::MISC_SPECIES_HASH.each do |short, long|
+      if @ensembl_name.match(/^#{short}/)
+        if use_common_names_only
+          return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
+        else
+          return "#{long[0]} (#{long[1]}) #{@ensembl_name.split(/[ \/]/)[0]}"
+        end
+      end
     end
   
     # Advise if name didn't change
@@ -122,6 +91,11 @@ OptionParser.new do |opts|
   end
 end.parse!
 
+unless ARGV.length == 3
+  $stderr.puts USAGE
+  exit 1
+end
+
 # read the fasta and the phylip files, making a hash between them
 fasta_seqs = Bio::FlatFile.open(ARGV[0]).entries
 phylip_seqs = Bio::FlatFile.open(Bio::Phylip::PhylipFormat, ARGV[1]).entries[0].alignment.to_fastaformat_array
@@ -144,6 +118,8 @@ tree.each_node do |node|
   
   newname = phylip_to_fasta_name_hash[node.name]
   newname = phylip_to_fasta_name_hash[node.name.gsub(' ','_')] if newname.nil? #bit of a hack
+
+  original = newname
   
   if newname
     node.name = newname
@@ -158,7 +134,7 @@ tree.each_node do |node|
   if newname
     node.name = newname
   else
-    $stderr.puts "Unable to find species name for entry id '#{newname}'"
+    $stderr.puts "Unable to find species name for entry id '#{original}'"
   end
 end
   
