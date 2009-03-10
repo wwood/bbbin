@@ -64,16 +64,18 @@ module Bio
   class JGI
     JGI_SPECIES_HASH = {
       'jgi\|Brafl'=>['Lancet', 'Branchiostoma floridae'],
-      'jgi\|Helro'=>['Helobdella', 'Helobdella robusta'],
+      'jgi\|Helro'=>['Leech', 'Helobdella robusta'],
       'jgi\|Triad'=>['Trichoplax', 'Trichoplax adhaerens'],
       'jgi\|Monbr'=>['Choanoflagellate', 'Monosiga brevicollis'],
-      'jgi\|Lotgi'=>['Lottia', 'Lottia gigantea']
+      'jgi\|Nemve'=>['Sea anemone', 'Nematostella vectensis'],
+      'jgi\|Lotgi'=>['Limpet', 'Lottia gigantea']
     }
   end
 
   class Misc
     MISC_SPECIES_HASH = {
-      'Aqu1'=>['Sponge', 'Amphimedon queenslandica']
+      /^Aqu1\./=>['Sponge', 'Amphimedon queenslandica'],
+      /^AT\d/ => ['Arabidopsis','Arabidopsis thaliana']
     }
   end
 end

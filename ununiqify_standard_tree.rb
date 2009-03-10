@@ -58,7 +58,7 @@ class TipLabel
 
     # Try JGI tree
     Bio::Misc::MISC_SPECIES_HASH.each do |short, long|
-      if @ensembl_name.match(/^#{short}/)
+      if @ensembl_name.match(short)
         if use_common_names_only
           return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
         else
