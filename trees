@@ -4,7 +4,7 @@
 
 # As this is just a wrapper script around many other programs, several
 # programs need to be installed, and in the PATH:
-# PhyML - sudo ln -s /home/ben/bioinfo/phyml_3.0.1/phyml_3.0.1_linux32 /usr/bin
+# PhyML - sudo ln -s /home/ben/bioinfo/phyml_3.0.1/phyml_3.0.1_linux32 /usr/bin/phyml
 # phylip - sudo apt-get install phylip
 
 require 'optparse'

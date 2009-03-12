@@ -41,7 +41,7 @@ stdout = 'uniqued_phylip_stdout.txt'
 
 # If repetitions is defined do that, otherwise do the default likelyhood test
 if options[:repetitions]
-  system("phyml -d aa -i #{input} -b #{options[:repetitions]}>#{stdout}")
+  system("phyml -d aa -i #{input} -b #{options[:repetitions]} >#{stdout}")
 else
   system("phyml -d aa -i #{input} >#{stdout}")
 end
