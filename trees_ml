@@ -43,7 +43,7 @@ stdout = 'uniqued_phylip_stdout.txt'
 if options[:repetitions]
   system("phyml -d aa -i #{input} -b #{options[:repetitions]}>#{stdout}")
 else
-  system("phyml -d aa -i #{input} >#{stdout}")
+  system("phyml -d aa -b -1 -i #{input} >#{stdout}")
 end
 
 #convert the names on the tree back to sensible land
