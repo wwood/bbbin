@@ -68,14 +68,23 @@ module Bio
       'jgi\|Triad'=>['Trichoplax', 'Trichoplax adhaerens'],
       'jgi\|Monbr'=>['Choanoflagellate', 'Monosiga brevicollis'],
       'jgi\|Nemve'=>['Sea anemone', 'Nematostella vectensis'],
-      'jgi\|Lotgi'=>['Limpet', 'Lottia gigantea']
+      'jgi\|Lotgi'=>['Limpet', 'Lottia gigantea'],
+      'jgi\|Thaps'=>['Diatom', 'Thalassiosira pseudonana'],
+      'jgi\|Chlre'=>['Green Alga', 'Chlamydomonas reinhardtii']
+    }
+  end
+  
+  class EuPathDB
+    EUPATHDB_SPECIES_HASH = {
+      /^gb\|/ => ['Giardia', 'Giardia lamblia']
     }
   end
 
   class Misc
     MISC_SPECIES_HASH = {
       /^Aqu1\./=>['Sponge', 'Amphimedon queenslandica'],
-      /^AT\d/ => ['Arabidopsis','Arabidopsis thaliana']
+      /^AT\d/ => ['Arabidopsis','Arabidopsis thaliana'],
+      /^gnl\|CMER/ => ['Red Alga','Cyanidioschyzon merolae']
     }
   end
 end

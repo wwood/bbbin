@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+
+require 'tempfile'
+require 'optparse'
+
+# Parse cmd line options
+USAGE = "Usage: trees_ml [-r <repetitions>] [-d <directory>] <fasta_multiple_sequence_alignment>"
+options = {
+  :repetitions => 0,
+  :directory => 'trees_ml'
+}
+OptionParser.new do |opts|
+  opts.banner = USAGE
+  
+  opts.on("-r", "--repetitions [REPETITIONS]", Integer, "Number of bootstrap repetitions to do (default likelyhood only)") do |v|
+    options[:repetitions] = v
+  end
+  
+  opts.on('-d', '--directory [DIRECTORY]', String, "Directory of the working and output files") do |v|
+    options[:directory] = v
+  end
+end.parse!
+p options
+
+if ARGV.length != 1
+  $stderr.puts USAGE
+  exit
+end
+fasta_file_input = ARGV[0]
+
+# All files associated end up in this directory
+dir = options[:directory]
+#
+#system("mkdir #{dir}") or raise
+#system("sreformat phylip #{fasta_file_input} >#{dir}/ununiqued.phylip")
+Dir.chdir(dir)
+#system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
+#
+#input = 'uniqued.phylip'
+#stdout = 'uniqued_phylip_stdout.txt'
+#
+## If repetitions is defined do that, otherwise do the default likelyhood test
+#if options[:repetitions]
+#  system("phyml -d aa -i #{input} -b #{options[:repetitions]}>#{stdout}")
+#else
+#  system("phyml -d aa -i #{input} >#{stdout}")
+#end
+
+#convert the names on the tree back to sensible land
+Dir.chdir('..')
+system("ununiqify_standard_tree.rb #{fasta_file_input} #{dir}/uniqued.phylip #{dir}/uniqued.phylip_phyml_tree.txt >#{dir}/ununiqued.outtree")

@@ -7,13 +7,18 @@ require 'peach'
 
 USAGE = "Usage: trees [-r <repetitions>] <fasta_multiple_sequence_alignment>"
 options = {
-  :repetitions => 1000
+  :repetitions => 1000,
+  :ml_repetitions => 100,
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
 
   opts.on("-r", "--repetitions [REPETITIONS]", Integer, "Number of bootstrap repetitions to do for NJ and parsimony methods") do |v|
     options[:repetitions] = v
+  end
+  
+  opts.on("-m", "--maximum-likelyhood-repetitions [REPETITIONS]", Integer, "Number of ML repetitions") do |v|
+    options[:ml_repetitions] = v
   end
 end.parse!
 
@@ -26,9 +31,12 @@ fasta_file_input = ARGV[0]
 distance_options = ''
 distance_options = "#{distance_options} -r #{options[:repetitions]}" if options[:repetitions]
 parsimony_options = distance_options
+parsimony_options = distance_options
 commands = [
   "trees_distance #{distance_options} #{fasta_file_input} >trees_distance.out",
-  "trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out"
+  "trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out",
+  "trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
+  "trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_likelyhood.out",
 ]
 
 commands.peach do |command|
