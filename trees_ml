@@ -30,21 +30,21 @@ fasta_file_input = ARGV[0]
 
 # All files associated end up in this directory
 dir = options[:directory]
-#
-#system("mkdir #{dir}") or raise
-#system("sreformat phylip #{fasta_file_input} >#{dir}/ununiqued.phylip")
+
+system("mkdir #{dir}") or raise
+system("sreformat phylip #{fasta_file_input} >#{dir}/ununiqued.phylip")
 Dir.chdir(dir)
-#system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
-#
-#input = 'uniqued.phylip'
-#stdout = 'uniqued_phylip_stdout.txt'
-#
-## If repetitions is defined do that, otherwise do the default likelyhood test
-#if options[:repetitions]
-#  system("phyml -d aa -i #{input} -b #{options[:repetitions]}>#{stdout}")
-#else
-#  system("phyml -d aa -i #{input} >#{stdout}")
-#end
+system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
+
+input = 'uniqued.phylip'
+stdout = 'uniqued_phylip_stdout.txt'
+
+# If repetitions is defined do that, otherwise do the default likelyhood test
+if options[:repetitions]
+  system("phyml -d aa -i #{input} -b #{options[:repetitions]}>#{stdout}")
+else
+  system("phyml -d aa -i #{input} >#{stdout}")
+end
 
 #convert the names on the tree back to sensible land
 Dir.chdir('..')

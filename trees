@@ -1,5 +1,12 @@
 #!/usr/bin/env ruby
 
+# A script to automate the creation of multiple different types of trees.
+
+# As this is just a wrapper script around many other programs, several
+# programs need to be installed, and in the PATH:
+# PhyML - sudo ln -s /home/ben/bioinfo/phyml_3.0.1/phyml_3.0.1_linux32 /usr/bin
+# phylip - sudo apt-get install phylip
+
 require 'optparse'
 
 require 'rubygems'
