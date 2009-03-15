@@ -43,7 +43,7 @@ commands = [
   "trees_distance #{distance_options} #{fasta_file_input} >trees_distance.out",
   "trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out",
   "trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
-  "trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_likelyhood.out",
+  "trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_bootstrap.out",
 ]
 
 commands.peach do |command|
