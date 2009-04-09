@@ -1,0 +1,8 @@
+#!/bin/bash
+
+sequence_cleaner.rb aln.fa >aln.clean.fa
+sreformat phylip aln.clean.fa >aln.clean.fa.phylip
+uniqify_phylip.rb -n 9 aln.clean.fa.phylip >aln.clean.fa.uniqued.phylip
+#uniqify_phylip.rb aln.clean.fa.phylip >aln.clean.fa.uniqued.phylip
+readseq -f17 -a aln.clean.fa.uniqued.phylip >aln.clean.fa.uniqued.phylip.nxs
+

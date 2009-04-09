@@ -7,6 +7,6 @@
 # Only do so where there is no home, so normal users can use a different thing.
 command = "rq #{ARGV.join(' ')}"
 if !ENV['HOME']
-  command = "export HOME='/var/www'; #{command}"
+  command = "export PATH=$PATH:/usr/local/bin; export HOME='/var/www'; #{command}"
 end
 system(command)
