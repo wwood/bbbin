@@ -63,7 +63,7 @@ module Bio
 
   class JGI
     JGI_SPECIES_HASH = {
-      'jgi\|Brafl'=>['Lancet', 'Branchiostoma floridae'],
+      'jgi\|Brafl'=>['Lancelet', 'Branchiostoma floridae'],
       'jgi\|Helro'=>['Leech', 'Helobdella robusta'],
       'jgi\|Triad'=>['Trichoplax', 'Trichoplax adhaerens'],
       'jgi\|Monbr'=>['Choanoflagellate', 'Monosiga brevicollis'],
