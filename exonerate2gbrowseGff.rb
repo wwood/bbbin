@@ -7,33 +7,19 @@
 # Only print out the similarity part, and make sure each exon is printed
 # differently
 
+seqname = 'if this shows it is an error'
+
 ARGF.each do |line|
   splits = line.split("\t");
-  if splits.length == 9 and splits[2] == 'similarity'
+  if splits.length == 9 and splits[2] == 'gene'
     stwos = splits[8].split(' ; ')
-    seqname = stwos[1].match(/Query (.+)/)[1]
-    stwos[2..(stwos.length-1)].each do |align|
-      matches = align.match(/Align (\d+) \d+ (\d+)/)
-      raise unless matches
-      pilon = matches[1].to_i
-      length = matches[2].to_i
-      start = 0
-      stop = 0
-      if splits[6] == '-'
-        start = pilon-length
-        stop = pilon+1
-      elsif splits[6] == '+'
-        start = pilon
-        stop = pilon+length-1
-      end
-
-      puts [
-        splits[0..2],
-        start,
-        stop,
-        splits[5..7],
-        "ID=#{seqname};Name=#{seqname}"
-      ].flatten.join("\t")
-    end
+    seqname = stwos[1].match(/sequence (.+)/)[1]
+  elsif splits.length == 9 and splits[2] == 'exon'
+    puts [
+      splits[0..1],
+      'similarity',
+      splits[3..7],
+      "ID=#{seqname};Name=#{seqname}"
+    ].flatten.join("\t")
   end
 end
