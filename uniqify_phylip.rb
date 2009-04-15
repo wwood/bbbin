@@ -19,7 +19,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-unless ARGV.length == 1
+unless ARGV.length <= 1
   $stderr.puts USAGE
   exit 1
 end
