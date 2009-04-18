@@ -71,11 +71,21 @@ pod2usage({-exitval => 1, -verbose => 2}) unless (scalar @ARGV or $opt_showall);
 my $ftp = &connect_to_ftp();
 if ($opt_showall) {
     print "$_\n" foreach (sort(&get_available_databases()));
+$ftp->quit();
 } else {
     my @files = sort(&get_files_to_download());
-    &download(@files);
-}
+#    &download(@files);
 $ftp->quit();
+
+   # Un-tar-gz the downloaded files
+foreach $file (@files) {
+my $cmd = "tar xzf $file";
+print $cmd;
+#`tar xzf $file`;
+}
+}
+
+
 
 # Connects to NCBI ftp server
 sub connect_to_ftp
@@ -90,7 +100,7 @@ sub connect_to_ftp
         or die "Failed to login to " . NCBI_FTP . ": $!\n";
     $ftp->cwd(BLAST_DB_DIR);
     $ftp->binary();
-    print STDERR "Connected to NCBI\n" if $opt_verbose;
+    print STDERR "Connected to ".NCBI_FTP."\n" if $opt_verbose;
     return $ftp;
 }
 

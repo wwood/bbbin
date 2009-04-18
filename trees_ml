@@ -20,7 +20,6 @@ OptionParser.new do |opts|
     options[:directory] = v
   end
 end.parse!
-p options
 
 if ARGV.length != 1
   $stderr.puts USAGE

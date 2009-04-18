@@ -76,7 +76,7 @@ module Bio
   
   class EuPathDB
     EUPATHDB_SPECIES_HASH = {
-      /^gb\|/ => ['Giardia', 'Giardia lamblia']
+      /gb\|GL.* organism=Giardia_lamblia/ => ['Giardia', 'Giardia lamblia']
     }
   end
 
