@@ -6,7 +6,7 @@
 require 'bio'
 require '/home/ben/bin/uniq'
 
-tree = Bio::FlatFile.open(ARGF).entries[0].tree
+tree = Bio::FlatFile.open(Bio::Newick, ARGF).entries[0].tree
 uniq = Uniq.new
 
 tree.each_node do |node|
@@ -15,3 +15,5 @@ tree.each_node do |node|
   
   node.name = uniq.make_unique(node.name);
 end
+
+puts tree.output(:newick)
