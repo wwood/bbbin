@@ -74,15 +74,15 @@ if ($opt_showall) {
 $ftp->quit();
 } else {
     my @files = sort(&get_files_to_download());
-#    &download(@files);
-$ftp->quit();
+    &download(@files);
+    $ftp->quit();
 
-   # Un-tar-gz the downloaded files
-foreach $file (@files) {
-my $cmd = "tar xzf $file";
-print $cmd;
-#`tar xzf $file`;
-}
+    # Un-tar-gz the downloaded files
+    foreach my $file (@files) {
+	my $cmd = "tar xzf $file";
+	print "UnGunZipping $file...\n";
+	`$cmd`;
+    }
 }
 
 

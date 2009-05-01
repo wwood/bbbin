@@ -40,11 +40,19 @@ end
 if $0 == __FILE__
   require 'bio'
   
+trimmed_count = 0
+not_trimmed_count = 0
+
   Bio::FlatFile.open(ARGV[0]).each do |seq|
     trimmed = Bio::Trimpoly.trim_both(seq.seq)
-    if trimmed
-      puts ">#{seq.entry_id}"
-      puts trimmed
+    puts ">#{seq.entry_id}"
+    puts trimmed
+    if trimmed == seq.seq
+      not_trimmed_count += 1
+    else
+      trimmed_count += 1
     end
   end
+
+  $stderr.puts "Trimmed #{trimmed_count}, left #{not_trimmed_count} untrimmed"
 end
