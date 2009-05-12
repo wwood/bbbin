@@ -49,7 +49,7 @@ ARGF.each do |line|
         
         (0..(name_chars-spaces)).each do |i|
           char = line[i..i]
-          char = '_' if char.nil? # fix for short names
+          char = '_' if char.to_s == ' ' # fix for short names
           name<< char
         end
         name<< "#{number}"
