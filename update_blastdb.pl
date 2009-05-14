@@ -74,15 +74,8 @@ if ($opt_showall) {
 $ftp->quit();
 } else {
     my @files = sort(&get_files_to_download());
-#    &download(@files);
-$ftp->quit();
-
-   # Un-tar-gz the downloaded files
-foreach $file (@files) {
-my $cmd = "tar xzf $file";
-print $cmd;
-#`tar xzf $file`;
-}
+    &download(@files);
+    $ftp->quit();
 }
 
 
@@ -172,6 +165,7 @@ sub download($)
             print STDERR "Downloading $file... " if $opt_verbose;
             $ftp->get($file);
             print STDERR "done.\n" if $opt_verbose;
+            &extract_archive($file);
         } else {
             print STDERR "$file is up to date.\n" if $opt_verbose;
         }
@@ -215,6 +209,15 @@ sub get_num_volumes
         }
     }
     return $retval + 1;
+}
+
+# Extracts the archives so they are ready to blast against
+sub extract_archive
+{
+    my $file = shift;
+    my $cmd = "tar xzf $file";
+    print STDERR "UnTarGunZipping $file...\n" if $opt_verbose;
+    `$cmd`;
 }
 
 __END__

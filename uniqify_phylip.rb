@@ -48,7 +48,9 @@ ARGF.each do |line|
         spaces = Math::log10(number).floor+2+(10-name_chars)
         
         (0..(name_chars-spaces)).each do |i|
-          name<< line[i..i]
+          char = line[i..i]
+          char = '_' if char.to_s == ' ' # fix for short names
+          name<< char
         end
         name<< "#{number}"
         name<< ' '
