@@ -68,6 +68,19 @@ class TipLabel
         end
       end
     end
+
+    # Try Orthomcl, which doesn't have common names
+    [Bio::Orthomcl::ORTHOMCL_SPECIES_HASH].each do |hash|
+      hash.each do |short, long|
+        if @ensembl_name.match(short)
+          if use_common_names_only
+            return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
+          else
+            return "#{long[0]} #{@ensembl_name.split(/[ \/]/)[0]}"
+          end
+        end
+      end
+    end
   
     # Advise if name didn't change
     
@@ -114,10 +127,7 @@ end
 
 # for each node of the tree, rename. warn if there is no hash match
 tree = Bio::FlatFile.open(Bio::Newick, ARGV[2]).entries[0].tree
-tree.each_node do |node|
-  #I get internal nodes here - not sure how else to skip
-  next if node.name.nil? or node.name.length == 0 
-  
+tree.leaves.each do |node|  
   newname = phylip_to_fasta_name_hash[node.name]
   newname = phylip_to_fasta_name_hash[node.name.gsub(' ','_')] if newname.nil? #bit of a hack
 
@@ -126,6 +136,7 @@ tree.each_node do |node|
   if newname
     node.name = newname
   else
+    $stderr.puts phylip_to_fasta_name_hash.inspect
     $stderr.puts "Unexpected node name (left unchanged): '#{node}' '#{node.name}' #{node.class}"
     next
   end
