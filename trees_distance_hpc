@@ -10,7 +10,7 @@
 # As a bare minimum you must set number of cpus and application name.
 
 # Declares the shell that interprets the job script.
-#PBS -S /home/ben/usr/bin/ruby
+#PBS -S /bin/bash
 
 # To give your job a name, replace "MyJob" with an appropriate name
 #PBS -N treesDistance
