@@ -48,6 +48,8 @@ module Bio
       'ENSVPA'=>['Alpaca','Vicugna pacos'],
       'ENSPPY'=>['Orangutan','Pongo pygmaeus'],
       'ENSGGO'=>['Gorilla','gorilla gorilla'],
+      'ENSACA'=>['Anole lizard','Anolis carolinensis'],
+      'ENSTGU'=>['Zebra finch','Taeniopygia guttata'],
       'ENS'=>['Human','Homo sapiens']
     }
     ENSEMBL_OTHER_HASH = {
