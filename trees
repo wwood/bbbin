@@ -27,6 +27,10 @@ OptionParser.new do |opts|
   opts.on("-m", "--maximum-likelyhood-repetitions [REPETITIONS]", Integer, "Number of ML repetitions") do |v|
     options[:ml_repetitions] = v
   end
+
+  opts.on('-p', "--pbs", "Use PBS style scripts for each tree making method. Most useful for HPC computers") do |v|
+    options[:pbs] = v
+  end
 end.parse!
 
 if ARGV.length != 1
@@ -45,6 +49,14 @@ commands = [
   "trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
   "trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_bootstrap.out",
 ]
+
+# Add '_hpc' to the end of the first argument if requested
+if options[:pbs]
+  commands.collect! do |cmds|
+    splits = cmds.split(' ', 2)
+    "qsub #{splits[0]}_hpc #{splits[1]}"
+  end
+end
 
 commands.peach do |command|
   system(command) or raise Exception, $?
