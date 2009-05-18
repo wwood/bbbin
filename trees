@@ -11,6 +11,7 @@ require 'optparse'
 
 require 'rubygems'
 require 'peach'
+require 'tempfile'
 
 USAGE = "Usage: trees [-r <repetitions>] <fasta_multiple_sequence_alignment>"
 options = {
@@ -52,14 +53,26 @@ commands = [
 
 # Add '_hpc' to the end of the first argument if requested
 if options[:pbs]
-  commands.collect! do |cmds|
-    splits = cmds.split(' ', 2)
-    "qsub #{splits[0]}_hpc #{splits[1]}"
+  commands.collect! do |cmd|
+    # qsub annoyingly can't deal with arguments for the 
+    # program being run - it keeps them for itself. So, here I write
+    # a new pbs script
+    Tempfile.open('trees_pbs') do |tempfile|
+      splits = cmd.split(' ', 2)
+      input = File.open(File.join(File.dirname(__FILE__),"#{splits[0]}_hpc")).read
+      tempfile.puts input
+      tempfile.puts cmd
+      tempfile.flush
+      
+      system("qsub #{tempfile.path}")
+    end
+  end
+else
+  commands.peach do |command|
+    system(command) or raise Exception, $?
   end
 end
 
-commands.peach do |command|
-  system(command) or raise Exception, $?
-end
+
 
 
