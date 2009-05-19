@@ -50,4 +50,4 @@ system(cmd)
 
 #convert the names on the tree back to sensible land
 Dir.chdir('..')
-system("ununiqify_standard_tree.rb #{fasta_file_input} #{dir}/uniqued.phylip #{dir}/uniqued.phylip_phyml_tree.txt >#{dir}/ununiqued.outtree")
+system("ununiqify_standard_tree.rb #{fasta_file_input} #{dir}/uniqued.phylip #{dir}/uniqued.phylip_phyml_tree.txt >#{dir}/ml.tree")

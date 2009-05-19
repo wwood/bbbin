@@ -79,4 +79,4 @@ system('rm intree')
 
 #convert the names on the tree back to sensible land
 Dir.chdir('..')
-system("ununiqify_standard_tree.rb #{fasta_file_input} trees_distance/uniqued.phylip trees_distance/consense.outtree >trees_distance/ununiqued.outtree")
+system("ununiqify_standard_tree.rb #{fasta_file_input} trees_distance/uniqued.phylip trees_distance/consense.outtree >trees_distance/distance.tree")
