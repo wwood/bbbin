@@ -10,6 +10,7 @@
 # like Ensembl genes, and then prepends the species name to the front, so that
 # things are more obvious in a tree
 
+require 'rubygems'
 require 'bio'
 require File.dirname(__FILE__) + '/ensembl'
 

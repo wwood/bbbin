@@ -71,7 +71,7 @@ pod2usage({-exitval => 1, -verbose => 2}) unless (scalar @ARGV or $opt_showall);
 my $ftp = &connect_to_ftp();
 if ($opt_showall) {
     print "$_\n" foreach (sort(&get_available_databases()));
-$ftp->quit();
+    $ftp->quit();
 } else {
     my @files = sort(&get_files_to_download());
     &download(@files);
