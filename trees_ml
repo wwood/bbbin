@@ -19,6 +19,10 @@ OptionParser.new do |opts|
   opts.on('-d', '--directory [DIRECTORY]', String, "Directory of the working and output files") do |v|
     options[:directory] = v
   end
+
+  opts.on('-a', '--arguments [ARGUMENTS]', String, "Arguments passed to phyml directly") do |v|
+     options[:arguments] = v
+  end
 end.parse!
 
 if ARGV.length != 1
@@ -41,9 +45,9 @@ stdout = 'uniqued_phylip_stdout.txt'
 # If repetitions is defined do that, otherwise do the default likelyhood test
 cmd = "error if you see this"
 if options[:repetitions] and options[:repetitions] > 0
-cmd = "phyml -d aa -i #{input} -b #{options[:repetitions]} >#{stdout}"
+cmd = "phyml -d aa -i #{input} -b #{options[:repetitions]} #{options[:arguments]} >#{stdout}"
 else
-cmd = "phyml -d aa -b -1 -i #{input} >#{stdout}"
+cmd = "phyml -d aa -b -1 -i #{input} #{options[:arguments]} >#{stdout}"
 end
 puts "Running phyml: #{cmd}";
 system(cmd)
