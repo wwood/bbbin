@@ -21,11 +21,11 @@ options = {
 OptionParser.new do |opts|
   opts.banner = USAGE
 
-  opts.on("-r", "--repetitions [REPETITIONS]", Integer, "Number of bootstrap repetitions to do for NJ and parsimony methods") do |v|
+  opts.on("-r", "--repetitions REPETITIONS", Integer, "Number of bootstrap repetitions to do for NJ and parsimony methods") do |v|
     options[:repetitions] = v
   end
   
-  opts.on("-m", "--maximum-likelyhood-repetitions [REPETITIONS]", Integer, "Number of ML repetitions") do |v|
+  opts.on("-m", "--maximum-likelyhood-repetitions REPETITIONS", Integer, "Number of ML repetitions") do |v|
     options[:ml_repetitions] = v
   end
 
@@ -34,7 +34,7 @@ OptionParser.new do |opts|
   end
 
   # Capital letter switch input indicate arguments that are directly passed to the tree making programs
-  opts.on('-M', "--maximum-likelyhood-parameters", "Parameters to pass to the maximum likelyhood program as is (Currently phyml)") do |v|
+  opts.on('-M', "--maximum-likelyhood-parameters ARGUMENTS", "Parameters to pass to the maximum likelyhood program as is (Currently phyml)") do |v|
     options[:likelyhood_parameters] = v
   end
 end.parse!
