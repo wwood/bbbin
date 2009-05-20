@@ -32,6 +32,11 @@ OptionParser.new do |opts|
   opts.on('-p', "--pbs", "Use PBS style scripts for each tree making method. Most useful for HPC computers") do |v|
     options[:pbs] = v
   end
+
+  # Capital letter switch input indicate arguments that are directly passed to the tree making programs
+  opts.on('-M', "--maximum-likelyhood-parameters", "Parameters to pass to the maximum likelyhood program as is (Currently phyml)") do |v|
+    options[:likelyhood_parameters] = v
+  end
 end.parse!
 
 if ARGV.length != 1
