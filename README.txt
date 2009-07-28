@@ -1,7 +1,7 @@
 This branch of bbbin contains those files pertinant to the AMPKb2 publication.
 
 If you want to use scripts from this directory, it is recommended to use those
-from the master branch (http://github.com/wwood/bbbin) because they
+from the master branch (http://github.com/wwood/bbbin ) because they
 are kept more up to date, whereas this branch is not maintained.
 
 COPYRIGHT
