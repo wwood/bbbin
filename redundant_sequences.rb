@@ -9,12 +9,9 @@ require 'reach'
 hash = {}
 
 # Collect everything
-Bio::FlatFile.open($stdin).each do |seq|
-  if hash[seq.seq]
-    hash[seq.seq].push seq
-  else
-    hash[seq.seq] = [seq]
-  end
+Bio::FlatFile.open(ARGF).each do |seq|
+  hash[seq.seq] ||= []
+  hash[seq.seq].push seq
 end
 
 # Print out if there is duplicates

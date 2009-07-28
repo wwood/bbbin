@@ -4,9 +4,10 @@ require 'tempfile'
 require 'optparse'
 
 # Parse cmd line options
-USAGE = "Usage: trees_distance [-r <repetitions] <fasta_multiple_sequence_alignment>"
+USAGE = "Usage: trees_distance [-r <repetitions>] [-d <directory>] <fasta_multiple_sequence_alignment>"
 options = {
-  :repetitions => 1000
+  :repetitions => 1000,
+  :directory => 'trees_parsimony'
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
@@ -14,8 +15,13 @@ OptionParser.new do |opts|
   opts.on("-r", "--repetitions [REPETITIONS]", Integer, "Number of bootstrap repetitions to do") do |v|
     options[:repetitions] = v
   end
+  
+  opts.on('-d', '--directory DIRECTORY', String, "Directory of the working and output files") do |v|
+    options[:directory] = v
+  end
 end.parse!
 p options
+bootstrapping = (options[:repetitions] != 1)
 
 if ARGV.length != 1
   $stderr.puts USAGE
@@ -23,36 +29,45 @@ if ARGV.length != 1
 end
 fasta_file_input = ARGV[0]
 
-Dir.mkdir 'trees_parsimony'
-system("sreformat phylip #{fasta_file_input} >trees_parsimony/ununiqued.phylip")
-Dir.chdir 'trees_parsimony'
+Dir.mkdir options[:directory]
+system("sreformat phylip #{fasta_file_input} >#{options[:directory]}/ununiqued.phylip")
+Dir.chdir options[:directory]
 system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
 
 # Do the boostrapping
-system('ln -s uniqued.phylip infile')
-Tempfile.open('trees_parsimony.seqboot.params') do |tempfile|
-  tempfile.puts 'R'
-  tempfile.puts options[:repetitions] #1000 by default
-  tempfile.puts 'Y'
-  tempfile.puts '73'
-  tempfile.close
+if bootstrapping
+  system('ln -s uniqued.phylip infile')
+  Tempfile.open('trees_parsimony.seqboot.params') do |tempfile|
+    tempfile.puts 'R'
+    tempfile.puts options[:repetitions] #1000 by default
+    tempfile.puts 'Y'
+    tempfile.puts '73'
+    tempfile.close
 
-  system("phylip seqboot <#{tempfile.path}")
+    system("phylip seqboot <#{tempfile.path}")
+  end
+  system('mv outfile seqboot.outfile')
+  system('rm infile')
+
+  # prepare for parsimony tree creation
+  system('ln -s seqboot.outfile infile')
+else
+  # prepare for parsimony tree creation
+  system('ln -s uniqued.phylip infile')
 end
-system('mv outfile seqboot.outfile')
-system('rm infile')
 
 # create parsimony trees
-system('ln -s seqboot.outfile infile')
 Tempfile.open('trees_parsimony.protpars.params') do |tempfile|
-  tempfile.puts 'M'
-  tempfile.puts 'D'
-  tempfile.puts options[:repetitions] #1000 by default
-  tempfile.puts '79'
-  tempfile.puts '1'
-  tempfile.puts '2' # Turn of indications because it wastes disk space and I think causes it to fail as well.
-  tempfile.puts '3' # Turn of tree writing to outfile because that isn't needed and wastes disk space
+  if bootstrapping
+    tempfile.puts 'M'
+    tempfile.puts 'D'
+    tempfile.puts options[:repetitions] #1000 by default
+  end
+  #  tempfile.puts '1'
+  #  tempfile.puts '2' # Turn of indications because it wastes disk space and I think causes it to fail as well.
+  #  tempfile.puts '3' # Turn of tree writing to outfile because that isn't needed and wastes disk space
   tempfile.puts 'Y'
+  tempfile.puts '79'
   tempfile.close
 
   system("phylip protpars <#{tempfile.path}")
@@ -74,4 +89,4 @@ system('rm intree')
 
 #convert the names on the tree back to sensible land
 Dir.chdir '..'
-system("ununiqify_standard_tree.rb #{fasta_file_input} trees_parsimony/uniqued.phylip trees_parsimony/consense.outtree >trees_parsimony/parsimony.tree")
+system("ununiqify_standard_tree.rb #{fasta_file_input} #{options[:directory]}/uniqued.phylip #{options[:directory]}/consense.outtree >#{options[:directory]}/parsimony.tree")
