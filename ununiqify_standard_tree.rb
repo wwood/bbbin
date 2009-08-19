@@ -95,15 +95,21 @@ end
 require 'optparse'
 
 # ununiqify_ensembl_tree.rb ../ensembl.cbm48.fa uniqued.phylip consense.outtree
-USAGE = "Usage: ununiqify_ensembl_tree [-c] <fasta_multiple_sequence_alignment> <uniqued.phylip> <consense.outtree>"
+USAGE = "Usage: ununiqify_ensembl_tree [-c] [-m <manual_names_filename>] <fasta_multiple_sequence_alignment> <uniqued.phylip> <consense.outtree>"
 options = {
-  :common_names => false
+  :common_names => false,
+  :manual_names => {}
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
 
   opts.on("-c", "--common-names", "Print common names only, and not scientific names") do |v|
     options[:common_names] = v
+  end
+
+  opts.on("-m", "--manual-names MANUAL_NAMES_FILENAME", "Read a hash of regular expression => wanted names for a node, so that figures can be recreated more easily") do |v|
+    require v
+    options[:manual_names] = MANUAL_NAMES
   end
 end.parse!
 
@@ -128,25 +134,58 @@ end
 
 # for each node of the tree, rename. warn if there is no hash match
 tree = Bio::FlatFile.open(Bio::Newick, ARGV[2]).entries[0].tree
-tree.leaves.each do |node|  
+tree.leaves.each do |node|
+
+  # Priority of renaming:
+  # 1. manually specified as a string in the manual_names hash
+  # 2. manually specified as a regular expression in the manual_names hash
+  # 3. using TipLabel to rename common species
+  # 4. Use the original name (and warn that this is happening)
+
+  # 3. happens first because this is what is used in the manual matching
   newname = phylip_to_fasta_name_hash[node.name]
   newname = phylip_to_fasta_name_hash[node.name.gsub(' ','_')] if newname.nil? #bit of a hack
+
+  manualled = false
+
+  # 1. manually specified as a string in the manual_names hash
+  options[:manual_names].each do |key, value|
+    next unless key.kind_of?(String)
+    if key == newname
+      newname = value
+      manualled = true
+    end
+  end
+
+  # 2. manually specified as a regular expression in the manual_names hash
+  unless manualled
+    options[:manual_names].each do |key, value|
+      next unless key.kind_of?(Regexp)
+#      $stderr.puts key.inspect
+#      $stderr.puts newname
+      if newname.match(key)
+        newname = value
+        manualled = true
+      end
+    end
+  end
 
   original = newname
   
   if newname
     node.name = newname
   else
+    # 4. Use the original name (and warn that this is happening)
     $stderr.puts phylip_to_fasta_name_hash.inspect
     $stderr.puts "Unexpected node name (left unchanged): '#{node}' '#{node.name}' #{node.class}"
     next
   end
   
-  # set the new name
-  newname = TipLabel.new(newname).to_s(options[:common_names])
-  
-  if newname
+  # set the new name in the tree
+  if manualled
     node.name = newname
+  elsif newname
+    node.name = TipLabel.new(newname).to_s(options[:common_names])
   else
     $stderr.puts "Unable to find species name for entry id '#{original}'"
   end

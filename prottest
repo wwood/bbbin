@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# takes in an alignment file, converts it to a phylip, then submits it to prottest
+
+require 'optparse'
+
+# Parse cmd line options
+USAGE = "Usage: prottest [-d <directory>] <fasta_multiple_sequence_alignment>"
+options = {
+  :directory => 'prottest'
+}
+OptionParser.new do |opts|
+  opts.banner = USAGE
+  opts.on('-d', '--directory DIRECTORY', String, "Directory of the working and output files") do |v|
+    options[:directory] = v
+  end
+end.parse!
+
+# All files associated end up in this directory
+dir = options[:directory]
+
+if ARGV.length != 1
+  $stderr.puts USAGE
+  exit
+end
+fasta_file_input = ARGV[0]
+
+system("mkdir #{dir}") or raise
+system("sreformat phylip #{fasta_file_input} >#{dir}/ununiqued.phylip")
+Dir.chdir(dir)
+system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
+
+# run prottest
+system("runProtTest -i uniqued.phylip |tee prottest.out")
+

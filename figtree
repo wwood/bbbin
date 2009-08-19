@@ -1,0 +1,1 @@
+java -Xms64m -Xmx128m -jar /home/ben/bioinfo/FigTree.v1.2.2/figtree.jar $*
