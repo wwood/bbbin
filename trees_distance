@@ -4,7 +4,7 @@ require 'tempfile'
 require 'optparse'
 
 # Parse cmd line options
-USAGE = "Usage: trees_distance [-r <repetitions] <fasta_multiple_sequence_alignment>"
+USAGE = "Usage: trees_distance [-r <repetitions>] <fasta_multiple_sequence_alignment>"
 options = {
   :repetitions => 1000
 }
