@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env ruby
 #
 # Script to read FASTA sequences from GenBank
 #
@@ -11,8 +11,9 @@
 # Ben J Woodcroft 2009. Adapted from entrez.py by Ross Hall
 #
 
+require 'rubygems'
 require 'bio'
 require 'reach'
 
-puts Bio::NCBI::REST::EFetch.est(File.open(ARGV[0]).to_a.reach.strip!.to_i.retract, "fasta")
+puts Bio::NCBI::REST::EFetch.sequence(File.open(ARGV[0]).to_a.reach.strip!.to_i.retract, "fasta")
 
