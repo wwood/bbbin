@@ -4,7 +4,7 @@ require 'tempfile'
 require 'optparse'
 
 # Parse cmd line options
-USAGE = "Usage: trees_ml [-r <repetitions>] [-d <directory>] <fasta_multiple_sequence_alignment>"
+USAGE = "Usage: trees_ml [-r <repetitions>] [-d <directory>] [-a <phyml_arguments>] <fasta_multiple_sequence_alignment>"
 options = {
   :repetitions => 0,
   :directory => 'trees_ml'

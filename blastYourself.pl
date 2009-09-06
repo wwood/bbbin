@@ -5,7 +5,7 @@ use Bio::Tools::Run::StandAloneBlast;
 use Bio::AlignIO;
 use Getopt::Std;
 
-getopt('fpi');
+getopt('fpie');
 
 # Takes in a single fasta file with >1 fasta sequence in it and blasts each pair together
 $bl2seq_program = 'blastn';
@@ -18,6 +18,9 @@ if ($opt_f){
 }
 if ($opt_p){
   $bl2seq_program = $opt_p;
+}
+if ($opt_e){
+  $MIN_EXPECTATION = $opt_e;
 }
 
 my $original;
@@ -58,7 +61,7 @@ foreach $i (0..$#seqs){
 						     $bl2seq_program,
 						     -outfile => $cur_file,
 						     #'F' => $filtering,
-						     #'e' => $MIN_EXPECTATION
+						     'e' => $MIN_EXPECTATION
 						    );
 
 
