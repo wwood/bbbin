@@ -4,6 +4,10 @@
 # a list of clusters, just like blastclust
 clusters = {}
 
+options = {
+  #:cluster_size => 230 #a hack
+}
+
 # Read in and parse
 require 'rubygems'
 require 'fastercsv'
@@ -45,6 +49,8 @@ reversed[number].push seq
 end
 # Print the reversed cluster
 reversed.each do |key, value|
+if options[:cluster_size] and value.length == options[:cluster_size]
 puts value.join(' ')
+end
 end
 
