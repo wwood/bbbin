@@ -59,16 +59,22 @@ end
 # create parsimony trees
 Tempfile.open('trees_parsimony.protpars.params') do |tempfile|
   if bootstrapping
-    tempfile.puts 'M'
+    tempfile.puts 'M' #start multiple data sets options
     tempfile.puts 'D'
     tempfile.puts options[:repetitions] #1000 by default
+    tempfile.puts 79
+    tempfile.puts 1
+    tempfile.puts 'Y'
+  else
+    tempfile.puts 'Y'
+    tempfile.puts '79'
   end
   #  tempfile.puts '1'
   #  tempfile.puts '2' # Turn of indications because it wastes disk space and I think causes it to fail as well.
   #  tempfile.puts '3' # Turn of tree writing to outfile because that isn't needed and wastes disk space
-  tempfile.puts 'Y'
-  tempfile.puts '79'
   tempfile.close
+
+$stderr.puts "protpars parameters: #{tempfile.open.read}(END OF FILE)"
 
   system("phylip protpars <#{tempfile.path}")
 end
