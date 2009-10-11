@@ -99,6 +99,6 @@ end
 
 #convert the names on the tree back to sensible land
 Dir.chdir('..')
-command_options = options[:manual_names_file].nil? ? nil : "-m #{options[:manual_names_file]}"
+command_options = options[:manual_names_file].nil? ? '' : "-m #{options[:manual_names_file]}"
 command_options += " #{fasta_file_input} #{options[:directory]}/uniqued.phylip #{options[:directory]}/#{final_tree_name} >#{options[:directory]}/distance.tree"
 system("ununiqify_standard_tree.rb #{command_options}")
