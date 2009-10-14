@@ -2,45 +2,49 @@
 
 cd /blastdb
 
+PLASMODB_VERSION = '6.0'
+TOXODB_VERSION = '5.2'
+
 # soft link the necessary files to the /blastdb folder
 # still missing a few species from this section
-ln -s ~/phd/data/berghei/genome/plasmodb/6.0/PbergheiAllTranscripts_PlasmoDB-6.0.fasta
-ln -s ~/phd/data/berghei/genome/plasmodb/6.0/PbergheiAnnotatedProteins_PlasmoDB-6.0.fasta
+ln -s ~/phd/data/berghei/genome/plasmodb/$PLASMODB_VERSION/PbergheiAllTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
+ln -s ~/phd/data/berghei/genome/plasmodb/$PLASMODB_VERSION/PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 
-ln -s ~/phd/data/vivax/genome/plasmodb/6.0/PvivaxAnnotatedTranscripts_PlasmoDB-6.0.fasta
-ln -s ~/phd/data/vivax/genome/plasmodb/6.0/PvivaxAnnotatedProteins_PlasmoDB-6.0.fasta
+ln -s ~/phd/data/vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
+ln -s ~/phd/data/vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 
-ln -s ~/phd/data/falciparum/genome/plasmodb/6.0/PfalciparumGenomic_PlasmoDB-6.0.fasta
+ln -s ~/phd/data/falciparum/genome/plasmodb/$PLASMODB_VERSION/PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
 
-ln -s ~/phd/data/yoelii/genome/plasmodb/6.0/PyoeliiAllTranscripts_PlasmoDB-6.0.fasta 
-ln -s ~/phd/data/yoelii/genome/plasmodb/6.0/PyoeliiAnnotatedProteins_PlasmoDB-6.0.fasta 
+ln -s ~/phd/data/yoelii/genome/plasmodb/$PLASMODB_VERSION/PyoeliiAllTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta 
+ln -s ~/phd/data/yoelii/genome/plasmodb/$PLASMODB_VERSION/PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta 
 
-ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/5.2/TgondiiME49Genomic_ToxoDB-5.2.fasta"
-ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/5.2/TgondiiME49AnnotatedTranscripts_ToxoDB-5.2.fasta"
-ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/5.2/TgondiiME49AnnotatedProteins_ToxoDB-5.2.fasta"
+ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/$TOXODB_VERSION/TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta"
+ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/$TOXODB_VERSION/TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta"
+ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/$TOXODB_VERSION/TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta"
+
 
 
 # concatenate the databases together
 echo "Concatenating the fasta files.."
 cat\
- PfalciparumAnnotatedTranscripts_PlasmoDB-6.0.fasta\
- TgondiiAnnotatedTranscripts_ToxoDB-5.2.fasta\
+ PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
+ TgondiiAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
  GeneDB_Etenella_Genes\
- PbergheiAllTranscripts_PlasmoDB-6.0.fasta\
- PvivaxAnnotatedTranscripts_PlasmoDB-6.0.fasta\
- PyoeliiAllTranscripts_PlasmoDB-6.0.fasta\
+ PbergheiAllTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PvivaxAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PyoeliiAllTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  >apicomplexa.nucleotide.fa
 cat\
- PfalciparumAnnotatedProteins_PlasmoDB-6.0.fasta\
- TgondiiAnnotatedProteins_ToxoDB-5.2.fasta\
+ PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ TgondiiAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
  GeneDB_Etenella_Proteins\
- PbergheiAnnotatedProteins_PlasmoDB-6.0.fasta\
- PvivaxAnnotatedProteins_PlasmoDB-6.0.fasta\
- PyoeliiAnnotatedProteins_PlasmoDB-6.0.fasta\
+ PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  >apicomplexa.protein.fa 
 cat\
  PfalciparumGenomic_PlasmoDB-6.0.fasta\
- TgondiiME49Genomic_ToxoDB-5.2.fasta\
+ TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta\
  >apicomplexa.genome.fa
 
 
@@ -52,9 +56,9 @@ formatdb -p F -i apicomplexa.genome.fa
 
 #species-specific blast databases
 echo "formating toxo databases.."
-formatdb -i TgondiiME49AnnotatedProteins_ToxoDB-5.2.fasta
-formatdb -p F -i TgondiiME49AnnotatedTranscripts_ToxoDB-5.2.fasta
-formatdb -p F -i TgondiiME49Genomic_ToxoDB-5.2.fasta
+formatdb -i TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta
+formatdb -p F -i TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta
+formatdb -p F -i TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta
 
 # Create Blat databases
 #faToTwoBit apicomplexa.protein.fa apicomplexa.protein.fa.2bit
