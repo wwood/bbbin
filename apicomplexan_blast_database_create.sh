@@ -2,7 +2,7 @@
 
 cd /blastdb
 
-PLASMODB_VERSION = '6.0'
+PLASMODB_VERSION = '6.1'
 TOXODB_VERSION = '5.2'
 
 # soft link the necessary files to the /blastdb folder
@@ -41,9 +41,10 @@ cat\
  PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ BabesiaWGS.fasta_with_names\
  >apicomplexa.protein.fa 
 cat\
- PfalciparumGenomic_PlasmoDB-6.0.fasta\
+ PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta\
  >apicomplexa.genome.fa
 
