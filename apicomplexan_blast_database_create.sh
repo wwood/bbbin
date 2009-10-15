@@ -2,8 +2,8 @@
 
 cd /blastdb
 
-PLASMODB_VERSION = '6.1'
-TOXODB_VERSION = '5.2'
+PLASMODB_VERSION='6.1'
+TOXODB_VERSION='5.2'
 
 # soft link the necessary files to the /blastdb folder
 # still missing a few species from this section
@@ -14,13 +14,20 @@ ln -s ~/phd/data/vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedTranscri
 ln -s ~/phd/data/vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 
 ln -s ~/phd/data/falciparum/genome/plasmodb/$PLASMODB_VERSION/PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
+ln -s ~/phd/data/falciparum/genome/plasmodb/$PLASMODB_VERSION/PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
+ln -s ~/phd/data/falciparum/genome/plasmodb/$PLASMODB_VERSION/PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 
 ln -s ~/phd/data/yoelii/genome/plasmodb/$PLASMODB_VERSION/PyoeliiAllTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta 
 ln -s ~/phd/data/yoelii/genome/plasmodb/$PLASMODB_VERSION/PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta 
 
+# ToxoDB entries
 ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/$TOXODB_VERSION/TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta"
 ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/$TOXODB_VERSION/TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta"
 ln -s "/home/ben/phd/data/Toxoplasma gondii/ToxoDB/$TOXODB_VERSION/TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta"
+
+ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta"
+ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta"
+ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumGenomic_ToxoDB-$TOXODB_VERSION.fasta"
 
 
 
@@ -29,6 +36,7 @@ echo "Concatenating the fasta files.."
 cat\
  PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
+ NeosporaCaninumAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
  GeneDB_Etenella_Genes\
  PbergheiAllTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  PvivaxAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
@@ -37,6 +45,7 @@ cat\
 cat\
  PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
+ NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
  GeneDB_Etenella_Proteins\
  PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
@@ -60,6 +69,11 @@ echo "formating toxo databases.."
 formatdb -i TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta
 formatdb -p F -i TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta
 formatdb -p F -i TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta
+
+echo "formating neospora databases.."
+formatdb -i NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta
+formatdb -p F -i NeosporaCaninumAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta
+formatdb -p F -i NeosporaCaninumGenomic_ToxoDB-$TOXODB_VERSION.fasta
 
 # Create Blat databases
 #faToTwoBit apicomplexa.protein.fa apicomplexa.protein.fa.2bit
