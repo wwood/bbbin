@@ -1,4 +1,12 @@
 #!/bin/sh
 
+# if rails_env is already defined, I'm not expecting that.
+# so play it safe.
+if [ $RAILS_ENV != "" ]; then
+  echo "bad rails environment!!!!!, ignoring your request";
+  exit 1;
+else
+  screen -S kawaii kawaii_screen.sh;
+fi;
 
-screen -S kawaii kawaii_screen.sh
+

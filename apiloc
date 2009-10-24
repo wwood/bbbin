@@ -1,0 +1,4 @@
+#!/bin/sh
+
+
+screen -S apiloc apiloc_screen.sh
