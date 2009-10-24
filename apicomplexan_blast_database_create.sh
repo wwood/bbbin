@@ -36,10 +36,19 @@ ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/Neospor
 ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta"
 ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumGenomic_ToxoDB-$TOXODB_VERSION.fasta"
 
+<<<<<<< HEAD:apicomplexan_blast_database_create.sh
 # CryptoDB
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
+=======
+# CrytpoDB
+ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
+ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
+ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
+
+
+>>>>>>> 9d54877e664f54542696e4d39f3b65ef8d241d02:apicomplexan_blast_database_create.sh
 
 # concatenate the databases together
 echo "Concatenating the fasta files.."
@@ -78,7 +87,7 @@ formatdb -p F -i apicomplexa.genome.fa
 
 #species-specific blast databases
 echo "formating toxo databases.."
-formatdb -i TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta
+formatdb -i TgondiiME49AnnotatedProteins_ToxoDB-$CRYPTODB_VERSION.fasta
 formatdb -p F -i TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta
 formatdb -p F -i TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta
 
@@ -110,7 +119,6 @@ formatdb -p F -i PchabaudiGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
 echo "creating Theileria databases.."
 cat TANN.GeneDB.pep TPA1.pep >theileria.pep
 formatdb -i theileria.pep
-
 
 # Create Blat databases
 #faToTwoBit apicomplexa.protein.fa apicomplexa.protein.fa.2bit
