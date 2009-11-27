@@ -6,7 +6,7 @@ require 'optparse'
 
 USAGE = "Usage: blastxml_to_tab.rb [-n] <blastxml_file>"
 options = {
-  :ncbi => true
+  :ncbi => false
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
