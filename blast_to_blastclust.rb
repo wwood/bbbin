@@ -8,6 +8,8 @@ options = {
   #:cluster_size => 230 #a hack
 }
 
+$stderr.puts "warning: currently this script does not care about the singletons, because they have no blast result!"
+
 unless ARGV.length == 1
   $stderr.puts "usage: blast_to_blastclust.rb <blast_output>"
   $stderr.puts "  where <blast_output> is the -m 8 output from blastall"
