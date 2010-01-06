@@ -25,7 +25,7 @@ finish_xml_file = lambda {
   current_filehandle.close
 }
 
-ARGF.each_line do |line| #for each line of the XML file
+File.foreach(ARGV[0]) do |line| #for each line of the XML file
   # if we are beginning of a new kind block
   if line == "    <Iteration>\n"
     # if we are doing the first one, then record the header and don't print the currentxml, increment state

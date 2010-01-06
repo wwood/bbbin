@@ -19,7 +19,7 @@ class BlastxmlSplitTest < Test::Unit::TestCase
     assert File.exists?('3.xml') == false
     `blastxml_to_tab.rb 1.xml >1.csv`
     `blastxml_to_tab.rb 2.xml >2.csv`
-    `cat 1.csv 2.csv |grep -v Query\ Definition |diff - direct >diff`
+    `cat 1.csv 2.csv |grep -v 'Query Definition' |diff - blastxml_split_test_direct >diff`
     assert_equal '', File.open('diff').read
 
     `rm 1.xml`
