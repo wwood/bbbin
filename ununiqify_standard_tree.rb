@@ -186,7 +186,6 @@ tree.leaves.each do |node|
     node.name = newname
   elsif newname
     node.name = TipLabel.new(newname).to_s(options[:common_names])
-p node.name
   else
     $stderr.puts "Unable to find species name for entry id '#{original}'"
   end
