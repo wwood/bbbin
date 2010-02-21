@@ -84,8 +84,8 @@ class TipLabel
     end
   
     # Advise if name didn't change
-    
-    return nil
+    $stderr.puts "Name not recognized - left unchanged: '#{@ensembl_name}'"
+    return @ensembl_name
   end
 end
 
@@ -186,6 +186,7 @@ tree.leaves.each do |node|
     node.name = newname
   elsif newname
     node.name = TipLabel.new(newname).to_s(options[:common_names])
+p node.name
   else
     $stderr.puts "Unable to find species name for entry id '#{original}'"
   end

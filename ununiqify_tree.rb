@@ -29,10 +29,9 @@ end
 
 # for each node of the tree, rename. warn if there is no hash match
 tree = Bio::FlatFile.open(Bio::Newick, ARGV[2]).entries[0].tree
-tree.each_node do |node|
-  #I get internal nodes here - not sure how else to skip
-  next if node.name.nil? or node.name.length == 0 
-  
+p tree
+p phylip_to_fasta_name_hash
+tree.leaves.each do |node|
   newname = phylip_to_fasta_name_hash[node.name]
   newname = phylip_to_fasta_name_hash[node.name.gsub(' ','_')] if newname.nil? #bit of a hack
   
