@@ -1,5 +1,5 @@
 #!/bin/sh
 
 cd ~/phd/gnr
-./script/server
+./script/server >/dev/null
 bash
