@@ -84,8 +84,8 @@ class TipLabel
     end
   
     # Advise if name didn't change
-    
-    return nil
+    $stderr.puts "Name not recognized - left unchanged: '#{@ensembl_name}'"
+    return @ensembl_name
   end
 end
 
