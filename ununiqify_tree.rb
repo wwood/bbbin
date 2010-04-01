@@ -34,7 +34,7 @@ tree.each_node do |node|
   next if node.name.nil? or node.name.length == 0 
   
   newname = phylip_to_fasta_name_hash[node.name]
-  newname = phylip_to_fasta_name_hash[node.name.gsub(' ','_')] if newname.nil? #bit of a hack
+  newname = phylip_to_fasta_name_hash[node.name.gsub(/ \//,'_')] if newname.nil? #bit of a hack
   
   if newname
     node.name = newname

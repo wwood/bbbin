@@ -22,7 +22,7 @@ buffer = ''
 while str
   
   #$stderr.print '.'
-  str = str.lstrip.rstrip
+  str = str.strip
   
   # If there is an odd number of \" characters, then continue to get lines until fixed
   matched = str.scan(/\"/)

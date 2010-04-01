@@ -130,7 +130,7 @@ phylip_to_fasta_name_hash = {}
 fasta_seqs.each_with_index do |fasta_name, i|
   phylip_to_fasta_name_hash[phylip_seqs[i].definition] = fasta_name.definition
 end
-
+p phylip_to_fasta_name_hash = {}
 
 # for each node of the tree, rename. warn if there is no hash match
 tree = Bio::FlatFile.open(Bio::Newick, ARGV[2]).entries[0].tree
