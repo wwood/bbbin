@@ -4,6 +4,12 @@
 
 require 'tempfile'
 
+unless ARGV.length == 0
+  $stderr.puts "Usage: evalue_graph.rb <blastResult"
+  $stderr.puts "  where blastResult is a -m 8 blast output file"
+  exit
+end
+
 Tempfile.open('evalue_data_points') do |tempfile|
   # Dump all the evalues without the log scale to a tempfile,
   # which will then be graphed
@@ -29,16 +35,16 @@ Tempfile.open('evalue_data_points') do |tempfile|
   r_commands = [
 "data=read.table('#{tempfile.path}')",
 "pdf('#{pdf_name}')",
-"hist(data[,1], xlab='-log(E-value)', title='histogram of E-values')",
+"hist(data[,1], xlab='-log(E-value)', main='histogram of E-values')",
 "dev.off()",
   ]
-  Tempfile.open('evalue_r_cmds') do |tempfile|
+  Tempfile.open('evalue_r_cmds') do |tempfile2|
     r_commands.each do |cmd|
-      tempfile.puts cmd
+      tempfile2.puts cmd
     end
-    tempfile.close
+    tempfile2.close
     
-    `R --no-save <#{tempfile.path}`
+    `R --no-save <#{tempfile2.path}`
   end
   
   # Open the pdf for the viewing by the user

@@ -47,12 +47,19 @@ class TrimpolyTest < Test::Unit::TestCase
     # test yes
     sequence = 'GCTXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXTXXXXXXXXXXXXXXXXXXXXACTTTTTTTTTTTTTTTTTTTTTTTTTTGGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT'
     trimmed = Trimpoly.trim_poly_t(sequence)
-    assert_equal nil, trimmed
+    assert_equal '', trimmed
 
     # test polyA -> shouldn't result in anything
     sequence = 'CAATTTGTGTGCCATCCACGCCAAGCGTGTGACGATAATGCCAAAGGATATACAACTGGCGCGAAGAATTAGGGGAGAAAGGGCATAAGCGACTAAACTTGTGTATTGTTTTTGTCATGCGTACATTTTATTTCATTTACAAAGTATTTAATAGCCTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaattaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAAAA'
     trimmed = Trimpoly.trim_poly_t(sequence)
     assert_equal sequence, trimmed
+  end
+  
+  # for some reason this was causing a bug
+  def test_trimpoly_nil_bug
+    sequence = 'GAAAAAAAAAAAAA'
+    trimmed = Trimpoly.trim_poly_a(sequence)
+    assert_equal '', trimmed
   end
 
   def test_script
@@ -97,6 +104,21 @@ CAATTTGTGTGCCATCCACGCCAAGCGTGTGACGATAATGCCAAAGGATATACAACTGGCGCGAAGAATTAGGGGAGAAA
 >2|test
 TCTCACGGGGCGCGGCAGGTGGGGGGGCAGCCTCCCCATGTGTTGCCCCGGGACAGCAGCTACATGGGCACCATGATTGACGATCTGGTGAGCAAGGACCTGCGGGAGCCCTATCGGGTCCTCACCAGTCGCAGTGAATATCGGCTCCTGCTGCGGGGCGATAACGCTGATCGACGGCTCACACCCATGGGCCGGGAGTTGGGTCTGGTGGATGATCGCCGCTGGCGCACCTTCGAGGCCAAGCAAAAGGCCATCCAGGCCCAGCAAGCCCTGTTGGAGACCACCCGCCTCAAGGCCGATGACCCGGTTAG
 ',
+          File.read('white_rabbit.trimpoly.fa')
+      end
+    end
+
+    within_construct do |construct|
+      construct.directory 'alice/rabbithole' do |dir|
+        $stderr.puts 'blah'
+        input =<<END_OF_DATA
+>Ascid Clone 1586
+GAAAAAAAAAAAAAAAAAAAAAAAA
+END_OF_DATA
+        dir.file 'white_rabbit.fa', input
+        system 'trimpoly.rb white_rabbit.fa >white_rabbit.trimpoly.fa'
+        $stderr.puts 'done'
+        assert_equal '',
           File.read('white_rabbit.trimpoly.fa')
       end
     end

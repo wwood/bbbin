@@ -20,6 +20,7 @@ module Bio
           result = system "trimpoly -Y <#{file1.path} >#{file2.path}"
 
           line = File.open(file2.path).readlines[0]
+          return '' if line.nil?
 
           splits = line.split("\t")
           start = splits[2].to_i
@@ -44,6 +45,7 @@ module Bio
           result = system "trimpoly -e 3 <#{file1.path} >#{file2.path}"
 
           line = File.open(file2.path).readlines[0]
+          return '' if line.nil?
 
           splits = line.split("\t")
           start = splits[2].to_i
@@ -52,7 +54,7 @@ module Bio
           if stop > start
             return sequence[start-1..stop-1]
           else
-            return nil
+            return ''
           end
         end
       end
@@ -68,6 +70,7 @@ module Bio
           result = system "trimpoly -e 5 <#{file1.path} >#{file2.path}"
 
           line = File.open(file2.path).readlines[0]
+          return '' if line.nil?
 
           splits = line.split("\t")
           start = splits[2].to_i
@@ -76,7 +79,7 @@ module Bio
           if stop > start
             return sequence[start-1..stop-1]
           else
-            return nil
+            return ''
           end
         end
       end
@@ -114,6 +117,7 @@ if $0 == __FILE__
 
   trimmed_count = [0,0,0]
   not_trimmed_count = [0,0,0]
+  obliterated_count = [0,0,0]
   method_hash = {
     :trim_poly_a => 0,
     :trim_poly_t => 1,
@@ -128,19 +132,23 @@ if $0 == __FILE__
 
       # record how many have been trimmed
       index = method_hash[method]
-      if last == trimmed
+      if last != '' and trimmed == ''
+        obliterated_count[index] += 1
+      elsif last == trimmed
         not_trimmed_count[index] += 1
       else
         trimmed_count[index] += 1
       end
     end
     
-    puts ">#{seq.definition}"
-    puts trimmed
+    unless trimmed.empty?
+      puts ">#{seq.definition}"
+      puts trimmed
+    end
   end
 
 
-  $stderr.puts "polyA: Trimmed #{trimmed_count[0]}, left #{not_trimmed_count[0]} untrimmed"
-  $stderr.puts "polyT: Trimmed #{trimmed_count[1]}, left #{not_trimmed_count[1]} untrimmed"
-  $stderr.puts "both: Trimmed #{trimmed_count[2]}, left #{not_trimmed_count[2]} untrimmed"
+  $stderr.puts "polyA: Trimmed #{trimmed_count[0]}, left #{not_trimmed_count[0]} untrimmed, #{obliterated_count[0]} removed completely"
+  $stderr.puts "polyT: Trimmed #{trimmed_count[1]}, left #{not_trimmed_count[1]} untrimmed, #{obliterated_count[1]} removed completely"
+  $stderr.puts "both: Trimmed #{trimmed_count[2]}, left #{not_trimmed_count[2]} untrimmed, #{obliterated_count[2]} removed completely"
 end
