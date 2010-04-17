@@ -65,6 +65,8 @@ cat\
  PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
  BabesiaWGS.fasta_with_names\
+ TANN.GeneDB.pep\
+ TPA1.pep\
  >apicomplexa.protein.fa 
 cat\
  PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta\
