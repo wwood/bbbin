@@ -8,26 +8,19 @@ module Orf
   STOP_AMINO_ACID_CHAR = '*'
   
   class OrfFinder
-    # Translate in both directions (by default is false, and only the forward direction is counted)
-    #    attr_accessor :translate_both_directions
-    
-    #    def initialize
-    #      @translate_both_directions = false
-    #    end
-    
     # return an array of filled out OrfThread objects. Each OrfThread is itself an array of orfs.
     # maximal orfs are returned. That is, 'MMYStop' will return MMYStop, not MYStop.
     # incomplete ORFs may also be included, if they fall out of the analysis. Orfs in the reverse direction 
     # are not included - to workaround repeat use Bio::Sequence::NA.complement() and resubmit to this class
     def generate_longest_orfs(nucleotide_sequence)
       thread = OrfThread.new
-    
+      
       # convert to more readable format
       regular = Bio::Sequence::NA.new(nucleotide_sequence)
       trans = [
-        regular.translate(1),
-        regular.translate(2),
-        regular.translate(3)
+      regular.translate(1),
+      regular.translate(2),
+      regular.translate(3)
       ]
       #      if @translate_both_directions
       #        revcom = regular.revcom
@@ -35,43 +28,56 @@ module Orf
       #        trans.push revcom.translate(2)
       #        trans.push revcom.translate(3)
       #      end
-    
+      
       phase_offset = 0
       thread_array = []
       trans.each do |amino_acid_sequence|
         thread = OrfThread.new
-      
-        # retrieve the first bit that doesn't start with an M character
-        if first = amino_acid_sequence.match(/^([^M\*]*\*)/)
-          o = Orf.new
-          o.start = phase_offset + 3*first.offset(0)[0]
-          o.stop = phase_offset + 3*first.offset(0)[1]-1
-          o.aa_sequence = first[1]
-          thread.push o
+        
+        # exception made for very short sequences
+        unless amino_acid_sequence.length == 0 
+          # retrieve if the whole thing translates without a
+          # a stop codon
+          if first = amino_acid_sequence.match(/^([^M\*]*)$/)
+            o = Orf.new
+            o.start = phase_offset + 3*first.offset(0)[0]
+            o.stop = phase_offset + 3*first.offset(0)[1]-1
+            o.aa_sequence = first[1]
+            thread.push o unless o.start > o.stop
+          end        
+          
+          # retrieve the first bit that doesn't start with an M character
+          if first = amino_acid_sequence.match(/^([^M\*]*\*)/)
+            o = Orf.new
+            o.start = phase_offset + 3*first.offset(0)[0]
+            o.stop = phase_offset + 3*first.offset(0)[1]-1
+            o.aa_sequence = first[1]
+            thread.push o unless o.start > o.stop
+          end
+          
+          # retrieve the full orfs
+          amino_acid_sequence.scan(/(M.*?\*)/){ #do |match| doesn't work here - tests fail.
+            o = Orf.new
+            o.start = phase_offset + 3*$~.offset(0)[0]
+            o.stop = phase_offset + 3*$~.offset(0)[1]-1
+            o.aa_sequence = $~.to_s
+            thread.push o unless o.start > o.stop
+          }
+          
+          # retrieve the partial orf at the end if it exists
+          if last = amino_acid_sequence.match(/(M[^\*]*)$/)
+            o = Orf.new
+            o.start = phase_offset + 3*last.offset(0)[0]
+            o.stop = phase_offset + 3*last.offset(0)[1]-1
+            o.aa_sequence = last[1]
+            thread.push o unless o.start > o.stop
+          end
         end
-      
-        # retrieve the full orfs
-        amino_acid_sequence.scan(/(M.*?\*)/){ #do |match| doesn't work here - tests fail.
-          o = Orf.new
-          o.start = phase_offset + 3*$~.offset(0)[0]
-          o.stop = phase_offset + 3*$~.offset(0)[1]-1
-          o.aa_sequence = $~.to_s
-          thread.push o
-        }
-      
-        # retrieve the partial orf at the end if it exists
-        if last = amino_acid_sequence.match(/(M[^\*]*)$/)
-          o = Orf.new
-          o.start = phase_offset + 3*last.offset(0)[0]
-          o.stop = phase_offset + 3*last.offset(0)[1]-1
-          o.aa_sequence = last[1]
-          thread.push o
-        end
-      
+        
         phase_offset += 1
         thread_array.push thread
       end
-    
+      
       return thread_array
     end
     
@@ -109,14 +115,14 @@ module Orf
       end
       
       thread_array.push thread
-    
+      
       return thread_array
     end
     
     # Return the Orf object representing the longest orf. It is possible the orf is a fragment,
     # if it encounters the end (or start) of the sequence while in an orf.
     def longest_orf(nucleotide_sequence)
-      raise Exception, "Buggy!!! Doesn't work when there is no start codon"
+      #raise Exception, "Buggy!!! Doesn't work when there is no start codon"
       thread_array = generate_longest_orfs(nucleotide_sequence)
       return nil if thread_array.empty?
       return thread_array.flatten.max
@@ -178,21 +184,21 @@ module Orf
       return longest_m_protein_orf_array(thread_array)
     end
   end
-
+  
   class OrfThread <Array
     attr_accessor :orfs
   end
-
+  
   class Orf
     attr_accessor :start, :stop, :aa_sequence
     
     def fragment?
       mystop = @aa_sequence.length-1
       !(
-        (
-          @aa_sequence[mystop..mystop] === STOP_AMINO_ACID_CHAR and
-            @aa_sequence[0..0] === START_AMINO_ACID_CHAR
-        )
+       (
+       @aa_sequence[mystop..mystop] === STOP_AMINO_ACID_CHAR and
+       @aa_sequence[0..0] === START_AMINO_ACID_CHAR
+      )
       )
     end
     
@@ -200,7 +206,7 @@ module Orf
     def end_fragment?
       mystop = @aa_sequence.length-1
       @aa_sequence[mystop..mystop] === STOP_AMINO_ACID_CHAR and
-        @aa_sequence[0..0] != START_AMINO_ACID_CHAR
+      @aa_sequence[0..0] != START_AMINO_ACID_CHAR
     end
     
     def start?
@@ -210,7 +216,7 @@ module Orf
     def <=>(orf_b)
       self.length <=> orf_b.length
     end
-
+    
     def length
       @aa_sequence.length
     end
@@ -301,7 +307,7 @@ if $0 == __FILE__
       'Longest Orf with Start Codon Length',
       'Longest Orf with Start Codon Sequence'
     ].join("\t")
-
+    
     Bio::FlatFile.auto(input).each do |seq|
       orf = nil
       if options['p']
@@ -312,22 +318,22 @@ if $0 == __FILE__
       
       
       to_print = []
-    
+      
       # any old orf
       if !orf
         to_print = [
-          seq.entry_id,
-          0,
+        seq.entry_id,
+        0,
           ''
         ]
       else
         to_print = [
-          seq.entry_id,
-          orf.length,
-          orf.aa_sequence
+        seq.entry_id,
+        orf.length,
+        orf.aa_sequence
         ]
       end
-    
+      
       #must be a full orf
       if options['p']
         raise Exception, "longest_full_protein_orf not yet implemented"
@@ -357,7 +363,7 @@ if $0 == __FILE__
         to_print.push orf.length
         to_print.push orf.aa_sequence
       end
-    
+      
       puts to_print.join("\t")
     end
   end
