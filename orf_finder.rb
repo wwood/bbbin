@@ -273,7 +273,7 @@ if $0 == __FILE__
   
   
   #  options = ARGV.getopts("fhbp")
-  options = ARGV.getopts("fhpm")
+  options = ARGV.getopts("fhpmn")
   if ARGV.length > 1 or options['h']
     $stderr.puts "Usage: orf_finder.rb [-f] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. The output is the length of the longest ORF found in each sequence."
@@ -281,6 +281,7 @@ if $0 == __FILE__
     #    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
     $stderr.puts "-p: protein. Start from an amino acid sequence, not a nucleotide sequence"
     $stderr.puts "-m: Only return ORFs starting with a Methionine. Doesn't make sense unless used with -f"
+    $stderr.puts "-n: Output nucleotide sequence. Currently incompatible with fasta (-f) output."
     return
   end
   
@@ -298,7 +299,7 @@ if $0 == __FILE__
     fasta_output(Bio::FlatFile.auto(input))
   else
     # Output a summary
-    puts [
+    titles =  [
       'Name',
       'Longest ORF Length',
       'Longest ORF Sequence',
@@ -306,7 +307,11 @@ if $0 == __FILE__
       'Longest Full ORF Sequence',
       'Longest Orf with Start Codon Length',
       'Longest Orf with Start Codon Sequence'
-    ].join("\t")
+    ]
+    if options['n']
+      titles.push 'Longest Full ORF nucleotide sequence'
+    end
+    puts titles.join("\t")
     
     Bio::FlatFile.auto(input).each do |seq|
       orf = nil
@@ -326,6 +331,9 @@ if $0 == __FILE__
         0,
           ''
         ]
+        if options['n']
+          to_print.push nil
+        end
       else
         to_print = [
         seq.entry_id,
@@ -362,6 +370,15 @@ if $0 == __FILE__
       else
         to_print.push orf.length
         to_print.push orf.aa_sequence
+      end
+      
+      # Add nucleotide sequence if asked
+      if options['n']
+        unless orf
+          to_print.push nil 
+        else
+          to_print.push seq.seq[orf.start..orf.stop]
+        end
       end
       
       puts to_print.join("\t")
