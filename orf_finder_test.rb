@@ -192,14 +192,14 @@ MLRFLAVVALIATVNAGGYGLYGGGGYPGIYGTYGGYPSIYGGFGPGGVYGSINSYGGVSTGAYGLYGTSPAVRGAAQGA
       assert system("orf_finder.rb -n testFiles/orf_finder.fa >#{tempfile.path}")
       
       expecteds = [
-      'Longest Full ORF nucleotide sequence',
+      'Longest Orf with Start Codon Nucleotide',
       'ATGAAATAG',
       'ATGATGATGTAG',
       ]
       tempfile.read.split("\n").each_with_index do |line, i|
         splits = line.chomp.split("\t")
-        assert_equal 8, splits.length
-        assert_equal expecteds[i], splits[7]
+        assert_equal 10, splits.length
+        assert_equal expecteds[i], splits[9]
       end
     end
   end
