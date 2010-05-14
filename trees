@@ -16,7 +16,7 @@ require 'tempfile'
 USAGE = "Usage: trees [-r <repetitions>] <fasta_multiple_sequence_alignment>"
 options = {
   :repetitions => 1000,
-  :ml_repetitions => 100,
+  :ml_repetitions => 1000,
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
