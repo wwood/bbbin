@@ -12,12 +12,14 @@ ln -s ~/phd/data/berghei/genome/plasmodb/$PLASMODB_VERSION/PbergheiAllTranscript
 ln -s ~/phd/data/berghei/genome/plasmodb/$PLASMODB_VERSION/PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 ln -s ~/phd/data/berghei/genome/plasmodb/$PLASMODB_VERSION/PbergheiGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
 
-ln -s ~/phd/data/vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
-ln -s ~/phd/data/vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
+ln -s ~/phd/data/Plasmodium\ vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
+ln -s ~/phd/data/Plasmodium\ vivax/genome/plasmodb/$PLASMODB_VERSION/PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 
 ln -s ~/phd/data/falciparum/genome/plasmodb/$PLASMODB_VERSION/PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
 ln -s ~/phd/data/falciparum/genome/plasmodb/$PLASMODB_VERSION/PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
 ln -s ~/phd/data/falciparum/genome/plasmodb/$PLASMODB_VERSION/PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
+
+ln -s ~/phd/data/falciparum/genome/fullmal/5onepass/onepass_pf.fas
 
 ln -s ~/phd/data/Plasmodium\ chabaudi/genome/plasmodb/$PLASMODB_VERSION/PchabaudiGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
 ln -s ~/phd/data/Plasmodium\ chabaudi/genome/plasmodb/$PLASMODB_VERSION/PchabaudiAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
@@ -36,19 +38,10 @@ ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/Neospor
 ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta"
 ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumGenomic_ToxoDB-$TOXODB_VERSION.fasta"
 
-<<<<<<< HEAD:apicomplexan_blast_database_create.sh
 # CryptoDB
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
-=======
-# CrytpoDB
-ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
-ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
-ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
-
-
->>>>>>> 9d54877e664f54542696e4d39f3b65ef8d241d02:apicomplexan_blast_database_create.sh
 
 # concatenate the databases together
 echo "Concatenating the fasta files.."
@@ -72,6 +65,8 @@ cat\
  PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
  BabesiaWGS.fasta_with_names\
+ TANN.GeneDB.pep\
+ TPA1.pep\
  >apicomplexa.protein.fa 
 cat\
  PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta\
@@ -87,7 +82,7 @@ formatdb -p F -i apicomplexa.genome.fa
 
 #species-specific blast databases
 echo "formating toxo databases.."
-formatdb -i TgondiiME49AnnotatedProteins_ToxoDB-$CRYPTODB_VERSION.fasta
+formatdb -i TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta
 formatdb -p F -i TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta
 formatdb -p F -i TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta
 
@@ -111,6 +106,11 @@ formatdb -i PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 formatdb -p F -i PyoeliiAllTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
 formatdb -p F -i PyoeliiGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
 
+echo "formatting falciparum"
+formatdb -i PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
+formatdb -p F -i PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
+formatdb -p F -i PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
+
 echo "formatting chabaudi"
 formatdb -i PchabaudiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta
 formatdb -p F -i PchabaudiAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta
@@ -119,6 +119,11 @@ formatdb -p F -i PchabaudiGenomic_PlasmoDB-$PLASMODB_VERSION.fasta
 echo "creating Theileria databases.."
 cat TANN.GeneDB.pep TPA1.pep >theileria.pep
 formatdb -i theileria.pep
+
+echo "creating full malaria one pass database"
+cat onepass_pf.fas >fullmal
+formatdb -i fullmal -p F
+
 
 # Create Blat databases
 #faToTwoBit apicomplexa.protein.fa apicomplexa.protein.fa.2bit

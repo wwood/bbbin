@@ -12,15 +12,15 @@ class OrfFinderTest < Test::Unit::TestCase
     finder = OrfFinder.new
     
     # simple as
-    threads = finder.generate_longest_orfs('ATGTAG') #start stop
+    threads = finder.generate_longest_orfs('ATGATAAATAAATAG') #start stop
     assert_equal 3, threads.length
     assert_kind_of OrfThread, threads[1]
     assert_equal 1, threads[0].length
     t = threads[0]
     assert_equal 0, t[0].start
-    assert_equal 5, t[0].stop
-    assert_equal 0, threads[1].length
-    assert_equal 0, threads[2].length
+    assert_equal 14, t[0].stop
+    assert_equal 1, threads[1].length
+    assert_equal 1, threads[2].length
     
     # off 1 frame
     threads = finder.generate_longest_orfs('AATGTAG') #start stop
@@ -30,8 +30,8 @@ class OrfFinderTest < Test::Unit::TestCase
     t = threads[1]
     assert_equal 1, t[0].start
     assert_equal 6, t[0].stop
-    assert_equal 0, threads[0].length
-    assert_equal 0, threads[2].length
+    assert_equal 1, threads[0].length
+    assert_equal 1, threads[2].length
     
     # has an partial frame at the end
     threads = finder.generate_longest_orfs('ATGAAATAGATGAAA')
@@ -39,7 +39,7 @@ class OrfFinderTest < Test::Unit::TestCase
     assert_kind_of OrfThread, threads[1]
     assert_equal 2, threads[0].length
     assert_equal 1, threads[1].length
-    assert_equal 0, threads[2].length
+    assert_equal 1, threads[2].length
     t = threads[0]
     assert_equal 0, t[0].start
     assert_equal 8, t[0].stop
@@ -57,7 +57,7 @@ class OrfFinderTest < Test::Unit::TestCase
     #=> "KIDEIDE"
     threads = finder.generate_longest_orfs('AAAAATAGATGAAATAGATGAAT') #translate(3) => "K*MK*MN"
     assert_equal 1, threads[0].length
-    assert_equal 0, threads[1].length
+    assert_equal 1, threads[1].length
     assert_equal 3, threads[2].length
     t = threads[0]
     assert_equal 0, t[0].start
@@ -78,17 +78,17 @@ class OrfFinderTest < Test::Unit::TestCase
   
   def test_orf
     o = Orf::Orf.new
-      
+    
     o.aa_sequence = 'M*'
     assert_equal false, o.end_fragment?
-      
+    
     o.aa_sequence = 'KKK*'
     assert_equal true, o.end_fragment?
-      
+    
     o.aa_sequence = 'KKKT'
     assert_equal false, o.end_fragment?
   end
-    
+  
   # Am expecting to fail this for the moment, until I fix regex problems
   def test_middle_orf
     threads = OrfFinder.new.generate_longest_orfs('ATGTAGATGAAATAG')
@@ -107,18 +107,24 @@ class OrfFinderTest < Test::Unit::TestCase
   
   def test_longest_orf
     finder = OrfFinder.new
+    
     # test no orfs
-    assert_nil finder.longest_orf('ATTTTTTT')
+    assert_nil finder.longest_orf('AT')
+    
+    # test the whole thing is one ORF
+    o = finder.longest_orf('ATTTTTTTTTTTTTTTT')
+    assert o
+    assert_equal 'IFFFF', o.aa_sequence
     
     # test 2 orfs in the same frame
-    o = finder.longest_orf('ATGTAGATGAAATAG')
+    o = finder.longest_orf('ATGTAGATGATAAATAAATAG')
     assert o
-    assert_equal 3, o.length
+    assert_equal 'MINK*', o.aa_sequence
     
     # test 2 frames in different frames
     o = finder.longest_orf('ATGATGATGTAGAAAATGAAATAG')
     assert o
-    assert_equal 4, o.length, o.aa_sequence
+    assert_equal 'DDVENEI', o.aa_sequence
   end
   
   
@@ -132,7 +138,7 @@ class OrfFinderTest < Test::Unit::TestCase
     assert o
     assert_equal 'M*', o.aa_sequence
     assert_equal 2, o.length
-
+    
     
     # test 2 frames in different frames
     o = finder.longest_full_orf('ATGATGATGTAGAAAATGAAATAG')
@@ -150,7 +156,7 @@ class OrfFinderTest < Test::Unit::TestCase
     assert o
     assert_equal 'MKKK', o.aa_sequence
     assert_equal 4, o.length
-
+    
     
     # test 2 frames in different frames
     o = finder.longest_m_orf('ATGTAGAAAATGAAAAAA')
@@ -169,7 +175,7 @@ class OrfFinderTest < Test::Unit::TestCase
   end
   
   def test_command_line_protein
-    Tempfile.new('orf_finder_test') do |tempfile|
+    Tempfile.open('orf_finder_test') do |tempfile|
       assert system("orf_finder.rb -pf data/orf_finder_proteins.fa >#{tempfile.path}")
       expected = <<-END_OF_FASTA
 >Contig_Oyster_90_8089_1_95_7630_1_98_6720_1
@@ -178,6 +184,23 @@ MLRFIAIVALIATVNAKGGTYGIGVLPSVTYVSGGGGGGGYYPGSYGTYGGGYPVTYGGFGPGSVYGSINSFGGVSTSAY
 MLRFLAVVALIATVNAGGYGLYGGGGYPGIYGTYGGYPSIYGGFGPGGVYGSINSYGGVSTGAYGLYGTSPAVRGAAQGAATLSALGVASGVPSRVSGSSIGIGGGRALVSGSATPIGYYGVPYGGYSYGVPSYGYGYGYGYGYPSYGISYGYPGYGYGGYGGYGYPDVAYFGGSTYGNLATGAISSPTSGVTIPYGGALGLYGGYGGYGGYGLGYGGYGLGYGGYGLGYGGYGGGYGGYYGGYYPSYGSSLTGVSQSLSFGRAVMGGQAFGAGVPAFGSVNFGNFGVGTGGIYGPGIYGGGIYGGGGIYGGGATIIRRKKY*
       END_OF_FASTA
       assert_equal expected, tempfile.read
+    end
+  end
+  
+  def test_command_line_nucleotide_option
+    Tempfile.open('orf_finder_n_test') do |tempfile|
+      assert system("orf_finder.rb -n testFiles/orf_finder.fa >#{tempfile.path}")
+      
+      expecteds = [
+      'Longest Orf with Start Codon Nucleotide',
+      'ATGAAATAG',
+      'ATGATGATGTAG',
+      ]
+      tempfile.read.split("\n").each_with_index do |line, i|
+        splits = line.chomp.split("\t")
+        assert_equal 10, splits.length
+        assert_equal expecteds[i], splits[9]
+      end
     end
   end
 end

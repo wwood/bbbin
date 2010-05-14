@@ -33,7 +33,7 @@ p tree
 p phylip_to_fasta_name_hash
 tree.leaves.each do |node|
   newname = phylip_to_fasta_name_hash[node.name]
-  newname = phylip_to_fasta_name_hash[node.name.gsub(' ','_')] if newname.nil? #bit of a hack
+  newname = phylip_to_fasta_name_hash[node.name.gsub(/ \//,'_')] if newname.nil? #bit of a hack
   
   if newname
     node.name = newname

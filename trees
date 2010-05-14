@@ -13,7 +13,7 @@ require 'rubygems'
 require 'peach'
 require 'tempfile'
 
-USAGE = "Usage: trees [-r <repetitions>] <fasta_multiple_sequence_alignment>"
+USAGE = "Usage: trees [-r <repetitions>] [-m <maximum-likelyhood-repeats>] [-M <maximum-likelyhood-parameters>] [-p] <fasta_multiple_sequence_alignment>"
 options = {
   :repetitions => 1000,
   :ml_repetitions => 1000,
@@ -51,9 +51,9 @@ parsimony_options = distance_options
 parsimony_options = distance_options
 commands = [
   "trees_distance #{distance_options} #{fasta_file_input} >trees_distance.out",
-  "trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out",
-  "trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
-  "trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_bootstrap.out",
+  #"trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out",
+  #"trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
+  #"trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_bootstrap.out",
 ]
 
 # Add '_hpc' to the end of the first argument if requested
