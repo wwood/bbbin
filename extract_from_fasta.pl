@@ -49,17 +49,16 @@ if ($opt_f){
     if (s/[^[:print:]]+//g){
       print STDERR "WARNING: non-standard characters found in the name: '$_'. These were removed before extraction.\n"
     }
-    $seqnames{$_} = 1;
-    if ($opt_r){
-      push @seqnames, $_;
+    if (defined($seqnames{$_})){
+      $seqnames{$_} += 1;
+    } else {
+      $seqnames{$_} = 1;
+      if ($opt_r){
+	push @seqnames, $_;
+      }
     }
   }
 }
-
-
-
-
-
 
 
 
