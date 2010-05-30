@@ -300,17 +300,20 @@ if $0 == __FILE__
   else
     # Output a summary
     titles =  [
-      'Name',
-      'Longest ORF Length',
-      'Longest ORF Sequence',
-      'Longest Full ORF Length',
-      'Longest Full ORF Sequence',
-      'Longest Orf with Start Codon Length',
-      'Longest Orf with Start Codon Sequence'
+      'Name'
     ]
-    if options['n']
-      titles.push 'Longest Full ORF nucleotide sequence'
+    
+    ['Longest ORF',
+      'Longest Full ORF',
+      'Longest Orf with Start Codon',
+    ].each do |col|
+      titles.push "#{col} Length"
+      titles.push "#{col} Protein"
+      if options['n']
+        titles.push "#{col} Nucleotide"
+      end
     end
+    
     puts titles.join("\t")
     
     Bio::FlatFile.auto(input).each do |seq|
@@ -342,6 +345,15 @@ if $0 == __FILE__
         ]
       end
       
+      # Add nucleotide sequence if asked
+      if options['n']
+        unless orf
+          to_print.push nil 
+        else
+          to_print.push seq.seq[orf.start..orf.stop]
+        end
+      end
+      
       #must be a full orf
       if options['p']
         raise Exception, "longest_full_protein_orf not yet implemented"
@@ -355,6 +367,15 @@ if $0 == __FILE__
       else
         to_print.push orf.length
         to_print.push orf.aa_sequence
+      end
+      
+      # Add nucleotide sequence if asked
+      if options['n']
+        unless orf
+          to_print.push nil 
+        else
+          to_print.push seq.seq[orf.start..orf.stop]
+        end
       end
       
       #must be a full or
