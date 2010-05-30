@@ -24,7 +24,7 @@ module SignalSequence
           result = system("signalp -trunc 70 -format short -t euk #{tempfilein.path} >#{out.path}")
         
           if !result
-            raise Exception, "Running signalp program failed. See $? for details."
+            raise Exception, "Running signalp program failed. $? is #{$!.inspect}"
           end
           line = rio(out.path)[2][0].strip
           return SignalPResult.create_from_line(line)
@@ -165,7 +165,7 @@ if $0 == __FILE__
   if options['h']
     $stderr.puts "Usage: signalp.rb [-s] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. Default output is all the sequences with their signal sequences cleaved."
-    $stderr.puts "-s: summary: print a tab separated table indicating if the sequence had a signal peptide according to the HMM and NN results, respecitvely."
+    $stderr.puts "-s: summary: print a tab separated table indicating if the sequence had a signal peptide according to the HMM and NN results, respectively."
     return
   end
   
