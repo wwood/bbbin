@@ -2,9 +2,9 @@
 
 cd /blastdb
 
-PLASMODB_VERSION='6.1'
-TOXODB_VERSION='5.2'
-CRYPTODB_VERSION='4.2'
+PLASMODB_VERSION='6.4'
+TOXODB_VERSION='6.0'
+CRYPTODB_VERSION='4.3'
 
 # soft link the necessary files to the /blastdb folder
 # still missing a few species from this section
@@ -42,6 +42,10 @@ ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/Neospor
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/cryptoDB/$CRYPTODB_VERSION/CparvumGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
+
+ln -s ~/phd/data/Cryptosporidium\ homonis/genome/cryptoDB/$CRYPTODB_VERSION/ChomonisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
+ln -s ~/phd/data/Cryptosporidium\ homonis/genome/cryptoDB/$CRYPTODB_VERSION/ChomonisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
+ln -s ~/phd/data/Cryptosporidium\ homonis/genome/cryptoDB/$CRYPTODB_VERSION/ChomonisGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
 
 # concatenate the databases together
 echo "Concatenating the fasta files.."
