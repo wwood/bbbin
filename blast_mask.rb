@@ -48,8 +48,31 @@ class Hit
 end
 
 if __FILE__ == $0
+  require 'optparse'
+  
+  # Parse cmd line options
+  USAGE = "Usage: blast_mask.rb [-m] <fasta_filename> <blast_filename>"
+  options = {
+  :print_masked_sequences_only => false,
+  }
+  o = OptionParser.new do |opts|
+    opts.banner = USAGE
+    
+    opts.on("-m", "--masked-only", "Print out only those sequences that have blast hits (or equivalently, only those that are masked") do |v|
+      options[:print_masked_sequences_only] = true
+    end
+  end
+  o.parse!
+  
+  unless ARGV.length == 2
+    $stsderr.puts USAGE
+    exit 1
+  end
+  
   fasta_filename = ARGV[0]
   blast_filename = ARGV[1]
+  
+  
   
   # read in blast data
   blasts = {} #hash of sequence identifiers to arrays of blasthits
@@ -70,8 +93,9 @@ if __FILE__ == $0
       puts ">#{entry.entry_id}"
       puts masked
     else
-      # No matching blast hits recorded
-      puts entry
+      # No matching blast hits recorded. Print unless
+      # the config says not to print these ones
+      puts entry unless options[:print_masked_sequences_only]
     end
   end
 end

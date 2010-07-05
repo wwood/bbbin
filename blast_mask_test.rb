@@ -34,6 +34,12 @@ ATGCXXXCAA
 >Aqu1.200003
 ATGCA
 EOF
+    expected_masked_only=<<EOF
+>Aqu1.200001
+XXXXXTXX
+>Aqu1.200002
+ATGCXXXCAA
+EOF
     
     Tempfile.open('input_blast') do |tempfile_blast|
       tempfile_blast.puts input_blast
@@ -46,6 +52,11 @@ EOF
         Tempfile.open('expected') do |tempfile_expected|
           `blast_mask.rb #{tempfile_fasta.path} #{tempfile_blast.path} >#{tempfile_expected.path}`
           assert_equal expected, File.open(tempfile_expected.path,'r').read
+        end
+        
+        Tempfile.open('expected') do |tempfile_expected|
+          `blast_mask.rb -m #{tempfile_fasta.path} #{tempfile_blast.path} >#{tempfile_expected.path}`
+          assert_equal expected_masked_only, File.open(tempfile_expected.path,'r').read
         end
       end
     end
