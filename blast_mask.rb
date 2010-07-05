@@ -2,6 +2,7 @@
 
 require 'rubygems'
 require 'bio'
+require 'fastercsv'
 
 # A script to mask out certain sections of a fasta file as
 # specified by their homology to some blast database
@@ -36,6 +37,7 @@ end
 class Hit
   attr_accessor :from, :to
   def initialize(from, to)
+    raise Exception, "Integers needed" unless from.kind_of?(Integer) and to.kind_of?(Integer)
     @from = from
     @to = to
   end
@@ -51,21 +53,25 @@ if __FILE__ == $0
   
   # read in blast data
   blasts = {} #hash of sequence identifiers to arrays of blasthits
-  File.foreach(blast_filename, :col_sep => "\t") do |row|
+  FasterCSV.foreach(blast_filename, :col_sep => "\t") do |row|
     query = row[0]
-    from = row[6]
-    to = row[7]
+    from = row[6].to_i
+    to = row[7].to_i
     
     blasts[query] ||= BlastHitArray.new
     blasts[query].push Hit.new(from, to)
   end
   
   # read and print fasta file with the masking done
-  Bio::FlatFile.foreach(ARGV[1], Bio::FastaFormat) do |entry|
-    if blasts[entry_id]
-      
+  Bio::FlatFile.foreach(Bio::FastaFormat, fasta_filename) do |entry|
+    # Apply masking if required
+    if blasts[entry.entry_id]
+      masked = blasts[entry.entry_id].masked_sequence(entry.seq)
+      puts ">#{entry.entry_id}"
+      puts masked
     else
-      puts entry.to_s
+      # No matching blast hits recorded
+      puts entry
     end
   end
 end
