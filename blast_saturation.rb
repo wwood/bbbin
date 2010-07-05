@@ -9,7 +9,9 @@ if __FILE__ == $0
   require 'optparse'
   
   # Parse options
+  # require fasta input
   # should be able to set number deep at each point
+  # should be able to set arbitrary blast parameters
   
   # run the initial blast
   # start the blast output file
