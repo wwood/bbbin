@@ -61,4 +61,41 @@ EOF
       end
     end
   end
+  
+  def test_complex_name_line
+    input_blast = <<EOF
+Aqu1.200001 one	Aqu1.200001	100.00	294	0	0	1	5	1	294	2e-166	583
+EOF
+    input_fasta= <<EOF
+>Aqu1.200001 blah
+ATGCATGC
+>Aqu1.200001 one
+ATGCATGC
+>Aqu1.200001 two
+ATGCATGC
+EOF
+
+    expected= <<EOF
+>Aqu1.200001 blah
+ATGCATGC
+>Aqu1.200001 one
+XXXXXTGC
+>Aqu1.200001 two
+ATGCATGC
+EOF
+    Tempfile.open('input_blast') do |tempfile_blast|
+      tempfile_blast.puts input_blast
+      tempfile_blast.close
+      
+      Tempfile.open('input_blast') do |tempfile_fasta|
+        tempfile_fasta.puts input_fasta
+        tempfile_fasta.close
+        
+        Tempfile.open('expected') do |tempfile_expected|
+          `blast_mask.rb #{tempfile_fasta.path} #{tempfile_blast.path} >#{tempfile_expected.path}`
+          assert_equal expected, File.open(tempfile_expected.path,'r').read
+        end
+      end
+    end
+  end
 end

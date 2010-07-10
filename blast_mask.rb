@@ -88,9 +88,9 @@ if __FILE__ == $0
   # read and print fasta file with the masking done
   Bio::FlatFile.foreach(Bio::FastaFormat, fasta_filename) do |entry|
     # Apply masking if required
-    if blasts[entry.entry_id]
-      masked = blasts[entry.entry_id].masked_sequence(entry.seq)
-      puts ">#{entry.entry_id}"
+    if blasts[entry.definition]
+      masked = blasts[entry.definition].masked_sequence(entry.seq)
+      puts ">#{entry.definition}"
       puts masked
     else
       # No matching blast hits recorded. Print unless
