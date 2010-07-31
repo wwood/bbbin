@@ -9,7 +9,6 @@ class Blaster
   def blast(fasta_filename, blast_options, output_filename, blast_iteration_number)
     $stderr.puts "Running blast ##{blast_iteration_number}, starting at #{`date`}"
     # Do the actual blast
-    `cat #{fasta_filename}`
     cmd = "blastall -m 8 -i '#{fasta_filename}' -o #{output_filename} #{blast_options}"
     `#{cmd}`
     print `cat #{output_filename}` #output to the user each of the blast results
