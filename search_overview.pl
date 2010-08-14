@@ -111,7 +111,7 @@ while( my $r = $parser->next_result ) {
 	my $bin = 0;
 	my $score = $h->score;
 	for my $s ( @SCORES ) {
-	    #last if( $score > $s);
+	    last if( $score > $s);
 	    $bin++;
 	}
 	push @features, Bio::Graphics::Feature->new(-start   => $left,
