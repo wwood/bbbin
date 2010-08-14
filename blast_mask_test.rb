@@ -12,6 +12,12 @@ class BlastMaskTest < Test::Unit::TestCase
     assert_equal 'XXX', b.masked_sequence('ABC')
   end
   
+  def test_reverse
+    b = BlastHitArray.new
+    b.push Hit.new(3,1)
+    assert_equal 'XXXB', b.masked_sequence('ABCB')
+  end
+  
   def test_command_line
     input_blast = <<EOF
 Aqu1.200001	Aqu1.200001	100.00	294	0	0	1	5	1	294	2e-166	583
@@ -74,7 +80,7 @@ ATGCATGC
 >Aqu1.200001 two
 ATGCATGC
 EOF
-
+    
     expected= <<EOF
 >Aqu1.200001 blah
 ATGCATGC
