@@ -43,7 +43,7 @@ if __FILE__ == $0
   
   # Parse options
   USAGE = [
-  'Usage: blast_saturation.rb [-p <blast+_program>] -f <fasta_filename> -b <blast_options>',
+  'Usage: blast_saturation.rb [-q] [-p <blast+_program>] -f <fasta_filename> -b <blast_options>',
   
   ]
   options = {
@@ -72,7 +72,7 @@ if __FILE__ == $0
       options[:blast_plus_program] = v
     end
     
-    opts.on('-q','--quiet','Opposite of verbose') do
+    opts.on('-q','--quiet','Opposite of verbose. Default is off (default)') do
       options[:verbose] = false
     end
   end
@@ -107,6 +107,7 @@ if __FILE__ == $0
     $stderr.puts "Masking the fasta file parts that have blast hits, starting at #{`date`}" if options[:verbose]
     masked_fasta_file = Tempfile.new("masked_fasta#{blast_iteration_number}")
     `blast_mask.rb -m #{last_masked_file.path} #{blast_result_file.path} >#{masked_fasta_file.path}`
+    #$stderr.puts `cat #{masked_fasta_file.path}` #debug
     blast_iteration_number += 1
     # redo the blast, this time using the masked sequence as input
     blast_result_file = Tempfile.new("blast_saturation#{blast_iteration_number}")
