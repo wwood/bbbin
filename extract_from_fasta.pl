@@ -20,7 +20,7 @@ if ($#ARGV != 0 && $#ARGV != 1)
     print STDERR "-r use regular expressions in the names of the sequences\n";
     print STDERR "-f extract multiple sequences. Sequence names/regular expressions are defined in\n";
     print STDERR "   a newline separated list file\n";
-    print STDERR "-v reverse. Print out sequences that don't match (cf grep -v)\n"
+    print STDERR "-v reverse. Print out sequences that don't match (cf grep -v)\n";
     print STDERR "-g input a gff file with the names of the sequences in the first col, \n";
     print STDERR "   and chop out the sequence up so with the coordinates given in the start/stop\n";
     print STDERR "   columns, except with 2kb on each side.\n";
