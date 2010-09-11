@@ -1,0 +1,5 @@
+identifier	seq length	start	end	period	copy#	multiple sequence alignment	consensus (no gaps)	consensus (w/gaps)	consensus error
+PF123 456 | blah	33	1	24	1	24.00	A A A A A A A A A A A A A A A A A A A A A A A A	A	A	.00
+PF123 456 | blah	33	29	33	1	5.00	T T T T T	T	T	.00
+PF123 456vfd | blah	16	12	16	1	5.00	T T T T T	T	T	.00
+PF123 456vfd | blah	16	2	7	1	6.00	G G G G G G	G	G	.00
