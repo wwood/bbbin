@@ -43,7 +43,12 @@ class Hit
   end
   
   def contains?(one_based_index)
-    one_based_index >= from and one_based_index <= to
+    # If hit is a forward hit
+    if from < to
+      one_based_index >= from and one_based_index <= to
+    else #If hit is a reverse hit
+      one_based_index >= to and one_based_index <= from
+    end
   end
 end
 

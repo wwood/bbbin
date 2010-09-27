@@ -67,7 +67,7 @@ cat\
  PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
  NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
- GeneDB_Etenella_Proteins\
+# GeneDB_Etenella_Proteins\
  PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
