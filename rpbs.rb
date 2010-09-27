@@ -92,7 +92,7 @@ if $0 == __FILE__
       options[:job_name] = v
     end
     
-    opts.on("-n", "--nodes NODES_STRING", String, "nodes string to be used in the pbs script e.g. 'nodes=1,ppn=4'. Default: #{Pbs::DEFAULT_PARAMETERS[:nodes]}") do |v|
+    opts.on("-n", "--nodes NODES_STRING", String, "nodes string to be used in the pbs script e.g. 'nodes=1:ppn=4'. Default: #{Pbs::DEFAULT_PARAMETERS[:nodes]}") do |v|
       options[:nodes] = v
     end
     

@@ -43,9 +43,13 @@ ln -s ~/phd/data/Cryptosporidium\ parvum/genome/CryptoDB/$CRYPTODB_VERSION/Cparv
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/CryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/CryptoDB/$CRYPTODB_VERSION/CparvumGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
 
-ln -s ~/phd/data/Cryptosporidium\ homonis/genome/CryptoDB/$CRYPTODB_VERSION/ChomonisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
-ln -s ~/phd/data/Cryptosporidium\ homonis/genome/CryptoDB/$CRYPTODB_VERSION/ChomonisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
-ln -s ~/phd/data/Cryptosporidium\ homonis/genome/CryptoDB/$CRYPTODB_VERSION/ChomonisGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
+ln -s ~/phd/data/Cryptosporidium\ hominis/genome/CryptoDB/$CRYPTODB_VERSION/ChomonisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
+ln -s ~/phd/data/Cryptosporidium\ hominis/genome/CryptoDB/$CRYPTODB_VERSION/ChomonisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
+ln -s ~/phd/data/Cryptosporidium\ hominis/genome/CryptoDB/$CRYPTODB_VERSION/ChomonisGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
+
+# Random
+ln -s ~/phd/data/Theileria\ parva/TPA1.pep
+ln -s ~/phd/data/Theileria\ annulata/TANN.GeneDB.pep
 
 # concatenate the databases together
 echo "Concatenating the fasta files.."
@@ -61,7 +65,7 @@ cat\
  >apicomplexa.nucleotide.fa
 cat\
  PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
- TgondiiAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
+ TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
  NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
  GeneDB_Etenella_Proteins\
  PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
