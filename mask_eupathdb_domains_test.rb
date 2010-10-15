@@ -2,7 +2,6 @@ require "test/unit"
 require 'mask_eupathdb_domains'
 
 class EuPathDBDomainAnnotationFileTest < Test::Unit::TestCase
-  
   def test_parse_line
     line = <<EOF
 PFI1830c	SUPERFAMILY	SSF101967	0042205	1895	2072	  1.7E-03

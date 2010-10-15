@@ -24,40 +24,13 @@ while(defined($cur = $original->next_seq()))
 
 # Print the number of sequences in the input file
 # Print in media-wiki table format
-print '{| border="1" cellspacing="0" cellpadding="5" align="center"';
-print "\n";
-print "!Number\n";
-print "!Name\n";
-print "!Length\n";
+print "Number\tName\tLength\n";
+
+my $separater_string = "\t";
 
 foreach $i (0..$#seqs){
-  print "|-\n";
-
-  print "|";
   $j = $i+1;
-  print "$j";
-  print "\n";
 
-  print "|";
-  print $seqs[$i]->display_id();
-  print "\n";
-
-  print "|";
-  print $seqs[$i]->length();
-  print "\n";
-
-  #print $seqs[$i]->subseq(1,10);
-  #print "\n";
+  print $j.$separater_string.$seqs[$i]->display_id().$separater_string.$seqs[$i]->length()."\n";
 }
-
-print "|}\n";
-
-#{| border="1" cellspacing="0" cellpadding="5" align="center"
-#!Name
-#!Length
-#|-
-#|Contig0.1      
-#|2693
-#|-
-
 

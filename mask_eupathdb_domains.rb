@@ -1,4 +1,4 @@
-#!/usr/bin/env
+#!/usr/bin/env ruby
 
 class EuPathDB
   class Domain
@@ -39,5 +39,39 @@ class EuPathDB
       d.evalue = splits[6].strip.to_f
       d
     end
+  end
+end
+
+
+
+# Acting as a script
+if $0 == __FILE__
+  require 'rubygems'
+  require 'bio'
+  
+  # Input a fasta file
+  unless ARGV.length == 2
+    $stderr.puts "Usage: #{$0} <fasta_file> <eupathdb_domain_definition_file>"
+    exit
+  end
+  
+  fasta_file = ARGV[0]
+  domain_file = ARGV[1]
+  
+  domain_hash = EuPathDB::DomainAnnotationFile.new(File.open(domain_file)).domain_hash
+  Bio::FlatFile.open(fasta_file).entries.each do |s|
+    sequence = s.seq
+    puts ">#{s.definition}"
+    
+    if domain_hash[s.entry_id]
+      domain_hash[s.entry_id].each do |d|
+        (d.start..d.stop).each do |n|
+          # -1 is required to convert between 1-based indices of the EuPath file
+          # and 1 based indices of ruby string representation 
+          sequence[n-1..n-1] = 'X'
+        end
+      end
+    end
+    puts sequence
   end
 end
