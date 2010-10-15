@@ -282,7 +282,7 @@ if $0 == __FILE__
     $stderr.puts "-p: protein. Start from an amino acid sequence, not a nucleotide sequence"
     $stderr.puts "-m: Only return ORFs starting with a Methionine. Doesn't make sense unless used with -f"
     $stderr.puts "-n: Output nucleotide sequence. Currently incompatible with fasta (-f) output."
-    return
+    exit
   end
   
   # first argument or failing that, stdin to input the fasta file
