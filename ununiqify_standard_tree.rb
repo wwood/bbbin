@@ -107,9 +107,14 @@ OptionParser.new do |opts|
     options[:common_names] = v
   end
 
-  opts.on("-m", "--manual-names MANUAL_NAMES_FILENAME", "Read a hash of regular expression => wanted names for a node, so that figures can be recreated more easily") do |v|
+  opts.on("-m", "--manual-names MANUAL_NAMES_FILENAME", "Read a hash of regular expression => wanted names for a node, so that figures can be recreated more easily (may be BUGGGGY)") do |v|
     require v
     options[:manual_names] = MANUAL_NAMES
+  end
+
+  opts.on("-p", "--phylip-manual-names MANUAL_NAMES_FILENAME", "Read a hash of names in the uniqued phylip file => wanted names for a node, so that figures can be recreated more easily") do |v|
+    require v
+    options[:phylip_manual_names] = PHYLIP_MANUAL_NAMES
   end
 end.parse!
 
@@ -130,14 +135,15 @@ phylip_to_fasta_name_hash = {}
 fasta_seqs.each_with_index do |fasta_name, i|
   phylip_to_fasta_name_hash[phylip_seqs[i].definition] = fasta_name.definition
 end
-p phylip_to_fasta_name_hash = {}
+phylip_to_fasta_name_hash = {}
 
 # for each node of the tree, rename. warn if there is no hash match
 tree = Bio::FlatFile.open(Bio::Newick, ARGV[2]).entries[0].tree
 tree.leaves.each do |node|
 
   # Priority of renaming:
-  # 1. manually specified as a string in the manual_names hash
+  # 0. manually specified names of the uniqued phylip file
+  # 1. manually specified as a string in the manual_names hash, where the key is the fasta filename
   # 2. manually specified as a regular expression in the manual_names hash
   # 3. using TipLabel to rename common species
   # 4. Use the original name (and warn that this is happening)
@@ -148,7 +154,17 @@ tree.leaves.each do |node|
 
   manualled = false
 
+  # 0. manually specified names of the uniqued phylip file
+  options[:phylip_manual_names].each do |key, value|
+    next unless key.kind_of?(String)
+    if key == node.name
+      newname = value
+      manualled = true
+    end
+  end
+
   # 1. manually specified as a string in the manual_names hash
+unless manualled
   options[:manual_names].each do |key, value|
     next unless key.kind_of?(String)
     if key == newname
@@ -156,6 +172,7 @@ tree.leaves.each do |node|
       manualled = true
     end
   end
+end
 
   # 2. manually specified as a regular expression in the manual_names hash
   unless manualled
