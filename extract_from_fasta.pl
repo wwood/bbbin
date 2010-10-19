@@ -5,8 +5,8 @@ use Bio::SeqIO;
 use Getopt::Std;
 
 
-our ($opt_r, $opt_f, $opt_g, $opt_v);
-getopts('rfgv');
+our ($opt_r, $opt_f, $opt_g, $opt_v, $opt_F);
+getopts('rfgvF');
 
 
 
@@ -21,6 +21,7 @@ if ($#ARGV != 0 && $#ARGV != 1)
     print STDERR "-f extract multiple sequences. Sequence names/regular expressions are defined in\n";
     print STDERR "   a newline separated list file\n";
     print STDERR "-v reverse. Print out sequences that don't match (cf grep -v)\n";
+    print STDERR "-F first only. Match only the first part of the fasta name, i.e. the everything before the first space character or fasta name.\n";
     print STDERR "-g input a gff file with the names of the sequences in the first col, \n";
     print STDERR "   and chop out the sequence up so with the coordinates given in the start/stop\n";
     print STDERR "   columns, except with 2kb on each side.\n";
@@ -71,9 +72,12 @@ while (my $seq = $seqio->next_seq){
 
   # I want the whole of the line, not just the display_id.
   # Annoying how there is no function in bioperl to do this.
+  # That is, I want it unless -F (first only) is specified.
   my $displayId = $seq->display_id;
-  if ($seq->desc){
-    $displayId .= ' '.$seq->desc;
+  unless ($opt_F){
+    if ($seq->desc){
+      $displayId .= ' '.$seq->desc;
+    }
   }
 
   if ($opt_f){ #file of exact matches
