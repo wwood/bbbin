@@ -5,9 +5,8 @@ use Bio::SeqIO;
 use Getopt::Std;
 
 
-our ($opt_r, $opt_f, $opt_g, $opt_v, $opt_F);
-getopts('rfgvF');
-
+our ($opt_r, $opt_f, $opt_g, $opt_v, $opt_F, $opt_s);
+getopts('rf:gvFs:');
 
 
 # given a fasta file with multiple sequences, extract a single sequence
@@ -22,6 +21,7 @@ if ($#ARGV != 0 && $#ARGV != 1)
     print STDERR "   a newline separated list file\n";
     print STDERR "-v reverse. Print out sequences that don't match (cf grep -v)\n";
     print STDERR "-F first only. Match only the first part of the fasta name, i.e. the everything before the first space character or fasta name.\n";
+    print STDERR "-s sequence. Match using the sequence of an input fasta file, not the IDs at all. Incompatible with everything else, except -v\n";
     print STDERR "-g input a gff file with the names of the sequences in the first col, \n";
     print STDERR "   and chop out the sequence up so with the coordinates given in the start/stop\n";
     print STDERR "   columns, except with 2kb on each side.\n";
@@ -29,15 +29,30 @@ if ($#ARGV != 0 && $#ARGV != 1)
     exit;
   }
 
-my $seqname = $ARGV[0];
+# For regular, normal matches given on the command line.
+my $seqname = undef;
+unless ($opt_f or $opt_s){
+  $seqname = shift @ARGV;
+}
 
 my @lines = ();
 my $seqio = '';
-if ($#ARGV==0){
+if ($#ARGV==-1){
   $seqio = Bio::SeqIO->new(-fh => \*STDIN, -format => 'Fasta');
 } else {
-  $seqio = Bio::SeqIO->new(-file => $ARGV[1], -format => 'Fasta');
+  $seqio = Bio::SeqIO->new(-file => shift @ARGV, -format => 'Fasta');
 }
+
+
+
+# Check for incompatible arguments
+if ($opt_s){
+  if ($opt_f or $opt_r or $opt_g or $opt_F){
+    print STDERR "-s is incompatible with -f, -r, -F and -g\n";
+    exit 1;
+  }
+}
+
 
 
 # If an input file of sequence names is specified, use that instead
@@ -45,7 +60,7 @@ if ($#ARGV==0){
 my %seqnames = ();
 my @seqnames = ();
 if ($opt_f){
-  open NAMES, $ARGV[0] or die "couldn't open file with gene names: $ARGV[0]";
+  open NAMES, $opt_f or die "couldn't open file with gene names: '$opt_f'";
   foreach(<NAMES>){
     chomp;
     if (s/[^[:print:]]+//g){
@@ -61,6 +76,28 @@ if ($opt_f){
     }
   }
 }
+
+
+# This next stanza of code concerns the -s flag
+my %seq_to_id_hash = (); #hash of fasta sequences to IDs, so reporting problems when -s is specified is more coherent
+if ($opt_s){
+  # Read in fasta file of probe sequences
+  $input_seqio = Bio::SeqIO->new(-file => $opt_s, -format => 'Fasta');
+  while (my $seq = $input_seqio->next_seq){
+    # Save the seq as a key in %seq_to_id_hash, where the value is the ID
+    my $displayId = $seq->display_id;
+    if ($seq->desc){
+      $displayId .= ' '.$seq->desc;
+    }
+
+    my $new_seq = $seq->seq;
+    $new_seq =~ s/\*$//; #remove trailing stop codon if one exists
+    $seq_to_id_hash{$new_seq} = $displayId;
+    $seqnames{$displayId}++;
+  }
+}
+
+
 
 
 
@@ -101,17 +138,28 @@ while (my $seq = $seqio->next_seq){
 	$seqnames{$displayId}++;
       }
     }
+  } elsif ($opt_r){#regular expression match
+    if ($displayId =~ m/$seqname/){
+      $matches = 1;
+      $any_matches = 1;
+    }
+  } elsif ($opt_s){#sequence match
+    # remove trailing stop codon
+    my $new_seq = $seq->seq;
+    $new_seq =~ s/\*$//;
+    if ($seq_to_id_hash{$new_seq}){
+      $matches = 1;
+      $any_matches = 1;
+      $seqnames{$seq_to_id_hash{$new_seq}}++;
+    }
   } elsif ($displayId eq $seqname){# exact match
-    $matches = 1;
-    $any_matches = 1;
-  } elsif ($opt_r && $displayId =~ m/$seqname/){ #regular expression match
     $matches = 1;
     $any_matches = 1;
   }
 
 
   # if normal and matches, print the sequence
-  # if inverse and not matches, print it
+  # elsif inverse and not matches, print it
   if ((!$opt_v && $matches) || ($opt_v && !$matches)){
     &print_seq($seq);
   }
@@ -121,7 +169,7 @@ while (my $seq = $seqio->next_seq){
 
 # If there was a file used, check to make sure each of the sequences
 # specified were actually found in the file.
-if ($opt_f){
+if ($opt_f or $opt_s){
   while (my ($key, $value) = each(%seqnames)){
     # $value by default is 1 because otherwise it isn't true in an if
     # statement.
