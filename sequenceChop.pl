@@ -11,7 +11,7 @@ our($opt_f, $opt_n);
 getopts('f:n');
 
 if ($#ARGV != 2) {
-  print "usage: sequenceChop.pl <fasta> <start> <stop>\n";
+  print "usage: sequenceChop.pl [-f <chopping_definitions>] <fasta> <start> <stop>\n";
   print "output is piped to command line. 1-2 are the first two
            bases of the sequence.\n";
   print "if <fasta> is '-', then input is from STDIN, not a file.\n";
@@ -46,7 +46,7 @@ if ($opt_f){
     chomp;
     my @splits = split /\t/, $_;
     unless ($#splits == 2){
-      die "file specifying where to chop is not defined correctly - should be name, start, stop split by whitespace. It is `$_'\n";
+      die "file specifying where to chop is not defined correctly - should be name, start, stop split by tabs. It is `$_'\n";
     }
     my $name = $splits[0];
     $seq_to_start_hash{$name} = int $splits[1];
@@ -57,6 +57,8 @@ if ($opt_f){
 
 $original_start = $start;
 $original_stop = $stop;
+$total_start_bumpers = 0;
+$total_end_bumpers = 0;
 
 # Print the chopped file
 while ($cur_seq = $original->next_seq()) {
@@ -64,11 +66,14 @@ while ($cur_seq = $original->next_seq()) {
   #Reset the things
   $start = $original_start;
   $stop = $original_stop;
+  #Record if the start and end have been hit
+  $hit_start = 0;
+  $hit_end = 0;
 
   if ($opt_f){
     my $name = $cur_seq->display_id;
     unless ($seq_to_start_hash{$name}){
-      die "Unable to find display id `".$cur_seq->display_id."'!\n";
+      die "Unable to find display id `".$cur_seq->display_id."' in the chopping definition file!\n";
     }
     $start_f = $seq_to_start_hash{$name};
     $stop_f = $seq_to_stop_hash{$name};
@@ -76,12 +81,13 @@ while ($cur_seq = $original->next_seq()) {
     $stop = $stop+$stop_f;
   }
 
-
   if ($start eq '-') {
     $start = 1;
+    $hit_start = 1;
   }
   if ($stop eq '-') {
     $stop = $cur_seq->length;
+    $hit_end = 1;
   }
   # Convert negative values into positive ones since bioperl can't handle it
   if ($start < 0) {
@@ -99,11 +105,28 @@ while ($cur_seq = $original->next_seq()) {
     }
   }
 
-  if ($cur_seq->description) {
-    print ">".$cur_seq->display_id().' '.$cur_seq->description()."_chopped_$start-$stop\n";
-  } else {
-    print ">".$cur_seq->display_id()."_chopped_$start-$stop\n"
+  # Round off the sequences so they begin and end within the sequence
+  if ($start < 0){
+    $start = 1;
+    $hit_start = 1;
   }
+  if ($stop >= $cur_seq->length){
+    $stop = $cur_seq->length;
+    $hit_end = 1;
+  }
+  $total_start_bumpers += 1 if $hit_start;
+  $total_end_bumpers += 1 if $hit_end;
+
+  print ">".$cur_seq->display_id();
+  if ($cur_seq->description) {
+    print ' '.$cur_seq->description();
+  }
+  print "_chopped_";
+  print '^' if $hit_start;
+  print "$start-$stop";
+  print '$' if $hit_end;
+  print "\n";
+
 
   # If the sequence is less than the stop, then just use the whole sequence
   if ($stop > $cur_seq->length) {
@@ -115,3 +138,11 @@ while ($cur_seq = $original->next_seq()) {
   print $cur_seq->subseq($start,$stop);
   print "\n";
 }
+
+if ($total_start_bumpers > 0){
+  print STDERR "Hit the start on $total_start_bumpers sequence(s)\n";
+}
+if ($total_end_bumpers > 0){
+  print STDERR "Hit the end on $total_end_bumpers sequence(s)\n";
+}
+
