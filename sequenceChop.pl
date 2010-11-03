@@ -106,7 +106,7 @@ while ($cur_seq = $original->next_seq()) {
   }
 
   # Round off the sequences so they begin and end within the sequence
-  if ($start < 0){
+  if ($start < 1){
     $start = 1;
     $hit_start = 1;
   }
