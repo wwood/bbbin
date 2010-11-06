@@ -65,7 +65,7 @@ ln -s ~/phd/data/Theileria\ annulata/TANN.GeneDB.pep
 ln -s ~/phd/data/Babesia\ bovis/BabesiaWGS.fasta_with_names
 
 # Outside Apicomplexa
-ln -s ~/phd/data/Perknsus\ marinus/RefSeq/20101102/Pmarinus.protein.fa
+ln -s ~/phd/data/Perkinsus\ marinus/RefSeq/20101102/Pmarinus.protein.fa
 
 # concatenate the databases together
 echo "Concatenating the fasta files.."
