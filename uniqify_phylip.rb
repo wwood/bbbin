@@ -7,7 +7,7 @@ DEFAULT_NAME_CHARS = 10
 require 'optparse'
 
 # ununiqify_ensembl_tree.rb ../ensembl.cbm48.fa uniqued.phylip consense.outtree
-USAGE = "Usage: uniqify_phylip [-n] <phylip_file>"
+USAGE = "Usage: uniqify_phylip [-n <number_characters>] <phylip_file>"
 options = {
   :name_chars => DEFAULT_NAME_CHARS
 }

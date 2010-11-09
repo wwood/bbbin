@@ -66,9 +66,26 @@ ln -s ~/phd/data/Babesia\ bovis/BabesiaWGS.fasta_with_names
 
 # Outside Apicomplexa
 ln -s ~/phd/data/Perknsus\ marinus/RefSeq/20101102/Pmarinus.protein.fa
+ln -s ~/phd/data/Paramecium\ tetrauelia/genome/ParameciumDB/Ptetraurelia_peptides_v1.49.fasta
+ln -s ~/phd/data/Tetrahymena\ thermophila/Preliminary_Gene_Predictions_Aug_2004.pep
 
 # concatenate the databases together
 echo "Concatenating the fasta files.."
+export APICOMPLEXAN_PROTEIN_DATABASES=`echo\
+ PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
+ NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
+ PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PknowlesiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ PchabaudiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
+ CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
+ ChominisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
+ CmurisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
+ BabesiaWGS.fasta_with_names\
+ TANN.G.eneDB.pep\
+ TPA1.pep`
 cat\
  PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
@@ -83,28 +100,17 @@ cat\
  ChominisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta\
  CmurisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta\
  >apicomplexa.nucleotide.fa
-cat\
- PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
- TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
- NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
- PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
- PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
- PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
- PknowlesiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
- PchabaudiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
- CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
- ChominisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
- CmurisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
- BabesiaWGS.fasta_with_names\
- TANN.GeneDB.pep\
- TPA1.pep\
- Pmarinus.protein.fa\
- >apicomplexa.protein.fa 
+cat $APICOMPLEXAN_PROTEIN_DATABASES >apicomplexa.protein.fa 
 cat\
  PfalciparumGenomic_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiME49Genomic_ToxoDB-$TOXODB_VERSION.fasta\
  >apicomplexa.genome.fa
 
+echo "creating alveolate protein db"
+sed 's/>/>Pmarinus_/' Pmarinus.protein.fa >alveolata.protein.fa
+sed 's/>/>Tthermaphila_/' Preliminary_Gene_Predictions_Aug_2004.pep >>alveolata.protein.fa
+sed 's/>/>Ptetraurelia_/' Ptetraurelia_peptides_v1.49.fasta >>alveolata.protein.fa
+cat $APICOMPLEXAN_PROTEIN_DATABASES\ >>alveolata.protein.fa
 
 # Create Blast databases
 echo "formating apicomplexan-wide databases.."

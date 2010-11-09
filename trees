@@ -13,10 +13,11 @@ require 'rubygems'
 require 'peach'
 require 'tempfile'
 
-USAGE = "Usage: trees [-r <repetitions>] [-m <maximum-likelyhood-repeats>] [-M <maximum-likelyhood-parameters>] [-p] <fasta_multiple_sequence_alignment>"
+USAGE = "Usage: trees [-r <repetitions>] [-m <maximum-likelyhood-repeats>] [-M <maximum-likelyhood-parameters>] [-p] [-t [dpml]] <fasta_multiple_sequence_alignment>"
 options = {
   :repetitions => 1000,
   :ml_repetitions => 1000,
+  :methods => 'dpml',
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
@@ -37,6 +38,10 @@ OptionParser.new do |opts|
   opts.on('-M', "--maximum-likelyhood-parameters ARGUMENTS", "Parameters to pass to the maximum likelyhood program as is (Currently phyml)") do |v|
     options[:likelyhood_parameters] = v
   end
+  
+  opts.on('-t', "--methods METHODS", "Only the the following tree types: d for distance, p for parsimony, m for maximum likelihood with bootstrap, l for maximum likelihood with aLRT. For multiple methods put the letters together, order shouldn't matter.") do |v|
+    options[:methods] = v
+  end
 end.parse!
 
 if ARGV.length != 1
@@ -49,12 +54,19 @@ distance_options = ''
 distance_options = "#{distance_options} -r #{options[:repetitions]}" if options[:repetitions]
 parsimony_options = distance_options
 parsimony_options = distance_options
-commands = [
-  "trees_distance #{distance_options} #{fasta_file_input} >trees_distance.out",
-  #"trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out",
-  #"trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
-  #"trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_bootstrap.out",
-]
+commands = []
+if options[:methods].include?('d')
+  commands.push "trees_distance #{distance_options} #{fasta_file_input} >trees_distance.out"
+end
+if options[:methods].include?('p')
+  commands.push "trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out"
+end
+if options[:methods].include?('l')
+  commands.push "trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
+end
+if options[:methods].include?('m')
+  commands.push "trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_bootstrap.out"
+end
 
 # Add '_hpc' to the end of the first argument if requested
 if options[:pbs]

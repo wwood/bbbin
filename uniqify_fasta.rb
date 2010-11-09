@@ -4,7 +4,7 @@
 # cannot handle it
 
 require 'bio'
-require '/home/ben/bin/uniq'
+require File.dirname(__FILE__) + '/uniq'
 
 entries = Bio::FlatFile.open(ARGF).entries
 uniq = Uniq.new
