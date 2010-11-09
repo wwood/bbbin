@@ -62,7 +62,7 @@ if options[:methods].include?('p')
   commands.push "trees_parsimony #{parsimony_options} #{fasta_file_input} >trees_parsimony.out"
 end
 if options[:methods].include?('l')
-  commands.push "trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out",
+  commands.push "trees_ml -d trees_ml_likelyhood #{fasta_file_input} >trees_ml_likelyhood.out"
 end
 if options[:methods].include?('m')
   commands.push "trees_ml -r #{options[:ml_repetitions]} -d trees_ml_bootstrap #{fasta_file_input} >trees_ml_bootstrap.out"
