@@ -1,0 +1,25 @@
+#!/usr/bin/perl -w
+use File::Temp qw/ tempfile /;
+use Bio::SeqIO;
+
+
+my $in = Bio::SeqIO->new(-file => $ARGV[0], '-format' => 'Fasta');
+
+# For each file in the 
+while ( my $seq = $in->next_seq() ) {
+  # open a tempfile for input and output to predictnls
+  (undef, $input_filename) = tempfile();
+  (undef, $output_filename) = tempfile();
+
+  # write 1 sequence to the tempfile
+  $predictnls_in = Bio::SeqIO->new(-file => ">$input_filename" , '-format' => 'Fasta');
+  $predictnls_in->write_seq($seq);
+  $predictnls_in->close;
+
+  # run predictnls
+  print `predictnls -fileIn=$input_filename -fileOut=$output_filename`;
+
+  # read in the output from predictnls
+  print `cat $output_filename |grep -v 'Results of Nuclear Localization Signal Prediction(NLS)' |grep -v 'For help on interpretation of results visit the predictNLS'`;
+}
+

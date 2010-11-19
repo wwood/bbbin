@@ -19,7 +19,8 @@ if __FILE__ == $0
   # positive or negative, merely 'cordial'
   exclusion_list = gor.cordial_cc(inspected_go)
   
-  EuPathDBGeneInformationTable.new($stdin).each do |g|
+  EuPathDBGeneInformationTable.new(ARGF).each do |g|
+    next unless g['Gene Type'] == 'protein coding'
     go_terms = g.get_table('GO Terms').collect{|r| r['GO ID']}
     
     positive = false
