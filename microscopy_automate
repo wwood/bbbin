@@ -1,0 +1,92 @@
+#!/usr/bin/env ruby
+
+# Given a folder wih multiple stacks present as individual slices, process those stacks so that they are all as one merged stack, and do a maximum projection of each.
+# Requires ImageJ to be accessible on the cmd line.
+require 'tempfile'
+require 'optparse'
+
+USAGE = "Usage: microscopy_automate [-r <channel_colour_order e.g. 'rgb'>] [<directory>]";
+options = {
+  :channel_colour_order => 'rgb',
+}
+
+
+
+base_dir = ARGV[0]
+base_dir ||= '.' #cwd by default
+output_dir = File.join(base_dir,'processed')
+Dir.mkdir output_dir unless File.exist?(output_dir)
+
+stacks = {} #hash of stack id to filenames
+stack_colours = %w(Red Green Blue)
+
+# Process the directory, splitting the filenames up into stacks in the stacks hash
+Dir.foreach(base_dir) do |filename|
+  next unless filename.match(/.tif$/) #ignore files that aren't tiffs
+  
+  if matches = filename.match(/^(.*)_z\d\d\d_ch\d\d.tif$/)#e.g. 20101123_Series006_z000_ch00.tif
+    name = matches[1]
+    stacks[name] ||= []
+    stacks[name].push filename
+  else
+    $stderr.puts "Couldn't parse filename `#{filename}'"
+  end
+end
+
+# For each of the stacks, put them into a temporary directory so that ImageJ can handle them
+# Macro modified from http://imagej.588099.n2.nabble.com/macro-for-automatic-import-of-image-sequences-td636247.html
+stacks.each do |name, slices|
+  slices.sort! #unsure if this is needed but meh
+  
+  #Determine the number of channels
+  max_channel = slices.select{|f| f.match(/_z000_/)}.length #yes, this is a hack
+  
+  Tempfile.open(['ij_automate_macro', '.txt']) do |tempfile|# IJ does support commands directly on cmdline, but doesn't exit afterwards, annoyingly, so have to use a tempfile instead
+    raise Exception, "Cannot handle more than 3 colours - I found #{max_channel} channels in this folder in stack `#{name}'." if max_channel > 3
+    tif_names = []
+    channel_slices = [] #instantiate outside channel loop so the length of the last one is preserved
+     (0..max_channel-1).each do |channel|
+      channel_code = sprintf('_ch%2i.tif', channel).gsub(' ','0') #can't believe I'm using sprintf.
+      puts 
+      p channel_code
+      channel_slices = slices.select{|s| s.match(/#{channel_code}/)}.sort #unsure if this is needed but meh - maybe filenames
+      p channel_slices
+      tif_name = "#{stack_colours[channel]}.tif"
+      tif_names.push tif_name
+      
+      imagej_code = [
+      # Merge the slices 
+      "run(\"Image Sequence...\", \"open=[#{File.join(base_dir,slices.sort[0])}] number=#{channel_slices.length} starting=#{channel+1} increment=#{max_channel} scale=100 file=[#{name}_z] or=[] convert sort\");\n",
+      "run(\"#{stack_colours[channel]}\");\n",
+      "saveAs(\"Tiff\", \"#{tif_name}\");\n",
+      ].join
+      tempfile.puts imagej_code
+      puts imagej_code
+    end
+    # Merge the stacks
+    ij_channel_names = %w(red green blue grey)
+    arg = "red=#{tif_names[0]}"
+    ij_channel_names.each_with_index do |channel_name, i|
+      arg += " #{channel_name}="
+      if tif_names[i]
+        arg += tif_names[i]
+      else
+        arg += '*None*'
+      end
+    end
+    tempfile.puts "run(\"Merge Channels...\", \"#{arg}\");\n"
+    tempfile.puts "saveAs(\"Tiff\", \"#{File.join(output_dir, "#{name}.tif")}\");\n"
+    # Maximum projection
+    tempfile.puts "run(\"Z Project...\", \"start=1 stop=#{channel_slices.length} projection=[Max Intensity]\");\n"
+    tempfile.puts "saveAs(\"Tiff\",\"#{File.join(output_dir, "#{name}.max_projection.tif")}\");\n"
+
+    tempfile.close
+    `cat #{tempfile.path}`
+    
+    # Run ImageJ with the macro
+    puts `imagej -b '#{tempfile.path}'`
+    
+    #Remove the individual stacks, since they aren't necessary
+    puts `rm -v #{tif_names.join(' ')}`
+  end
+end
