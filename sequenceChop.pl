@@ -7,17 +7,18 @@
 use Bio::SeqIO;
 use Getopt::Std;
 
-our($opt_f, $opt_n);
-getopts('f:n');
+our($opt_f, $opt_n, $opt_q);
+getopts('f:nq');
 
 if ($#ARGV != 2) {
-  print "usage: sequenceChop.pl [-f <chopping_definitions>] <fasta> <start> <stop>\n";
+  print "usage: sequenceChop.pl [-f <chopping_definitions>] [-q] <fasta> <start> <stop>\n";
   print "output is piped to command line. 1-2 are the first two
            bases of the sequence.\n";
   print "if <fasta> is '-', then input is from STDIN, not a file.\n";
   print "if <start> is '-', then 1 is used.\n";
   print "if <stop> is '-', then the max is used.\n\n";
   print "Negative values are also allowable, -1 indicates max (last position)\n\n";
+  print " -q: quiet. Do not report when sequences in the fasta file aren't found in the chopping definition file\n";
   exit(0);
 }
 
@@ -59,6 +60,7 @@ $original_start = $start;
 $original_stop = $stop;
 $total_start_bumpers = 0;
 $total_end_bumpers = 0;
+$total_sequences = 0;
 
 # Print the chopped file
 while ($cur_seq = $original->next_seq()) {
@@ -73,6 +75,7 @@ while ($cur_seq = $original->next_seq()) {
   if ($opt_f){
     my $name = $cur_seq->display_id;
     unless ($seq_to_start_hash{$name}){
+      next if $opt_q;
       die "Unable to find display id `".$cur_seq->display_id."' in the chopping definition file!\n";
     }
     $start_f = $seq_to_start_hash{$name};
@@ -116,6 +119,7 @@ while ($cur_seq = $original->next_seq()) {
   }
   $total_start_bumpers += 1 if $hit_start;
   $total_end_bumpers += 1 if $hit_end;
+  $total_sequences += 1;
 
   print ">".$cur_seq->display_id();
   if ($cur_seq->description) {
@@ -145,4 +149,5 @@ if ($total_start_bumpers > 0){
 if ($total_end_bumpers > 0){
   print STDERR "Hit the end on $total_end_bumpers sequence(s)\n";
 }
+print STDERR "Chopped $total_sequences sequence(s)\n";
 

@@ -188,6 +188,7 @@ if $0 == __FILE__
       'Name',
       'NN Cmax',
       'NN Cmax position',
+      'NN Cmax prediction',
       'NN Ymax',
       'NN Ymax position',
       'NN Ymax prediction',
@@ -216,7 +217,7 @@ if $0 == __FILE__
       result.hmm_Sprob_prediction ? 'T' : 'F'
       ].join("\t")
     elsif options['v']
-      taputs = [seq.entry_id]
+      taputs = [seq.definition]
       [:nn_Cmax, :nn_Cmax_position, :nn_Cmax_prediction, 
       :nn_Ymax, :nn_Ymax_position, :nn_Ymax_prediction, 
       :nn_Smax, :nn_Smax_position, :nn_Smax_prediction, 
