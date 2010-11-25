@@ -1,13 +1,22 @@
 #!/usr/bin/env ruby
 
 # Given a folder wih multiple stacks present as individual slices, process those stacks so that they are all as one merged stack, and do a maximum projection of each.
-# Requires ImageJ to be accessible on the cmd line.
+# Requires:
+# * ImageJ to be accessible on the cmd line.
+# * Ruby and the rubygems fastercsv, peach
+# * ImageMagick accessible on the cmd line (i.e. 'convert')
+
+
+require 'rubygems'
 require 'tempfile'
 require 'optparse'
+require 'fastercsv'
+require 'peach'
 
 USAGE = "Usage: microscopy_automate [-r <channel_colour_order e.g. 'rgb'>] [<directory>]";
 options = {
   :channel_colour_order => 'rgb',
+  :num_threads => 2,
 }
 
 
@@ -15,27 +24,84 @@ options = {
 base_dir = ARGV[0]
 base_dir ||= '.' #cwd by default
 output_dir = File.join(base_dir,'processed')
+max_projection_dir = File.join(output_dir, 'maximum_projections')
+scale_bar_max_projection_dir = File.join(output_dir, 'maximum_projections_scale_bar')
+three_d_dir = File.join(output_dir, '3D_reconstructions')
 Dir.mkdir output_dir unless File.exist?(output_dir)
+Dir.mkdir max_projection_dir unless File.exist?(max_projection_dir)
+Dir.mkdir scale_bar_max_projection_dir unless File.exist?(scale_bar_max_projection_dir)
+Dir.mkdir three_d_dir unless File.exist?(three_d_dir)
 
 stacks = {} #hash of stack id to filenames
 stack_colours = %w(Red Green Blue)
+stack_metadata = {} #hash of stack_id to hash of metadata key value pairs (as it comes in the lei files, for instance)
+
+# First parse the lei file into a csv file, so that the 
 
 # Process the directory, splitting the filenames up into stacks in the stacks hash
 Dir.foreach(base_dir) do |filename|
-  next unless filename.match(/.tif$/) #ignore files that aren't tiffs
-  
-  if matches = filename.match(/^(.*)_z\d\d\d_ch\d\d.tif$/)#e.g. 20101123_Series006_z000_ch00.tif
-    name = matches[1]
-    stacks[name] ||= []
-    stacks[name].push filename
-  else
-    $stderr.puts "Couldn't parse filename `#{filename}'"
+  if filename.match(/.tif$/) #mostly ignore files that aren't tiffs
+    # Found a slice. Add this to the stack
+    if matches = filename.match(/^(.*)_z\d\d\d_ch\d\d.tif$/)#e.g. 20101123_Series006_z000_ch00.tif
+      name = matches[1]
+      stacks[name] ||= []
+      stacks[name].push filename
+    else
+      $stderr.puts "Couldn't parse filename `#{filename}'"
+    end
+    #  elsif filename.match(/.lei$/)
+    #    # Found the lei file, which encodes the metadata. Convert this to a csv file, then parse the csv file.
+    #    # This part requires the loci_tools parser
+    #    csv_filename = File.join(output_dir,"#{File.basename(filename)}.csv")
+    #    Tempfile.open(['ij_automate_macro', '.txt']) do |tempfile|
+    #      tempfile.puts "run(\"Data Browser\", \"open=#{File.join(base_dir,filename)} display_metadata view=[Metadata only] stack_order=Default\");\n"
+    #      puts "run(\"Data Browser\", \"open=#{File.join(base_dir,filename)} display_metadata view=[Metadata only] stack_order=Default\");\n"
+    #      tempfile.puts "saveAs(\"measurements\",\"#{csv_filename}\");\n"
+    #      tempfile.close
+    #      `cat #{tempfile.path}`
+    #      # Run ImageJ with the macro
+    #      puts `imagej -b '#{tempfile.path}'`
+    #    end
+  elsif filename.match(/.csv$/)
+    # Having trouble getting the results table as a csv file. Friggin' stupid ImageJ. I give up. Need to manually save the metadata as a results table
+    csv_filename = filename
+    
+    # Parse the csv file to get the metadata. Record this, as it includes metadata that is useful for later
+    # e.g.
+    #Series006 Block 2 dblVoxelX 0.0284671783
+    #Series006 Block 2 dblVoxelY 0.0284671783
+    #Series006 Block 2 dblVoxelZ 0.2442201237
+    FasterCSV.foreach(csv_filename, :col_sep => "\t") do |row|
+      # name the stack as expected
+      stack = row[0].strip.split(' ')[0]
+      next unless stack.match(/^Series\d\d\d$/) #non stack-specific info discarded for the moment
+      stack = "#{filename.gsub(/.csv/,'')}_#{stack}" #bit of a hack
+      
+      # Voxels define things for the scale bar, and the distances on the z-axis between planes
+      if row[0].match(/dblVoxel/)
+        meta = row[0].strip.split(' ')[3]
+        raise Exception, "Unexpected voxel name: #{row[0]}" unless meta.match(/^dblVoxel[ZYX]$/)
+        stack_metadata[stack] ||= {}
+        raise Exception, "Twice defined metadata: #{stack}=>#{meta}" if stack_metadata[stack][meta]
+        stack_metadata[stack][meta] = row[1].to_f
+      elsif row[0].match(/Dim0 size/) # Need the number of pixels high, so the scale bar can be placed
+        meta = 'Dim0 size'
+        stack_metadata[stack][meta] = row[1].to_i
+      end
+    end
   end
 end
 
+# make sure voxel info is recorded
+
+
 # For each of the stacks, put them into a temporary directory so that ImageJ can handle them
 # Macro modified from http://imagej.588099.n2.nabble.com/macro-for-automatic-import-of-image-sequences-td636247.html
-stacks.each do |name, slices|
+# Run this with multiple threads because the 3d reconstruct is a bit slow. So this bit has to be thread safe (which it should be, since no global variables are written)
+stacks.to_a.peach(options[:num_threads]) do |a|
+  name = a[0]
+  slices = a[1]
+  
   slices.sort! #unsure if this is needed but meh
   
   #Determine the number of channels
@@ -51,11 +117,11 @@ stacks.each do |name, slices|
       p channel_code
       channel_slices = slices.select{|s| s.match(/#{channel_code}/)}.sort #unsure if this is needed but meh - maybe filenames
       p channel_slices
+      # tif_name must have a random name, because of (possible, but were not ever observed) threading issues. Is it really necessary to save the image? Can a title just be given?
       tif_name = "#{stack_colours[channel]}.tif"
       tif_names.push tif_name
       
       imagej_code = [
-      # Merge the slices 
       "run(\"Image Sequence...\", \"open=[#{File.join(base_dir,slices.sort[0])}] number=#{channel_slices.length} starting=#{channel+1} increment=#{max_channel} scale=100 file=[#{name}_z] or=[] convert sort\");\n",
       "run(\"#{stack_colours[channel]}\");\n",
       "saveAs(\"Tiff\", \"#{tif_name}\");\n",
@@ -76,15 +142,48 @@ stacks.each do |name, slices|
     end
     tempfile.puts "run(\"Merge Channels...\", \"#{arg}\");\n"
     tempfile.puts "saveAs(\"Tiff\", \"#{File.join(output_dir, "#{name}.tif")}\");\n"
+    # 3D projection - requires the merged stack to be foregrounded
+    if stack_metadata[name]
+      #ImageJ sets size between planes in terms of pixel size in the XY dimension. So assuming no anisotropy in the XY plane, the dim would be dblVoxelZ/dblVoxelX
+      raise unless stack_metadata[name]['dblVoxelX']
+      raise unless stack_metadata[name]['dblVoxelY']
+      raise unless stack_metadata[name]['dblVoxelZ']
+      raise Exception, "Anisotropy? x=#{(stack_metadata[name]['dblVoxelX']*1e7).round}, y=#{(stack_metadata[name]['dblVoxelY']*1e7).round}" unless (stack_metadata[name]['dblVoxelX']*1e7).round == (stack_metadata[name]['dblVoxelY']*1e7).round #check for anisotropy
+      z_distance = stack_metadata[name]['dblVoxelZ']/stack_metadata[name]['dblVoxelX']
+      puts "z_distance: #{z_distance}"
+      
+      # Do the 3D project
+      tempfile.puts "run(\"3D Project...\", \"projection=[Brightest Point] axis=Y-Axis slice=#{z_distance} initial=0 total=360 rotation=10 lower=1 upper=255 opacity=0 surface=100 interior=50 interpolate\");\n"
+      tempfile.puts "saveAs(\"Tiff\",\"#{File.join(three_d_dir, "#{name}.3d_project.tif")}\");\n"
+      tempfile.puts "close();\n"
+    else
+      $stderr.puts "No metadata found for #{stack_metadata}. Use loci_tools to extract the metadata from the lei file, and save it as a csv file with the same basename as the lei file. Therefore no 3d re "
+    end
     # Maximum projection
+    max_projection_output_path = File.join(max_projection_dir, "#{name}.max_projection.tif")
     tempfile.puts "run(\"Z Project...\", \"start=1 stop=#{channel_slices.length} projection=[Max Intensity]\");\n"
-    tempfile.puts "saveAs(\"Tiff\",\"#{File.join(output_dir, "#{name}.max_projection.tif")}\");\n"
-
+    tempfile.puts "saveAs(\"Tiff\",\"#{max_projection_output_path}\");\n"
+    
     tempfile.close
     `cat #{tempfile.path}`
     
     # Run ImageJ with the macro
     puts `imagej -b '#{tempfile.path}'`
+    
+    # Maximum projection with scale bar (must be run after ImageJ macro has been run)
+    if stack_metadata[name]
+      # Add a line starting from 91% of the bottom right corner, extending 1um left
+      one_um_pixels = (1.0/stack_metadata[name]['dblVoxelX']).round
+      scale_start_y = (stack_metadata[name]['Dim0 size'].to_f*0.91).round
+      scale_start_x = scale_start_y
+      # add 1um line, and convert into PNG. No point in keeping TIFF if it is a 2D image.
+      # e.g. $convert -fill white -draw 'line 470,470,200,470' 20101123_Series006.max_projection.tif 20101123_Series006.max_projection.line.png
+      cmd = "convert -fill white -draw 'line #{scale_start_x},#{scale_start_y},#{scale_start_x-one_um_pixels},#{scale_start_y}' '#{max_projection_output_path}' '#{File.join(scale_bar_max_projection_dir,"#{name}.max_projection_scalebar.png")}'"
+      puts cmd 
+      puts `#{cmd}`
+    else
+      $stderr.puts "No scale bars added, since metadata not available"
+    end
     
     #Remove the individual stacks, since they aren't necessary
     puts `rm -v #{tif_names.join(' ')}`
