@@ -70,7 +70,7 @@ if __FILE__ == $0
   o.parse!
   
   unless ARGV.length == 2
-    $stsderr.puts USAGE
+    $stderr.puts USAGE
     exit 1
   end
   
