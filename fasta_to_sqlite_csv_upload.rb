@@ -28,11 +28,11 @@ OptionParser.new do |opts|
     sequence_source_id = v.to_i
   end
   
-  opts.on('-b','--coding-region-table-name FIRST_SEQUENCE_SOURCE_PRIMARY_KEY_ID', "the first number to start with when adding a sequence source") do |v|
+  opts.on('-b','--coding-region-table-name CODING_REGION_TABLE_NAME', "name of coding regions table (the one that has sequence_source_id, string_id)") do |v|
     coding_region_table_name = v
   end
   
-  opts.on('-t','--sequence-table-name FIRST_SEQUENCE_SOURCE_PRIMARY_KEY_ID', "the first number to start with when adding a sequence source") do |v|
+  opts.on('-t','--sequence-table-name SEQUENCE_TABLE_NAME', "name of sequences table (the one that has coding_region_id, sequence)") do |v|
     amino_acid_sequence_table_name = v
   end
 end.parse!
