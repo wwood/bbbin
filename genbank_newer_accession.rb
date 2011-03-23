@@ -28,13 +28,10 @@ class Bio::GenBank
       
       if matches = comment_spaceless.match(/this sequence was replaced by (\S*)\./)
         new_accession = matches[1]
-        $stderr.puts "Found an updated GI: #{new_accession}"
+        $stderr.puts "Found an updated GI: #{new_accession}" if options[:verbose]
         
         # go through it recursively. Is that newer identifier still out of date?
         if matches2 = matches[1].gsub(/gi:/,'')
-          if options[:verbose]
-            $stderr.puts "Found an updated GI: #{matches2}"
-          end
           return matches2
         end
         
@@ -56,6 +53,7 @@ class Bio::GenBank
       gb = self
       # while there are newer gi's being found
       while newer_gi != gb.gi
+        $stderr.puts "Contacting NCBI to get next newest GI #{newer_gi}"
         gb = Bio::GenBank.new(Bio::NCBI::REST.efetch(newer_gi, {:rettype => 'gb', :db => ENTREZ_DATABASE})) # is there no way to figure this out automatically?
         newer_gi =  update_gi_from_local_entry.call gb
       end
