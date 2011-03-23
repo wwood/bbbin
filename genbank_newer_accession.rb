@@ -49,7 +49,6 @@ class Bio::GenBank
     
     newer_gi = update_gi_from_local_entry.call(self)
     if options[:recursive]
-      puts self.class
       gb = self
       # while there are newer gi's being found
       while newer_gi != gb.gi
