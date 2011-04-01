@@ -161,11 +161,13 @@ if $0 == __FILE__
   
   runner = SignalSequence::SignalPWrapper.new
   
-  options = ARGV.getopts("shv") #s for summary, no args required
+  options = ARGV.getopts("shvf") #s for summary, no args required
   if options['h']
     $stderr.puts "Usage: signalp.rb [-s] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. Default output is all the sequences with their signal sequences cleaved."
     $stderr.puts "-s: summary: print a tab separated table indicating if the sequence had a signal peptide according to the HMM and NN results, respectively."
+    $stderr.puts "-v: verbose summary: much like -s except more details of the prediction are predicted."
+    $stderr.puts "-f: filter: print those sequences that have a signal peptide"
     return
   end
   
@@ -228,6 +230,10 @@ if $0 == __FILE__
         taputs.push result.send(meth)
       end
       puts taputs.join("\t")
+    elsif options['f']
+      if result.signal?
+        puts seq
+      end
     else
       puts ">#{seq.entry_id}\n#{result.cleave(seq.seq)}"
     end
