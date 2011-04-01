@@ -163,7 +163,7 @@ if $0 == __FILE__
   
   options = ARGV.getopts("shvf") #s for summary, no args required
   if options['h']
-    $stderr.puts "Usage: signalp.rb [-s] <my.fasta>"
+    $stderr.puts "Usage: signalp.rb [-svf] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. Default output is all the sequences with their signal sequences cleaved."
     $stderr.puts "-s: summary: print a tab separated table indicating if the sequence had a signal peptide according to the HMM and NN results, respectively."
     $stderr.puts "-v: verbose summary: much like -s except more details of the prediction are predicted."
