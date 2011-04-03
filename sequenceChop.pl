@@ -78,7 +78,7 @@ while ($cur_seq = $original->next_seq()) {
     my $name = $cur_seq->display_id;
     unless ($seq_to_start_hash{$name}){
       next if $opt_q;
-      die "Unable to find display id `".$cur_seq->display_id."' in the chopping definition file!\n";
+      die "Unable to find display id `".$cur_seq->display_id."' in the chopping definition file! Quitting..\n";
     }
     $start_f = $seq_to_start_hash{$name};
     $stop_f = $seq_to_stop_hash{$name};

@@ -30,7 +30,7 @@ end
 if __FILE__ == $0
   # Is OrthoMCL using v53 like it says on the data sources page?
   include Ensembl::Core
-  DBConnection.connect('homo_sapiens',60)
+  DBConnection.connect('homo_sapiens',56)
   
   $stdin.each_line do |line|
     whitespaced = line.split(/[,\s]+/)
