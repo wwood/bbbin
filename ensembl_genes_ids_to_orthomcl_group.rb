@@ -7,6 +7,7 @@
 #
 # Only tested on Ruby 1.9.2!
 
+require 'rubygems'
 require 'ensembl'
 
 # add the cds_length method
@@ -46,12 +47,40 @@ end
 
 # Script
 if __FILE__ == $0
-  orthomcl_groups_gzip_filename = ARGV[0]
-  orthomcl_groups_gzip_filename ||= '/home/ben/phd/data/orthomcl/v4/groups_OrthoMCL-4.txt.gz' #hack
+  require 'optparse'
   
-  # Is OrthoMCL using v53 like it says on the data sources page?
+  # Default options
+  options = {
+    :orthomcl_groups_filename => '/home/ben/phd/data/orthomcl/v4/groups_OrthoMCL-4.txt.gz', #ben is the creator of this script, so gets dibs.
+    :species => 'homo_sapiens', #because humans are closer to God.
+    :ensembl_version => 56, # v3 and v4 of OrthoMCL use this (personal communication)
+    :find_ensembl_names => false,
+  }
+  # Parse command line arguments
+  o = OptionParser.new do |opts|
+    opts.banner = [
+      'Usage: ensembl_genes_ids_to_orthomcl_group.rb -o <orthomcl_gzip_groups_filename> [fasta_filename]',
+      "fasta file can also be piped in on STDIN. Requires zcat, gzip",
+    ]
+    
+    opts.on('-o','--orthomcl-gzip-groups-filename GZIP_FILENAME','Path to the OrthoMCL groups file (gzipped), downloadable from orthomcl.org') do |filename|
+      options[:orthomcl_groups_filename] = filename
+    end
+    opts.on('-s','--species SPECIES','Connect to a this species\' Ensembl database. (Default \'homo_sapiens\')') do |s|
+      options[:species] = s
+    end
+    opts.on('-v','--version VERSION','Connect to a specific version number of the Ensembl database. (Default 56 since that is what OrthoMCL v3 and v4 use)') do |s|
+      options[:ensembl_version] = s
+    end
+    opts.on('-n','--find_names','Find genes by their name, rather than the default searching by Ensembl gene id (e.g. MFN2 instead of ENSG00000116688') do
+      options[:find_ensembl_names] = true
+    end
+  end
+  o.parse!
+  p options
+  
   include Ensembl::Core
-  DBConnection.connect('homo_sapiens',56)
+  DBConnection.connect(options[:species],options[:ensembl_version].to_i)
   
   $stdin.each_line do |line|
     whitespaced = line.split(/[,\s]+/)
@@ -59,7 +88,20 @@ if __FILE__ == $0
       gene_id = line.strip
       $stderr.puts "Processing #{gene_id} .."
       
-      g = Gene.find_by_stable_id gene_id
+      g = nil
+      if options[:find_ensembl_names]
+        p 'by name'
+        geneses = Gene.find_all_by_name gene_id
+        p geneses
+        if geneses.length > 1
+          $stderr.puts "Found #{geneses.length} matches to '#{gene_id}', ignoring"
+        else
+          g = geneses[0] #the case of none found is handled later.
+        end
+      else
+        g = Gene.find_all_by_stable_id gene_id
+      end
+      
       if g.nil?
         $stderr.puts "Couldn't find gene #{gene_id}"
       else
@@ -79,14 +121,19 @@ if __FILE__ == $0
         # Convert to Protein IDs, since that is what OrthoMCL uses
         max_translation_ids = max_transcripts.collect{|t| t.translation.stable_id}
         
+        $stderr.puts "Found protein IDs with maximal length of CDS #{max_length_transcript}: #{max_translation_ids.join(', ')}"
+        
         # Extract the group IDs for each Ensembl Protein ID
-        groups = []
+        hits = [] #the protein IDs that hit
+        groups = [] #the orthomcl groups that are retrieved
         max_translation_ids.each do |t|
-          liner = `zcat #{orthomcl_groups_gzip_filename} |grep #{t}`.strip
+          $stderr.puts "Attempting to find translated protein ID #{t} from the OrthoMCL file"
+          liner = `zcat '#{options[:orthomcl_groups_filename]}' |grep #{t}`.strip
           if liner.match(/\n/)
             $stderr.puts "Multiple groups found for protein ID #{t}! Whack."
           else
             unless liner.nil?
+              hits.push t
               groups.push Bio::OrthoMCL::Group.create_from_groups_file_line liner
             end
           end
@@ -99,7 +146,7 @@ if __FILE__ == $0
           $stderr.puts "Too many OrthoMCL groups found for gene id #{gene_id}, using protein ID(s)#{max_translation_ids.join(',')}"
         else
           puts [
-          gene_id,
+          hits.join(', '),
           max_translation_ids.join(','),
           groups[0].group_id
           ].join "\t"
