@@ -77,12 +77,11 @@ if __FILE__ == $0
     end
   end
   o.parse!
-  p options
   
   include Ensembl::Core
   DBConnection.connect(options[:species],options[:ensembl_version].to_i)
   
-  $stdin.each_line do |line|
+  ARGF.each_line do |line|
     whitespaced = line.split(/[,\s]+/)
     whitespaced.each do |line|
       gene_id = line.strip
@@ -90,9 +89,7 @@ if __FILE__ == $0
       
       g = nil
       if options[:find_ensembl_names]
-        p 'by name'
         geneses = Gene.find_all_by_name gene_id
-        p geneses
         if geneses.length > 1
           $stderr.puts "Found #{geneses.length} matches to '#{gene_id}', ignoring"
         else
@@ -132,7 +129,7 @@ if __FILE__ == $0
           if liner.match(/\n/)
             $stderr.puts "Multiple groups found for protein ID #{t}! Whack."
           else
-            unless liner.nil?
+            unless liner == ''
               hits.push t
               groups.push Bio::OrthoMCL::Group.create_from_groups_file_line liner
             end
@@ -146,8 +143,8 @@ if __FILE__ == $0
           $stderr.puts "Too many OrthoMCL groups found for gene id #{gene_id}, using protein ID(s)#{max_translation_ids.join(',')}"
         else
           puts [
+          gene_id,
           hits.join(', '),
-          max_translation_ids.join(','),
           groups[0].group_id
           ].join "\t"
         end
