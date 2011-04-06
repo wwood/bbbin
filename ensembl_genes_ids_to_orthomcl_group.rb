@@ -39,11 +39,11 @@ if __FILE__ == $0
   # Parse command line arguments
   o = OptionParser.new do |opts|
     opts.banner = [
-      'Usage: ensembl_genes_ids_to_orthomcl_group.rb -o <orthomcl_gzip_groups_filename> [fasta_filename]',
-      "fasta file can also be piped in on STDIN. Requires zcat, gzip",
+      'Usage: ensembl_genes_ids_to_orthomcl_group.rb -o <orthomcl_groups_filename> [fasta_filename]',
+      "fasta file can also be piped in on STDIN. Requires grep to be available on the command line",
     ]
     
-    opts.on('-o','--orthomcl-gzip-groups-filename GZIP_FILENAME','Path to the OrthoMCL groups file (gzipped), downloadable from orthomcl.org') do |filename|
+    opts.on('-o','--orthomcl-groups-filename FILENAME','Path to the OrthoMCL groups file (either gzipped or not - that is autodetected), downloadable from orthomcl.org') do |filename|
       options[:orthomcl_groups_filename] = filename
     end
     opts.on('-s','--species SPECIES','Connect to a this species\' Ensembl database. (Default \'homo_sapiens\')') do |s|
