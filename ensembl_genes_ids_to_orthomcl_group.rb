@@ -24,26 +24,6 @@ module Ensembl
   end
 end
 
-module Bio
-  class OrthoMCL
-    class Group
-      attr_accessor :group_id
-      attr_accessor :genes
-      
-      def self.create_from_groups_file_line(groups_file_line)
-        group = self.new
-        if matches = groups_file_line.match(/(OG[\d_]+):(.+)/)
-          group.group_id = matches[1]
-          group.genes = matches[2].strip.split(' ') 
-        else
-          raise Exception, "Failed to parse OrthoMCL line #{groups_file_line}"
-        end
-        return group
-      end
-    end
-  end
-end
-
 
 # Script
 if __FILE__ == $0
