@@ -65,7 +65,7 @@ if __FILE__ == $0
       lines = []
       if options[:input_species_code]
         cmd = "zcat '#{options[:orthomcl_groups_filename]}' |grep '#{add_species_code.call(options[:input_species_code],gene_id)}'"
-        $stderr.puts cmd
+        #$stderr.puts cmd
         lines = `#{cmd}`.strip.split(/\n/)
       else
         lines = `zcat '#{options[:orthomcl_groups_filename]}' |grep '^#{gene_id}:'`.strip.split(/\n/)
@@ -80,7 +80,7 @@ if __FILE__ == $0
       # multiple genes can be found, because the some gene names are the beginnings of others, e.g. MAL13P1.15 and MAL13P1.150
       # remove those genes that are longer
       if options[:input_species_code]
-        groups.select! do |g|
+        groups = groups.select do |g|
           g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
         end
       end
