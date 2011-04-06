@@ -25,6 +25,28 @@ module Ensembl
 end
 
 
+# Not very DRY at the moment, probably should make this into a bioruby plugin, consolidating this and orthomcl_species_jumper.rb. Oh well.
+module Bio
+  class OrthoMCL
+    class Group
+      attr_accessor :group_id
+      attr_accessor :genes
+      
+      def self.create_from_groups_file_line(groups_file_line)
+        group = self.new
+        if matches = groups_file_line.match(/(OG[\d_]+):(.+)/)
+          group.group_id = matches[1]
+          group.genes = matches[2].strip.split(' ') 
+        else
+          raise Exception, "Failed to parse OrthoMCL line #{groups_file_line}"
+        end
+        return group
+      end
+    end
+  end
+end
+
+
 # Script
 if __FILE__ == $0
   require 'optparse'
@@ -40,10 +62,10 @@ if __FILE__ == $0
   o = OptionParser.new do |opts|
     opts.banner = [
       'Usage: ensembl_genes_ids_to_orthomcl_group.rb -o <orthomcl_groups_filename> [fasta_filename]',
-      "fasta file can also be piped in on STDIN. Requires grep to be available on the command line",
+      "fasta file can also be piped in on STDIN. Requires grep, zcat to be available on the command line",
     ]
     
-    opts.on('-o','--orthomcl-groups-filename FILENAME','Path to the OrthoMCL groups file (either gzipped or not - that is autodetected), downloadable from orthomcl.org') do |filename|
+    opts.on('-o','--orthomcl-groups-filename FILENAME','Path to the OrthoMCL groups file (gzipped), downloadable from orthomcl.org') do |filename|
       options[:orthomcl_groups_filename] = filename
     end
     opts.on('-s','--species SPECIES','Connect to a this species\' Ensembl database. (Default \'homo_sapiens\')') do |s|

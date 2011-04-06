@@ -25,6 +25,22 @@ module Bio
           g.match(/^#{species_code}\|/)
         end
       end
+      
+      def genes_without_species_codes
+        @genes.collect do |g|
+          split_species_and_id(g)[1]
+        end
+      end
+      
+      # Split up the species code and the gene ID
+      #   pfal|PF10_0178 => ['pfal','PF10_0178']
+      def split_species_and_id(gene_id)
+        if matches = gene_id.match(/^([a-z]{3,4})\|(.+)$/)
+          matches[1..2]
+        else
+          raise ParseException, "Couldn't parse OrthoMCL gene ID `#{gene_id}'"
+        end
+      end
     end
   end
 end
@@ -39,14 +55,14 @@ if __FILE__ == $0
   # parse options
   o = OptionParser.new do |opts|
     opts.banner = [
-      'Usage: orthomcl_species_jumper.rb -g <orthomcl_gzip_groups_filename> -i <input_species_orthomcl_species_code> -o <output_species_orthomcl_species_code>',
-      "A list of input IDs is piped in via STDIN. Requires zcat, gzip",
+      'Usage: orthomcl_species_jumper.rb -g <orthomcl_groups_filename> -i <input_species_orthomcl_species_code> -o <output_species_orthomcl_species_code>',
+      "A list of input IDs is piped in via STDIN. Requires grep, and zcat if the orthomcl file is gzipped",
     ]
     
-    opts.on('-g','--orthomcl-gzip-groups-filename GZIP_FILENAME','Path to the OrthoMCL groups file (gzipped), downloadable from orthomcl.org') do |filename|
+    opts.on('-g','--orthomcl-gzip-groups-filename GZIP_FILENAME','Path to the OrthoMCL groups file (either gzipped or not - that is autodetected), downloadable from orthomcl.org') do |filename|
       options[:orthomcl_groups_filename] = filename
     end
-    opts.on('-i','--input-species-code SPECIES_CODE','OrthoMCL species code e.g. hsap. Default nil, meaning orthomcl group identifiers are to be fed in') do |s|
+    opts.on('-i','--input-species-code SPECIES_CODE','OrthoMCL species code e.g. hsap. Default nil, meaning orthomcl group identifiers are to be fed in. If dash, then species inputs are not checked and mapping is based purely on the orthomcl gene IDs') do |s|
       options[:input_species_code] = s
     end
     opts.on('-o','--output-species-codes SPECIES_CODE','output OrthoMCL species code(s), comma-separated. Default nil, meaning inputs are only mapped to OrthoMCL group IDs') do |s|
@@ -65,13 +81,18 @@ if __FILE__ == $0
       lines = []
       use_zcat = options[:orthomcl_groups_filename].match(/gz$/) #is this a gz file, or just a regular text file?
       if options[:input_species_code]
+        # Are we grepping for species?
+        to_grep = gene_id
+        to_grep = add_species_code.call(options[:input_species_code],gene_id) unless options[:input_species_code] == '-'
+        
         if use_zcat
-          cmd = "zcat '#{options[:orthomcl_groups_filename]}' |grep '#{add_species_code.call(options[:input_species_code],gene_id)}'"
+          cmd = "zcat '#{options[:orthomcl_groups_filename]}' |grep '#{to_grep}'"
         else
-          cmd = "grep '#{add_species_code.call(options[:input_species_code],gene_id)}' '#{options[:orthomcl_groups_filename]}'"
+          cmd = "grep '#{to_grep}' '#{options[:orthomcl_groups_filename]}'"
         end
         #$stderr.puts cmd
         lines = `#{cmd}`.strip.split(/\n/)
+        #$stderr.puts lines
       else
         if use_zcat
           cmd = `zcat '#{options[:orthomcl_groups_filename]}' |grep '^#{gene_id}:'`
@@ -91,7 +112,13 @@ if __FILE__ == $0
       # remove those genes that are longer
       if options[:input_species_code]
         groups = groups.select do |g|
-          g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
+          if options[:input_species_code] == '-'
+            # Don't bother matching on species code, since we don't know it
+            g.genes_without_species_codes.include? gene_id
+          else
+            # match on species ID
+            g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
+          end
         end
       end
       
