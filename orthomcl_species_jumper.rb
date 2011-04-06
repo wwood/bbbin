@@ -63,12 +63,22 @@ if __FILE__ == $0
   ARGF.each_line do |line|
     line.split(/\s+/).each do |gene_id|
       lines = []
+      use_zcat = options[:orthomcl_groups_filename].match(/gz$/) #is this a gz file, or just a regular text file?
       if options[:input_species_code]
-        cmd = "zcat '#{options[:orthomcl_groups_filename]}' |grep '#{add_species_code.call(options[:input_species_code],gene_id)}'"
+        if use_zcat
+          cmd = "zcat '#{options[:orthomcl_groups_filename]}' |grep '#{add_species_code.call(options[:input_species_code],gene_id)}'"
+        else
+          cmd = "grep '#{add_species_code.call(options[:input_species_code],gene_id)}' '#{options[:orthomcl_groups_filename]}'"
+        end
         #$stderr.puts cmd
         lines = `#{cmd}`.strip.split(/\n/)
       else
-        lines = `zcat '#{options[:orthomcl_groups_filename]}' |grep '^#{gene_id}:'`.strip.split(/\n/)
+        if use_zcat
+          cmd = `zcat '#{options[:orthomcl_groups_filename]}' |grep '^#{gene_id}:'`
+        else
+          cmd = "grep '^#{gene_id}:' #{options[:orthomcl_groups_filename]}"
+        end
+        lines = `#{cmd}`.strip.split(/\n/)
       end
       
       # convert to parsed OrthoMCL groups 
