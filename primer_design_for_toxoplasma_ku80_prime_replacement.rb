@@ -66,7 +66,7 @@ end
 $stderr.puts "Found a #{direction} direction sequence on #{chromosome}"
 
 # Parse out the end exon - highest ending if +ve direction, lowest ending if -ve direction
-# It doesn't appear to be possible to extract the cds positions from the info file, only the transcript exons'
+# It doesn't appear to be easily possible to extract the cds positions from the info file, only the transcript exons. Need a separate table?
 
 # Extract 1kb upstream of insertion point
 
