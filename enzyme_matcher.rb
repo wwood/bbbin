@@ -9,7 +9,7 @@ if __FILE__ == $0
   # Parse options
   options = {
     :properly_formatted_enzyme_list_path => nil,
-    :enzyme_name_characters => 'a-zA-Z0-9\#',
+    :enzyme_name_characters => 'a-zA-Z0-9',
     :example_non_enzyme_character => "&",
   }
   o = OptionParser.new do |opts|
@@ -23,7 +23,7 @@ if __FILE__ == $0
   end
   o.parse!
   if ARGV.length != 1
-    $stderr.puts opts.banner
+    $stderr.puts o.banner
     exit
   end
   
