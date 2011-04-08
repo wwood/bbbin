@@ -13,6 +13,7 @@ require 'tempfile'
 # * a working install of emboss, and in particular the 'restrict' program should be runnable and should automatically be able to find the rebase database of enzyme restriction sites.
 # * common unix-utils
 # * an accessible copy of the enzyme_matcher.rb program (from bbbin)
+# * the oligotm program
 
 # Delete this class later, when it is incorporated into a more suitable rubygem
 # A class for extracting gene info from a gene info file
@@ -31,6 +32,14 @@ class EuPathDBGeneInformationFileExtractor
   end
 end
 
+class EnzymeCut
+  attr_accessor :start, :stop, :enzyme
+  
+  def to_s
+    [@enzyme, @start, @stop].join("\t")
+  end
+end
+
 if $0 == __FILE__
   options = {
     :gene_information_table_path => '/home/ben/phd/data/Toxoplasma gondii/ToxoDB/6.3/TgondiiME49Gene_ToxoDB-6.3.txt',
@@ -39,6 +48,8 @@ if $0 == __FILE__
     :enzymes_in_freezer_filename => '/home/ben/phd/ralphlab/enzymeList.txt',
     :print_vector_compatible_sites => false,
     :print_freezer_compatible_sites => false,
+    :recombination_sequence_buffer => 350, #how far way from priming sites can the restriction site be?
+    :enzyme => nil
   }
   wanted_gene_id = nil
   o = OptionParser.new do |opts|
@@ -59,6 +70,9 @@ if $0 == __FILE__
     opts.on(nil, "--print-freezer-compatible", "Print out freezer- (and vector-) compatible unique restriction sites") do
       options[:print_freezer_compatible_sites] = true
     end
+    opts.on('-e', "--enzyme ENZYME_NAME", "Use this enzyme to do the cutting") do |e|
+      options[:enzyme] = e
+    end
   end
   o.parse!
   
@@ -67,6 +81,8 @@ if $0 == __FILE__
     exit
   end
   
+  # ============================================================================
+  # unimplemented code to extract the sequence automatically
   upstream_sequence = options[:upstream_sequence]
   if upstream_sequence.nil? #this should neveer
     raise Exception, "not implemented - a fasta file must be specified"
@@ -98,7 +114,26 @@ if $0 == __FILE__
   
   $stderr.puts "Found a #{upstream_sequence.length}bp sequence found to match against"
   
-  # Find the unique restriction sites that are in that 1kb
+  vector_compatible_cuts = []
+  freezer_compatible_cuts = []
+  
+  # method to take a file that was output from reas input and return an array
+  enzyme_cuts_array_from_filename = lambda do |filename|
+    to_return = []
+    File.foreach(filename) do |line|
+      splits = line.split(' ')
+      raise if splits.length != 9
+      cut = EnzymeCut.new
+      cut.start = splits[5].to_i
+      cut.stop = splits[6].to_i
+      cut.enzyme = splits[3]
+      to_return.push cut
+    end
+    return to_return
+  end
+  
+  # ============================================================================
+  # Find the unique restriction sites that are in that 1kb, and a far enough distance away from the 3' end
   Tempfile.open('first_fasta') do |first_fasta_file|
     first_fasta_file.puts '>seq'
     first_fasta_file.puts upstream_sequence
@@ -125,23 +160,79 @@ if $0 == __FILE__
           puts `wc -l #{enzyme_match1.path} |awk '{print $1}'`
           puts `cat #{enzyme_match1.path}` if options[:print_vector_compatible_sites]
           
+          # parse restriction sites
+          vector_compatible_cuts = enzyme_cuts_array_from_filename.call(enzyme_match1.path)
+          
           # Do we have these enzymes on the lab's list of enzymes in the freezer?
           Tempfile.open('enzyme_match2') do |enzyme_match2|
             `enzyme_matcher.rb -f '#{options[:enzymes_in_freezer_filename]}' #{enzyme_match1.path} >#{enzyme_match2.path}`
             print 'Found this many freezer-compatible: '
             puts `cat #{enzyme_match2.path} |wc -l`
             puts `cat #{enzyme_match2.path}` if options[:print_freezer_compatible_sites]
+            
+            # parse the restriction sites
+            freezer_compatible_cuts = enzyme_cuts_array_from_filename.call(enzyme_match2.path)
           end
         end
       end
     end
   end
   
+  # Are there any freezer-enzymes that are far enough away from the 3' end?
+  freezer_compatible_cuts = freezer_compatible_cuts.select do |f|
+    f.stop < upstream_sequence.length-options[:recombination_sequence_buffer]
+  end
+  enzyme = nil
   
-  # Remove the restriction sites that are known to be in the plasmid we are inserting into
-  # Choose one of the enzymes to cut with. It must be at least 350bp from the 3' end of the sequence
-  
+  # first, has the enzyme to be used been specified by the user already?
+  if options[:enzyme]
+    hits = vector_compatible_cuts.select do |v|
+      v.enzyme == options[:enzyme]
+    end
+    if hits.length > 1
+      raise Exception, "what the hell? This shouldn't happen. Too many enzymes found matching"
+    elsif hits.length == 0
+      $stderr.puts "You specified to use enzyme `#{options[:enzyme]}', but that enzyme wasn't found to be vector-compatible. Choose another?"
+      exit 1
+    else
+      # all is well.
+      enzyme = hits[0]
+    end
+  else
+    # if there's one in the freezer, the choice is clear even though we haven't specified things manually
+    if freezer_compatible_cuts.length > 0
+      # choose the one with the least length for easier cloning
+      enzyme = freezer_compatible_cuts.max{|a,b| a.stop <=> b.stop}
+      $stderr.puts "Found a compatible enzyme in the freezer: #{enzyme.to_s} (All freezer-compatible choices: #{freezer_compatible_cuts.collect{|e| e.to_s}.join(', ')} but I've chosen the one with the shortest amount of sequence)"
+    elsif 
+      # if there are no freezer-compatible cuts, then need to ask the user for which enzyme we are going to use, and that means re-running the whole script
+      $stderr.puts "No compatible enzymes found, so I need your help. Tell me the name of the enzyme that you want me to use (it must be in the vector compatible list), using the -e option to this script."
+      exit 1
+    end
+  end
+  $stderr.puts "Using enzyme #{enzyme.enzyme}"
+
+
+  # ============================================================================
   # Attempt to design primers
+  
+  # If the last 3 bases translate to a stop codon, then remove them from the sequence
+  if Bio::Sequence::NA.new(upstream_sequence[upstream_sequence.length-3..upstream_sequence.length-1]).translate == '*'
+    $stderr.puts "Found a stop codon in the last position of the sequence. Removing this."
+    upstream_sequence = upstream_sequence[0..upstream_sequence.length-4]
+  end
+  
+  $stderr.puts "Attemping to find primers in the following sequence:"
+  $stderr.puts upstream_sequence
+  
+  # First step, find a right primer that is just less than 72 degrees
+  
+  
+  
+  Tempfile.open('primer3input') do |tempfile|
+    puts ['PRIMER_RIGHT_INPUT', upstream_sequence].join('=')
+    
+  end
   # right primer: using the reverse complement of the first however many bases
   # left primer: try to design this
   # ensure that the length of the product is at least the distance from the  end of the sequence to the restriction site + 350bp
