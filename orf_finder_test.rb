@@ -207,5 +207,9 @@ MLRFLAVVALIATVNAGGYGLYGGGGYPGIYGTYGGYPSIYGGFGPGGVYGSINSYGGVSTGAYGLYGTSPAVRGAAQGA
     finder = OrfFinder.new
   	assert_equal 'MM', finder.longest_m_orf('CATCAT').aa_sequence
   	assert_equal nil, finder.longest_m_orf('CATCAT', :translate_both_directions => false)
+  	# "test starts and stops"
+  	orf = finder.longest_m_orf('CATCAT')
+  	assert_equal 5, orf.start, "known to fail - not properly implemented"
+  	assert_equal 0, orf.stop
   end
 end
