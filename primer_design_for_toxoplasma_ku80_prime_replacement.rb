@@ -1,7 +1,13 @@
 #!/usr/bin/env ruby
 
-# A script to make the design primers for T. gondii ku80 3' replacement. Probably
-# doesn't work until further notice.
+# A script to make the design primers for T. gondii ku80 3' replacement. Currently
+# this script only works by taking a sequence, and it spits out a list of
+# possible enzyme digestion sites. This can be helpful in itself. It then
+# tries to find primer sites, but I wouldn't trust those results just yet, and
+# it isn't likely to find any suitable primers anyway.
+#
+# The list of enzymes that are compatible can be changed by modifying this script,
+# or using the -e option. By default, it is overly ben-specific. 
 
 require 'rubygems'
 require 'bio'
@@ -174,7 +180,11 @@ if $0 == __FILE__
 
           # Do we have these enzymes on the lab's list of enzymes in the freezer?
           Tempfile.open('enzyme_match2') do |enzyme_match2|
-            `enzyme_matcher.rb -f '#{options[:enzymes_in_freezer_filename]}' -e #{options[:enzymes_on_order].join(',')} #{enzyme_match1.path} >#{enzyme_match2.path}`
+            args = ''
+            unless options[:enzymes_on_order].nil?
+              args += "-e #{options[:enzymes_on_order].join(',')}"
+            end
+            `enzyme_matcher.rb -f '#{options[:enzymes_in_freezer_filename]}' #{args} #{enzyme_match1.path} >#{enzyme_match2.path}`
             print 'Found this many freezer-compatible: '
             puts `cat #{enzyme_match2.path} |wc -l`
             puts `cat #{enzyme_match2.path}` if options[:print_freezer_compatible_sites]

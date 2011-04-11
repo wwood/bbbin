@@ -88,7 +88,7 @@ class OligoDesigner
   # string. Uses the command line
   #   oligotm -tp 1 -sc 1 '#{nucleotide_string}'
   def melting_temperature(nucleotide_string)
-    `oligotm -tp 1 -sc 1 '#{nucleotide_string}'`.to_f
+    `oligotm -tp 1 -sc 1 -n 0.8 -d 500 -mv 0 -dv 50 '#{nucleotide_string}'`.to_f
   end
 
   private
