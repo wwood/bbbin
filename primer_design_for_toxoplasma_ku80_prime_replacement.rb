@@ -53,8 +53,10 @@ if $0 == __FILE__
     :enzymes_in_freezer_filename => '/home/ben/phd/ralphlab/enzymeList.txt',
     :print_vector_compatible_sites => false,
     :print_freezer_compatible_sites => false,
-    :recombination_sequence_buffer => 350, #how far way from priming sites can
+#    :recombination_sequence_buffer => 350, #how far way from priming sites can
     # the restriction site be?
+    :three_prime_homologous_recombination_minimum => 800,
+    :five_prime_homologous_recombination_minimum => 350,
     :enzyme => nil,
     :primer_temperature_minimum => 53,
     :primer_temperature_optimal => 60,
@@ -199,7 +201,7 @@ if $0 == __FILE__
 
   # Are there any freezer-enzymes that are far enough away from the 3' end?
   freezer_compatible_cuts = freezer_compatible_cuts.select do |f|
-    f.stop < upstream_sequence.length-options[:recombination_sequence_buffer]
+    f.stop < upstream_sequence.length-options[:three_prime_homologous_recombination_minimum]
   end
   enzyme = nil
 
@@ -272,7 +274,8 @@ if $0 == __FILE__
       input_hash = {
         'PRIMER_RIGHT_INPUT' => right_primer_sequence,
         'SEQUENCE' => upstream_sequence,
-        'PRIMER_PRODUCT_SIZE_RANGE' => "#{upstream_sequence.length-enzyme.start+options[:recombination_sequence_buffer]}-#{upstream_sequence.length}",
+        # needs to be a certain size - needs to be a certain amount 5' of the enzyme cut site for smooth homologous recombination
+        'PRIMER_PRODUCT_SIZE_RANGE' => "#{upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]}-#{upstream_sequence.length}",
         'PRIMER_GC_CLAMP' => options[:primer_gc_clamp],
       }
       record = BoulderIO::Record.new(input_hash)
