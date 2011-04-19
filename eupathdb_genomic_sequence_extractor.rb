@@ -71,7 +71,7 @@ if __FILE__ == $0
       if matches[1] == seq_name_naked #if we found the chromosome
         # extract the genomic region
         s = seq.seq[start-2..stop-1]
-        puts ">#{seq_name_naked}_#{options[:upstream_length]}_upstream_from_stop_codon"
+        puts ">#{gene_id_of_interest}_#{options[:upstream_length]}_upstream_from_stop_codon"
         if gene_of_interest.strand == '-'
           s = Bio::Sequence::NA.new(s).reverse_complement.to_s.upcase
         end
