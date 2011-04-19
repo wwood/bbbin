@@ -1,13 +1,15 @@
 #!/usr/bin/env ruby
 
-# A script to make the design primers for T. gondii ku80 3' replacement. Currently
+# A script to make the design primers for T. gondii ku80 3' replacement.
+# Currently
 # this script only works by taking a sequence, and it spits out a list of
 # possible enzyme digestion sites. This can be helpful in itself. It then
 # tries to find primer sites, but I wouldn't trust those results just yet, and
 # it isn't likely to find any suitable primers anyway.
 #
-# The list of enzymes that are compatible can be changed by modifying this script,
-# or using the -e option. By default, it is overly ben-specific. 
+# The list of enzymes that are compatible can be changed by modifying this
+# script,
+# or using the -e option. By default, it is overly ben-specific.
 
 require 'rubygems'
 require 'bio'
@@ -53,16 +55,19 @@ if $0 == __FILE__
     :enzymes_in_freezer_filename => '/home/ben/phd/ralphlab/enzymeList.txt',
     :print_vector_compatible_sites => false,
     :print_freezer_compatible_sites => false,
-#    :recombination_sequence_buffer => 350, #how far way from priming sites can
+    #    :recombination_sequence_buffer => 350, #how far way from priming sites
+    # can
     # the restriction site be?
-    :three_prime_homologous_recombination_minimum => 800,
-    :five_prime_homologous_recombination_minimum => 350,
+    :five_prime_homologous_recombination_minimum => 800,
+    :three_prime_homologous_recombination_minimum => 350,
     :enzyme => nil,
     :primer_temperature_minimum => 53,
     :primer_temperature_optimal => 60,
     :primer_temperature_maximum => 75,
     :primer_gc_clamp => 2,
-    :enzymes_on_order => [], #extra enzymes that will be in the freezer soon
+    :enzymes_on_order => [], #extra enzymes that will be in the freezer soon,
+    :primer_search_area => 500, # Need to choose some finite length to choose
+    # primers in, so incidence of non-unique restriction sites is reduced
   }
   wanted_gene_id = nil
   o = OptionParser.new do |opts|
@@ -150,22 +155,24 @@ if $0 == __FILE__
   end
 
   # ============================================================================
-  # Find the unique restriction sites that are in that 1kb, and a far enough
-  # distance away from the 3' end
+  # Find restriction sites in the sequence, then afterwards parse them into so
+  # that:
+  # * They are vector-compatible
+  # * (maybe) we have the enzymes in the freezer
   Tempfile.open('first_fasta') do |first_fasta_file|
     first_fasta_file.puts '>seq'
     first_fasta_file.puts upstream_sequence
     first_fasta_file.close
     Tempfile.open('restrict') do |restrict_output_file|
     # find the unique restriction sites
-      cmd = "restrict -sequence #{first_fasta_file.path} -sitelen 4 -single -enzymes all -outfile #{restrict_output_file.path}"
+      cmd = "restrict -sequence #{first_fasta_file.path} -sitelen 4 -enzymes all -outfile #{restrict_output_file.path}"
       puts `#{cmd}`
 
-      # extract the list of pure sites
+      # extract the list of enzyme cutting sites
       Tempfile.open('awk_output') do |awk_out|
         cmd = "awk 'NF==9{print $0}' #{restrict_output_file.path} >#{awk_out.path}"
         `#{cmd}`
-        print 'Found this many unique sites in the 1500bp: '
+        print 'Found this many sites in the whole sequence given, before culling at all: '
         puts `wc -l #{awk_out.path} |awk '{print $1}'`
 
         # merge the list of enzymes with the ones that are known to not be
@@ -173,7 +180,7 @@ if $0 == __FILE__
         # b) don't also cut the LIC Ku80 vector
         Tempfile.open('enzyme_match1') do |enzyme_match1|
           `enzyme_matcher.rb -f '#{options[:possible_enzymes_to_cut_with_filename]}' #{awk_out.path} >#{enzyme_match1.path}`
-          print 'found this many vector-compatible: '
+          print 'Found this many vector-compatible: '
           puts `wc -l #{enzyme_match1.path} |awk '{print $1}'`
           puts `cat #{enzyme_match1.path}` if options[:print_vector_compatible_sites]
 
@@ -183,10 +190,12 @@ if $0 == __FILE__
           # Do we have these enzymes on the lab's list of enzymes in the freezer?
           Tempfile.open('enzyme_match2') do |enzyme_match2|
             args = ''
-            unless options[:enzymes_on_order].nil?
+            unless options[:enzymes_on_order].nil? or options[:enzymes_on_order].empty?
               args += "-e #{options[:enzymes_on_order].join(',')}"
             end
-            `enzyme_matcher.rb -f '#{options[:enzymes_in_freezer_filename]}' #{args} #{enzyme_match1.path} >#{enzyme_match2.path}`
+            cmd = "enzyme_matcher.rb -f '#{options[:enzymes_in_freezer_filename]}' #{args} #{enzyme_match1.path} >#{enzyme_match2.path}"
+            p cmd
+            `#{cmd}`
             print 'Found this many freezer-compatible: '
             puts `cat #{enzyme_match2.path} |wc -l`
             puts `cat #{enzyme_match2.path}` if options[:print_freezer_compatible_sites]
@@ -199,13 +208,39 @@ if $0 == __FILE__
     end
   end
 
-  # Are there any freezer-enzymes that are far enough away from the 3' end?
-  freezer_compatible_cuts = freezer_compatible_cuts.select do |f|
-    f.stop < upstream_sequence.length-options[:three_prime_homologous_recombination_minimum]
+  # Are unique restriction sites within restricition site-800bp-1kb to 3' end of
+  # sequence?
+  # If no, then they are of no use, discard that restriction site
+  freezer_possibles = PossiblyRestrictedNucleotideSequence.new(freezer_compatible_cuts)
+  p freezer_possibles
+  freezer_compatible_cuts = freezer_compatible_cuts.select do |c|
+    beginner = c.start-options[:five_prime_homologous_recombination_minimum]-options[:primer_search_area]
+    if beginner <= 0 #this hopefully won't happen much for restriction sites that
+    # end up being useful
+    false
+    else
+    # remove from array if not unique
+    freezer_possibles.unique_within_region?(c, beginner, upstream_sequence.length)
+    end
   end
-  enzyme = nil
+  $stderr.puts "After culling for uniqueness, #{freezer_compatible_cuts.length} freezer-compatible sequences remain"
+
+  # Repeat the process for the freezer-compatible process
+  vector_possibles = PossiblyRestrictedNucleotideSequence.new(vector_compatible_cuts)
+  vector_compatible_cuts = vector_compatible_cuts.select do |c|
+    beginner = c.start-options[:five_prime_homologous_recombination_minimum]-options[:primer_search_area]
+    if beginner <= 0 #this hopefully won't happen much for restriction sites that
+    # end up being useful
+    false
+    else
+    # remove from array if not unique
+    vector_possibles.unique_within_region?(c, beginner, upstream_sequence.length)
+    end
+  end
+  $stderr.puts "After culling for uniqueness, #{vector_compatible_cuts.length} vector-compatible sequences remain"
 
   # first, has the enzyme to be used been specified by the user already?
+  enzyme = nil
   if options[:enzyme]
     hits = vector_compatible_cuts.select do |v|
       v.enzyme == options[:enzyme]
@@ -249,65 +284,59 @@ if $0 == __FILE__
   upstream_sequence = upstream_sequence[0..upstream_sequence.length-4]
   end
 
-  $stderr.puts "Attemping to find primers in the following sequence:"
+  $stderr.puts "Attemping to find primers in the following sequence, with a cut site at #{enzyme.start} with #{enzyme.enzyme}"
   $stderr.puts upstream_sequence
 
-  # First step, find a right primer that is just less than 72 degrees
-  o = OligoDesigner.new
-  revcomp = Bio::Sequence::NA.new(upstream_sequence).reverse_complement.to_s
+  # Use primer 3 to find a primer under various constraints.
 
-  # Get a list of oligos that are possible given the constraints
-  possible_right_primers = o.order(revcomp,
-  options[:primer_temperature_minimum],
-  options[:primer_temperature_optimal],
-  options[:primer_temperature_maximum],
-  options[:primer_gc_clamp]
-  )
-  $stderr.puts "Found #{possible_right_primers.length} right primers within constraints. Now attempting to design primers with these.."
+  Tempfile.open('primer3input') do |tempfile|
+    min_length = upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]
+    max_length = upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]+options[:primer_search_area]
+    input_hash = {
+      'SEQUENCE_TEMPLATE' => upstream_sequence,
+      # needs to be a certain size - needs to be a certain amount 5' of the
+      # enzyme cut site for smooth homologous recombination
+      'PRIMER_PRODUCT_SIZE_RANGE' => "#{min_length}-#{max_length}",
+      'PRIMER_GC_CLAMP' => options[:primer_gc_clamp],
+      'PRIMER_PAIR_MAX_DIFF_TM'=>1,
+      #'PRIMER_TM_SANTALUCIA' => 1, #as recommended by primer3
+      'PRIMER_SALT_CORRECTIONS' => 1, #as recommended by primer3
+      'SEQUENCE_FORCE_RIGHT_START' => upstream_sequence.length-1, #right primer
+      # must cover the last base, which is the base before the stop codon
+      'PRIMER_EXPLAIN_FLAG'=>1, #be verbose
+      'PRIMER_MIN_SIZE'=>15,
+      'PRIMER_MAX_SIZE'=>35,
+      'PRIMER_MIN_TM'=>50.0,
+      'PRIMER_MAX_TM'=>75.0,
+    }
+    record = BoulderIO::Record.new(input_hash)
+    tempfile.print record.to_s
+    tempfile.close
 
-  first = true
+    $stderr.puts "Querying primer3 with the following input: "
+    $stderr.puts record.to_s
 
-  possible_right_primers.each do |right_primer_sequence|
+    #run primer3
+    Tempfile.open('primer3out') do |primer3out|
+      puts `primer3_core -strict <#{tempfile.path} >#{primer3out.path}`
+      #puts `cat #{primer3out.path}`
 
-    $stderr.puts "Trying right primer #{right_primer_sequence}, melting temp #{o.melting_temperature right_primer_sequence}."
-    Tempfile.open('primer3input') do |tempfile|
-      input_hash = {
-        'PRIMER_RIGHT_INPUT' => right_primer_sequence,
-        'SEQUENCE' => upstream_sequence,
-        # needs to be a certain size - needs to be a certain amount 5' of the enzyme cut site for smooth homologous recombination
-        'PRIMER_PRODUCT_SIZE_RANGE' => "#{upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]}-#{upstream_sequence.length}",
-        'PRIMER_GC_CLAMP' => options[:primer_gc_clamp],
-      }
-      record = BoulderIO::Record.new(input_hash)
-      tempfile.print record.to_s
-      tempfile.close
+      # Was there a primer found?
+      # Read the output file, which is in boulder I/O format
+      result = Primer3Result.create_from_primer3_output_filename(primer3out.path)
 
-      if first
-        $stderr.puts "Querying primer3 with the following input: "
-      $stderr.puts record.to_s
-      first = false
-      end
-
-      #run primer3
-      Tempfile.open('primer3out') do |primer3out|
-        puts `primer3_core -strict_tags <#{tempfile.path} >#{primer3out.path}`
-
-        # Was there a primer found?
-        # Read the output file, which is in boulder I/O format
-        result = Primer3Result.create_from_primer3_output_filename(primer3out.path)
-
-        if result.yeh?
-          $stderr.puts "Found primer: #{result['PRIMER_LEFT_SEQUENCE']}"
-        # print out the other primers if more than one was found.
-        # TODO
-        else
-          $stderr.puts "No suitable primers"
-        end
+      if result.yeh?
+        $stderr.puts "Found primer 0: left: #{result['PRIMER_LEFT_0_SEQUENCE']}"
+        $stderr.puts "Found primer 0: right: #{result['PRIMER_RIGHT_0_SEQUENCE']}"
+        $stderr.puts "Found primer 0: template size: #{result['PRIMER_PAIR_0_PRODUCT_SIZE']}"
+      else
+        $stderr.puts "No suitable primers"
       end
     end
-  # right primer: using the reverse complement of the first however many bases
-  # left primer: try to design this
-  # ensure that the length of the product is at least the distance from the  end of the sequence to the restriction site + 350bp
+
+  #right primer: using the reverse complement of the first however many bases
+  #left primer: try to design this
+  #ensure that the length of the product is at least the distance from the  end of the sequence to the restriction site + 350bp
 
   # If primers found, output, otherwise
   # a) try another restriction enzyme

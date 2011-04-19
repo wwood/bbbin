@@ -2,8 +2,39 @@
 
 class EnzymeCut
   attr_accessor :start, :stop, :enzyme
+  def initialize(enzyme_name=nil, start=nil, stop=nil)
+    @enzyme = enzyme_name
+    @start = start
+    @stop = stop
+  end
+
   def to_s
     [@enzyme, @start, @stop].join("\t")
+  end
+end
+
+class PossiblyRestrictedNucleotideSequence
+  # An array of places where different enzymes can cut, each an
+  # EnzymeCut object
+  attr_accessor :enzyme_cuts
+  def initialize(enzyme_cuts=[])
+    @enzyme_cuts = enzyme_cuts
+  end
+
+  # Given start and stop region, is this enzyme unique within
+  # that space, or is there another cut within that same
+  # region
+  def unique_within_region?(enzyme, start, stop)
+    @enzyme_cuts.each do |e|
+    	if enzyme.enzyme == e.enzyme and enzyme.start == e.start #this is the same site as the one being tested, so ignore
+    		next
+    	end
+    	if enzyme.enzyme == e.enzyme and e.start > start and e.start < stop
+    		#$stderr.puts "Failing #{enzyme} since it is too close to #{e}"
+    		return false 
+    	end
+    end
+    return true
   end
 end
 
@@ -201,7 +232,7 @@ class Primer3Result
   # Was there any primers found? Assumes you were looking for a left primer, with
   # a right primer, which won't always be te case.
   def primer_found?
-    @output_hash.keys.include?('PRIMER_LEFT_SEQUENCE')
+    @output_hash.keys.include?('PRIMER_LEFT_0_SEQUENCE')
   end
   alias_method :yeh?, :primer_found?
 
