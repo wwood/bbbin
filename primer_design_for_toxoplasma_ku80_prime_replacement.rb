@@ -61,10 +61,11 @@ if $0 == __FILE__
     :five_prime_homologous_recombination_minimum => 800,
     :three_prime_homologous_recombination_minimum => 350,
     :enzyme => nil,
-    :primer_temperature_minimum => 53,
-    :primer_temperature_optimal => 60,
-    :primer_temperature_maximum => 75,
-    :primer_gc_clamp => 2,
+    :primer_temperature_minimum => 50,
+    :primer_temperature_optimal => 55,
+    :primer_temperature_maximum => 65,
+    :primer_gc_clamp => 1, #start out trying to get primers with this gc clamp. If none can be found, decrement until options[:real_gc_clamp_minimum] is reached
+    :real_gc_clamp_minimum => 1, #don't try getting primers with anything less than this
     :enzymes_on_order => [], #extra enzymes that will be in the freezer soon,
     :primer_search_area => 500, # Need to choose some finite length to choose
     # primers in, so incidence of non-unique restriction sites is reduced
@@ -288,62 +289,63 @@ if $0 == __FILE__
   end
   
   $stderr.puts "Attemping to find primers in the following sequence, with a cut site at #{enzyme.start} with #{enzyme.enzyme}"
-  $stderr.puts upstream_sequence
+  #$stderr.puts upstream_sequence
   
-  # Use primer 3 to find a primer under various constraints.
-  
-  Tempfile.open('primer3input') do |tempfile|
-    min_length = upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]
-    max_length = upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]+options[:primer_search_area]
-    input_hash = {
+  # Use primer 3 to find a primer under various constraints. Start with the default GC clamp, and then keep going down to options[:real_gc_minimum]
+  current_gc_clamp = options[:primer_gc_clamp]
+  found_primer = false
+  while !found_primer and current_gc_clamp >= options[:real_gc_clamp_minimum]
+    Tempfile.open('primer3input') do |tempfile|
+      min_length = upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]
+      max_length = upstream_sequence.length-enzyme.start+options[:five_prime_homologous_recombination_minimum]+options[:primer_search_area]
+      input_hash = {
       'SEQUENCE_TEMPLATE' => upstream_sequence,
-      # needs to be a certain size - needs to be a certain amount 5' of the
-      # enzyme cut site for smooth homologous recombination
+        # needs to be a certain size - needs to be a certain amount 5' of the
+        # enzyme cut site for smooth homologous recombination
       'PRIMER_PRODUCT_SIZE_RANGE' => "#{min_length}-#{max_length}",
-      'PRIMER_GC_CLAMP' => options[:primer_gc_clamp],
+      'PRIMER_GC_CLAMP' => current_gc_clamp,
       'PRIMER_PAIR_MAX_DIFF_TM'=>1,
-      #'PRIMER_TM_SANTALUCIA' => 1, #as recommended by primer3 - seems not to work for some reason.
+        # 'PRIMER_TM_SANTALUCIA' => 1, #as recommended by primer3 - seems not to work for some reason.
       'PRIMER_SALT_CORRECTIONS' => 1, #as recommended by primer3
       'SEQUENCE_FORCE_RIGHT_START' => upstream_sequence.length-1, #right primer
-      # must cover the last base, which is the base before the stop codon
+        # must cover the last base, which is the base before the stop codon
       'PRIMER_EXPLAIN_FLAG'=>1, #be verbose
       'PRIMER_MIN_SIZE'=>15,
       'PRIMER_MAX_SIZE'=>35,
       'PRIMER_MIN_TM'=>50.0,
       'PRIMER_MAX_TM'=>75.0,
-    }
-    record = BoulderIO::Record.new(input_hash)
-    tempfile.print record.to_s
-    tempfile.close
-    
-    $stderr.puts "Querying primer3 with the following input: "
-    $stderr.puts record.to_s
-    
-    #run primer3
-    Tempfile.open('primer3out') do |primer3out|
-      puts `primer3_core -strict <#{tempfile.path} >#{primer3out.path}`
-      #puts `cat #{primer3out.path}`
+      }
+      record = BoulderIO::Record.new(input_hash)
+      tempfile.print record.to_s
+      tempfile.close
       
-      # Was there a primer found?
-      # Read the output file, which is in boulder I/O format
-      result = Primer3Result.create_from_primer3_output_filename(primer3out.path)
+      puts "Querying primer3 with the following input: "
+      print record.to_s
       
-      if result.yeh?
-        $stderr.puts "Found primer 0: left: #{result['PRIMER_LEFT_0_SEQUENCE']}"
-        $stderr.puts "Found primer 0: right: #{result['PRIMER_RIGHT_0_SEQUENCE']}"
-        $stderr.puts "Found primer 0: template size: #{result['PRIMER_PAIR_0_PRODUCT_SIZE']}"
-      else
-        $stderr.puts "No suitable primers"
+      #run primer3
+      Tempfile.open('primer3out') do |primer3out|
+        puts `primer3_core -strict #{tempfile.path} >#{primer3out.path}`
+        #puts `cat #{primer3out.path}`
+        
+        # Was there a primer found?
+        # Read the output file, which is in boulder I/O format
+        result = Primer3Result.create_from_primer3_output_filename(primer3out.path)
+        
+        if result.yeh?
+          puts "Using enzyme #{enzyme.enzyme}, which cuts at #{enzyme.start}"
+          puts "Found primer 0: left: #{result['PRIMER_LEFT_0_SEQUENCE']}"
+          puts "Found primer 0: right: #{result['PRIMER_RIGHT_0_SEQUENCE']}"
+          puts "Found primer 0: template size: #{result['PRIMER_PAIR_0_PRODUCT_SIZE']}"
+          found_primer = true #success!
+        else
+          puts "No suitable primers. Some possible reasons:"
+          puts "PRIMER_ERROR: #{result['PRIMER_ERROR']}"
+          puts "PRIMER_PAIR_EXPLAIN: #{result['PRIMER_PAIR_EXPLAIN']}"
+          puts "PRIMER_RIGHT_EXPLAIN: #{result['PRIMER_RIGHT_EXPLAIN']}"
+          puts "PRIMER_LEFT_EXPLAIN: #{result['PRIMER_LEFT_EXPLAIN']}"
+          current_gc_clamp -= 1 #relax the GC clamp constraint
+        end
       end
     end
-    
-    #right primer: using the reverse complement of the first however many bases
-    #left primer: try to design this
-    #ensure that the length of the product is at least the distance from the  end of the sequence to the restriction site + 350bp
-    
-    # If primers found, output, otherwise
-    # a) try another restriction enzyme
-    # b) try with more than 1kb being extracted
   end
-  
 end

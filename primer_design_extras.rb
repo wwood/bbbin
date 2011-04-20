@@ -149,7 +149,7 @@ class BoulderIO
       ats = @attributes.collect do |key,value|
         "#{key}=#{value}\n"
       end
-      "#{ats}=\n"
+      "#{ats}="
     end
 
     # Given a Boulder I/O formatted string, parse into a record
