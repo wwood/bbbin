@@ -314,6 +314,9 @@ if $0 == __FILE__
       'PRIMER_MAX_SIZE'=>35,
       'PRIMER_MIN_TM'=>50.0,
       'PRIMER_MAX_TM'=>75.0,
+      # 'PRIMER_LEFT_MAX_POLY_X' => 3, #left primer shouldn't have runs in it
+      # 'PRIMER_LEFT_MAX_SELF_ANY' => 3,
+      'PRIMER_PAIR_MAX_COMPL_ANY' => 3, #primer dimers
       }
       record = BoulderIO::Record.new(input_hash)
       tempfile.print record.to_s
