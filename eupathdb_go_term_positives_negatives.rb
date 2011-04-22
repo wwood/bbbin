@@ -1,17 +1,19 @@
 #!/usr/bin/env ruby
 
 require 'rubygems'
-#require 'go' #provided by goruby
+require 'go' #provided by goruby
 require 'eupathdb_gene_information_table' #provided by the reubypathdb gem
-require '/home/ben/forays/goruby/lib/go'
 
 if __FILE__ == $0
-  inspected_go = 'GO:0005634'
+  inspected_go = ARGV[0] #'GO:0005634' #the term being investigated for postive or negative
   gor = Bio::Go.new
+  
+  #the top of the partition e.g. 'GO:0005575' for cellular component
+  partition_top = gor.ontology_go_identifier(inspected_go)
   
   # nucleus subsumer
   nucleus_subsumer = gor.subsume_tester(inspected_go)
-  cc_subsumer = gor.subsume_tester('GO:0005575')
+  cc_subsumer = gor.subsume_tester(partition_top)
   # nucleus' ancestors or ancestors of any of its children. 
   # These annotations are ignored, because they aren't
   # positive or negative, merely 'cordial'

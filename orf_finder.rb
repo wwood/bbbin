@@ -1,6 +1,7 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 
-
+require 'rubygems'
+require 'bio'
 
 
 module Orf
@@ -10,9 +11,10 @@ module Orf
   class OrfFinder
     # return an array of filled out OrfThread objects. Each OrfThread is itself an array of orfs.
     # maximal orfs are returned. That is, 'MMYStop' will return MMYStop, not MYStop.
-    # incomplete ORFs may also be included, if they fall out of the analysis. Orfs in the reverse direction 
-    # are not included - to workaround repeat use Bio::Sequence::NA.complement() and resubmit to this class
-    def generate_longest_orfs(nucleotide_sequence)
+    # incomplete ORFs may also be included, if they fall out of the analysis. By default, ORFS
+    # in the reverse direction are included. This functionality can be removed by setting 
+    # options[:translate_both_directions] = false
+    def generate_longest_orfs(nucleotide_sequence, options={})
       thread = OrfThread.new
       
       # convert to more readable format
@@ -22,12 +24,12 @@ module Orf
       regular.translate(2),
       regular.translate(3)
       ]
-      #      if @translate_both_directions
-      #        revcom = regular.revcom
-      #        trans.push revcom.translate(1)
-      #        trans.push revcom.translate(2)
-      #        trans.push revcom.translate(3)
-      #      end
+      unless options[:translate_both_directions] == false
+        revcom = regular.reverse_complement
+        trans.push revcom.translate(1)
+        trans.push revcom.translate(2)
+        trans.push revcom.translate(3)
+      end
       
       phase_offset = 0
       thread_array = []
@@ -121,17 +123,17 @@ module Orf
     
     # Return the Orf object representing the longest orf. It is possible the orf is a fragment,
     # if it encounters the end (or start) of the sequence while in an orf.
-    def longest_orf(nucleotide_sequence)
+    def longest_orf(nucleotide_sequence, options = {})
       #raise Exception, "Buggy!!! Doesn't work when there is no start codon"
-      thread_array = generate_longest_orfs(nucleotide_sequence)
+      thread_array = generate_longest_orfs(nucleotide_sequence, options)
       return nil if thread_array.empty?
       return thread_array.flatten.max
     end
     
     # Return the Orf object representing the longest 'full' orf. That is, the orf that contains both a start
     # and a stop codon
-    def longest_full_orf(nucleotide_sequence)
-      thread_array = generate_longest_orfs(nucleotide_sequence)
+    def longest_full_orf(nucleotide_sequence, options = {})
+      thread_array = generate_longest_orfs(nucleotide_sequence, options)
       return nil if thread_array.empty?
       best = thread_array.flatten.max{|a,b| 
         if a.fragment? and b.fragment? #if both fragments, meh. Keep some order though, otherwise other functions get confused maybe?
@@ -152,8 +154,8 @@ module Orf
     end
     
     # Longest ORF with a start codon, but not necessarilly a stop codon.
-    def longest_m_orf(nucleotide_sequence)
-      thread_array = generate_longest_orfs(nucleotide_sequence)
+    def longest_m_orf(nucleotide_sequence, options = {})
+      thread_array = generate_longest_orfs(nucleotide_sequence, options)
       return longest_m_protein_orf_array(thread_array)
     end
     
@@ -273,12 +275,12 @@ if $0 == __FILE__
   
   
   #  options = ARGV.getopts("fhbp")
-  options = ARGV.getopts("fhpmn")
+  options = ARGV.getopts("fhpmnw")
   if ARGV.length > 1 or options['h']
     $stderr.puts "Usage: orf_finder.rb [-f] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. The output is the length of the longest ORF found in each sequence."
     $stderr.puts "-f: fasta. Output a fasta file of the longest orfs found."
-    #    $stderr.puts "-b: both directions. Find the longest ORFs in both directions."
+    $stderr.puts "-w: watson: Only find the longest ORFs in the forward direction (default both directions)"
     $stderr.puts "-p: protein. Start from an amino acid sequence, not a nucleotide sequence"
     $stderr.puts "-m: Only return ORFs starting with a Methionine. Doesn't make sense unless used with -f"
     $stderr.puts "-n: Output nucleotide sequence. Currently incompatible with fasta (-f) output."
@@ -288,15 +290,14 @@ if $0 == __FILE__
   # first argument or failing that, stdin to input the fasta file
   input = ARGV.length == 1 ? ARGV[0] : $stdin
   
-  #  if options[:b]
-  #    finder.translate_both_directions = true
-  #  end
+  orf_finder_options = {}
+  orf_finder_options[:translate_both_directions] = false if options['w']
   
   # if fasta is wanted as output, do that
   if options['f'] and options['p']
     protein_fasta_output(Bio::FlatFile.auto(input))
   elsif options['f']
-    fasta_output(Bio::FlatFile.auto(input))
+    fasta_output(Bio::FlatFile.open(Bio::FastaFormat, input))
   else
     # Output a summary
     titles =  [
@@ -321,7 +322,7 @@ if $0 == __FILE__
       if options['p']
         orf = @finder.longest_protein_orf(seq.seq)
       else
-        orf = @finder.longest_orf(seq.seq)          
+        orf = @finder.longest_orf(seq.seq, orf_finder_options)          
       end
       
       
@@ -359,7 +360,7 @@ if $0 == __FILE__
         raise Exception, "longest_full_protein_orf not yet implemented"
         orf = @finder.longest_full_protein_orf(seq.seq)
       else
-        orf = @finder.longest_full_orf(seq.seq)          
+        orf = @finder.longest_full_orf(seq.seq, orf_finder_options)          
       end
       if !orf
         to_print.push nil
@@ -383,7 +384,7 @@ if $0 == __FILE__
         raise Exception, "longest_full_protein_orf not yet implemented"
         orf = @finder.longest_m_protein_orf(seq.seq)
       else
-        orf = @finder.longest_m_orf(seq.seq)          
+        orf = @finder.longest_m_orf(seq.seq, orf_finder_options)          
       end
       if !orf
         to_print.push nil
@@ -405,6 +406,4 @@ if $0 == __FILE__
       puts to_print.join("\t")
     end
   end
-else #included as module
-  require 'bio'
 end 

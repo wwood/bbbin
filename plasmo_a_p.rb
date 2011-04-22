@@ -1,6 +1,8 @@
 #!/usr/bin/ruby
 
 require 'bio'
+
+$:.unshift File.dirname(__FILE__) #signalp.rb is in the same directory
 require 'signalp'
 
 # PlasmoAP is a program for predicting apicoplast targetting sequences
@@ -18,7 +20,7 @@ module Bio
       set1 = set2 = false
       
       signal = signalp.classical_signal_sequence?
-      return PlasmoAPResult.new(0) if  !signal#Both set of rules need a signal peptide
+      return PlasmoAPResult.new(0) if !signal#Both set of rules need a signal peptide
       cleaved = Bio::Sequence::AA.new(signalp.cleave(sequence))
       
       set1 = set1?(cleaved)
@@ -32,8 +34,6 @@ module Bio
       points += 1 if additional
       return PlasmoAPResult.new(points)
     end
-    
-    private
     
     #      Set 1: a sequence is considered ‘positive’ if i) it starts with a signal peptide, ii) the 15
     #amino acids following the predicted signal peptide do not contain more than 2 acidic
@@ -117,7 +117,6 @@ module Bio
       end
       return nil
     end
-
   end # End class PlasmoAP
   
   
@@ -131,13 +130,13 @@ module Bio
     
     def to_s
       case @points
-      when 0..2
+        when 0..2
         return '-'
-      when 3
+        when 3
         return '0'
-      when 4
+        when 4
         return '+'
-      when 5
+        when 5
         return '++'
       end
     end  
@@ -161,15 +160,19 @@ if $0 == __FILE__
   puts [
     'Name',
     'PlasmoAP Score',
-    'Apicoplast Targeted'
+    'Apicoplast Targeted',
+    'Points'
   ].join("\t")
+  
   Bio::FlatFile.auto(ARGF).each do |seq|
     result = runner.calculate_score(seq.seq)
-    print "#{seq.definition}\t#{result.to_s}\t"
+    to_print = [seq.definition, result.to_s]
     if result.apicoplast_targeted?
-      puts 1
+      to_print.push 1
     else
-      puts 0
+      to_print.push 0
     end
+    to_print.push result.points
+    puts to_print.join("\t")
   end
 end

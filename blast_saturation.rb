@@ -72,7 +72,7 @@ if __FILE__ == $0
       options[:blast_plus_program] = v
     end
     
-    opts.on('-q','--quiet','Opposite of verbose. Default is off (default)') do
+    opts.on('-q','--quiet','Opposite of verbose. Default is not quiet (verbose is on)') do
       options[:verbose] = false
     end
   end

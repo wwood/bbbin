@@ -5,8 +5,8 @@ use Bio::SeqIO;
 use Getopt::Std;
 
 
-our ($opt_r, $opt_f, $opt_g, $opt_v, $opt_F, $opt_s);
-getopts('rf:gvFs:');
+our ($opt_r, $opt_f, $opt_g, $opt_v, $opt_F, $opt_s, $opt_i);
+getopts('rf:gvFs:i');
 
 
 # given a fasta file with multiple sequences, extract a single sequence
@@ -25,6 +25,7 @@ if ($#ARGV != 0 && $#ARGV != 1)
     print STDERR "-g input a gff file with the names of the sequences in the first col, \n";
     print STDERR "   and chop out the sequence up so with the coordinates given in the start/stop\n";
     print STDERR "   columns, except with 2kb on each side.\n";
+    print STDERR "-i Ignore case when matching (currently only works when using regular expressions (-r))\n";
     print STDERR "\n";
     exit;
   }
@@ -123,7 +124,13 @@ while (my $seq = $seqio->next_seq){
       # time, making this a slow operation. Is it possible to apply
       # many regular expressions on a single string all at once?
       foreach $name (@seqnames){
-	if ($displayId =~ m/$name/){
+	my $answer = undef;
+	if ($opt_i){
+	  $answer = ($displayId =~ m/$name/i);
+	} else {
+	  $answer = ($displayId =~ m/$name/);
+	}
+	if ($answer){
 	  $matches = 1;
 	  $seqnames{$name}++;
 	  last; #only print the sequence once.
@@ -139,7 +146,13 @@ while (my $seq = $seqio->next_seq){
       }
     }
   } elsif ($opt_r){#regular expression match
-    if ($displayId =~ m/$seqname/){
+    my $answer = undef;
+    if ($opt_i){
+      $answer = ($displayId =~ m/$seqname/i);
+    } else {
+      $answer = ($displayId =~ m/$seqname/);
+    }
+    if ($answer){
       $matches = 1;
       $any_matches = 1;
     }

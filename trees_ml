@@ -12,7 +12,7 @@ options = {
 OptionParser.new do |opts|
   opts.banner = USAGE
   
-  opts.on("-r", "--repetitions REPETITIONS", Integer, "Number of bootstrap repetitions to do (default likelyhood only)") do |v|
+  opts.on("-r", "--repetitions REPETITIONS", Integer, "Number of bootstrap repetitions to do (default likelihood only)") do |v|
     options[:repetitions] = v
   end
   
@@ -42,7 +42,7 @@ system('uniqify_phylip.rb <ununiqued.phylip >uniqued.phylip')
 input = 'uniqued.phylip'
 stdout = 'uniqued_phylip_stdout.txt'
 
-# If repetitions is defined do that, otherwise do the default likelyhood test
+# If repetitions is defined do that, otherwise do the default likelihood test
 cmd = "error if you see this"
 if options[:repetitions] and options[:repetitions] > 0
 cmd = "phyml -d aa -i #{input} -b #{options[:repetitions]} #{options[:arguments]} >#{stdout}"

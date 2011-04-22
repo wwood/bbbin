@@ -98,7 +98,8 @@ require 'optparse'
 USAGE = "Usage: ununiqify_ensembl_tree [-c] [-m <manual_names_filename>] <fasta_multiple_sequence_alignment> <uniqued.phylip> <consense.outtree>"
 options = {
   :common_names => false,
-  :manual_names => {}
+  :manual_names => {},
+  :phylip_manual_names = {},
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
