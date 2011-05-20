@@ -1,10 +1,10 @@
 #!/bin/bash
 
 cd /blastdb
-
-PLASMODB_VERSION='7.0'
-TOXODB_VERSION='6.2'
-CRYPTODB_VERSION='4.3'
+PLASMODB_VERSION='7.2'
+TOXODB_VERSION='6.4'
+CRYPTODB_VERSION='4.4'
+PIROPLAMADB_VERSION='1.0'
 
 # soft link the necessary files to the /blastdb folder
 # still missing a few species from this section
@@ -59,10 +59,18 @@ ln -s ~/phd/data/Cryptosporidium\ muris/genome/CryptoDB/$CRYPTODB_VERSION/Cmuris
 ln -s ~/phd/data/Cryptosporidium\ muris/genome/CryptoDB/$CRYPTODB_VERSION/CmurisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ muris/genome/CryptoDB/$CRYPTODB_VERSION/CmurisGenomic_CryptoDB-$CRYPTODB_VERSION.fasta
 
-# Random
-ln -s ~/phd/data/Theileria\ parva/TPA1.pep
-ln -s ~/phd/data/Theileria\ annulata/TANN.GeneDB.pep
-ln -s ~/phd/data/Babesia\ bovis/BabesiaWGS.fasta_with_names
+# PiroplasmaDB
+ln -s ~/phd/data/Theileria\ parva/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TparvaMugugaAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Theileria\ parva/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TparvaMugugaAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Theileria\ parva/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TparvaMugugaAnnotatedGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+
+ln -s ~/phd/data/Theileria\ annulata/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TannulataAnkaraAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Theileria\ annulata/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TannulataAnkaraAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Theileria\ annulata/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TannulataAnkaraAnnotatedGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+
+ln -s ~/phd/data/Babesia\ bovis/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/BbovisT2BoAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Babesia\ bovis/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/BbovisT2BoAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Babesia\ bovis/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/BbovisT2BoAnnotatedGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
 
 # Outside Apicomplexa
 ln -s ~/phd/data/Perknsus\ marinus/RefSeq/20101102/Pmarinus.protein.fa

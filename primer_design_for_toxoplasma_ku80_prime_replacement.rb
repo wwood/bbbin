@@ -327,6 +327,8 @@ if $0 == __FILE__
         #'PRIMER_LEFT_MAX_SELF_ANY' => 3, #doesn't seem to accept this, for some
         # reason
         'PRIMER_PAIR_MAX_COMPL_ANY' => 3, #primer dimers
+        # 'PRIMER_THERMODYNAMIC_ALIGNMENT' => 1, # commented out because it didn't seem to give good primers
+        # 'PRIMER_THERMODYNAMIC_PARAMETERS_PATH' => '/home/ben/bioinfo/primer3-2.2.3/src/primer3_config/',
       }
       record = BoulderIO::Record.new(input_hash)
       tempfile.print record.to_s
