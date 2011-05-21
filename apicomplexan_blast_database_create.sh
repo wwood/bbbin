@@ -4,7 +4,7 @@ cd /blastdb
 PLASMODB_VERSION='7.2'
 TOXODB_VERSION='6.4'
 CRYPTODB_VERSION='4.4'
-PIROPLAMADB_VERSION='1.0'
+PIROPLASMADB_VERSION='1.0'
 
 # soft link the necessary files to the /blastdb folder
 # still missing a few species from this section
@@ -62,15 +62,15 @@ ln -s ~/phd/data/Cryptosporidium\ muris/genome/CryptoDB/$CRYPTODB_VERSION/Cmuris
 # PiroplasmaDB
 ln -s ~/phd/data/Theileria\ parva/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TparvaMugugaAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
 ln -s ~/phd/data/Theileria\ parva/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TparvaMugugaAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
-ln -s ~/phd/data/Theileria\ parva/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TparvaMugugaAnnotatedGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Theileria\ parva/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TparvaMugugaGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
 
 ln -s ~/phd/data/Theileria\ annulata/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TannulataAnkaraAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
 ln -s ~/phd/data/Theileria\ annulata/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TannulataAnkaraAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
-ln -s ~/phd/data/Theileria\ annulata/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TannulataAnkaraAnnotatedGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Theileria\ annulata/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/TannulataAnkaraGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
 
 ln -s ~/phd/data/Babesia\ bovis/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/BbovisT2BoAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
 ln -s ~/phd/data/Babesia\ bovis/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/BbovisT2BoAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
-ln -s ~/phd/data/Babesia\ bovis/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/BbovisT2BoAnnotatedGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
+ln -s ~/phd/data/Babesia\ bovis/genome/PiroplasmaDB/$PIROPLASMADB_VERSION/BbovisT2BoGenomic_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta
 
 # Outside Apicomplexa
 ln -s ~/phd/data/Perknsus\ marinus/RefSeq/20101102/Pmarinus.protein.fa
@@ -121,7 +121,7 @@ echo "creating alveolate protein db"
 sed 's/>/>Pmarinus_/' Pmarinus.protein.fa >alveolata.protein.fa
 sed 's/>/>Tthermaphila_/' Preliminary_Gene_Predictions_Aug_2004.pep >>alveolata.protein.fa
 sed 's/>/>Ptetraurelia_/' Ptetraurelia_peptides_v1.49.fasta >>alveolata.protein.fa
-cat $APICOMPLEXAN_PROTEIN_DATABASES\ >>alveolata.protein.fa
+cat $APICOMPLEXAN_PROTEIN_DATABASES >>alveolata.protein.fa
 
 # Create Blast databases
 echo "formating apicomplexan-wide databases.."
