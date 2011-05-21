@@ -91,9 +91,9 @@ export APICOMPLEXAN_PROTEIN_DATABASES=`echo\
  CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
  ChominisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
  CmurisAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta\
- BabesiaWGS.fasta_with_names\
- TANN.G.eneDB.pep\
- TPA1.pep`
+ TparvaMugugaAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta\
+ TannulataAnkaraAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta\
+ BbovisT2BoAnnotatedProteins_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta`
 cat\
  PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
@@ -107,6 +107,9 @@ cat\
  CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta\
  ChominisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta\
  CmurisAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta\
+ TparvaMugugaAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta\
+ TannulataAnkaraAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta\
+ BbovisT2BoAnnotatedTranscripts_PiroplasmaDB-$PIROPLASMADB_VERSION.fasta\
  >apicomplexa.nucleotide.fa
 cat $APICOMPLEXAN_PROTEIN_DATABASES >apicomplexa.protein.fa 
 cat\
