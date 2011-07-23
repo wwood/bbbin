@@ -17,7 +17,7 @@ require 'optparse'
 require 'eupathdb_gene_information_table' #from the reubypathdb rubygem
 
 require 'tempfile'
-require '/home/ben/bin/primer_design_extras' # a loose collection of helpful
+require 'primer_design_extras' # a loose collection of helpful
 
 # classes for primer design
 

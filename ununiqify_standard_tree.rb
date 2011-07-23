@@ -12,7 +12,7 @@
 
 require 'rubygems'
 require 'bio'
-require File.dirname(__FILE__) + '/ensembl'
+require File.dirname(__FILE__) + '/species_id_prefixes'
 
 class TipLabel
 
