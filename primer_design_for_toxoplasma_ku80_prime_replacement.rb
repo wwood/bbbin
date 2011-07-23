@@ -53,6 +53,7 @@ if $0 == __FILE__
     :upstream_sequence => nil,
     :possible_enzymes_to_cut_with_filename => '/home/ben/phd/toxo_experimental_localisations/vectors/LIC HA3:DHFR non-cutters.txt',
     :enzymes_in_freezer_filename => '/home/ben/phd/ralphlab/enzymeList.txt',
+    :enzymes_to_avoid => %w(MauBI),
     :print_vector_compatible_sites => false,
     :print_freezer_compatible_sites => false,
     #    :recombination_sequence_buffer => 350, #how far way from priming sites
@@ -246,6 +247,9 @@ if $0 == __FILE__
   # Anything in the whole wide world?
   vector_compatible_cuts = remove_unsuitable_enzymes.call(vector_compatible_cuts)
   $stderr.puts "After culling for uniqueness, #{vector_compatible_cuts.length} vector-compatible sequences remain"
+  # Remove ones to specifically avoid because they are expensive or unavailable or whatever
+  vector_compatible_cuts = vector_compatible_cuts.reject{|c| options[:enzymes_to_avoid].include?(c.enzyme)}
+  $stderr.puts "After culling those enzymes that are to be globally avoided, #{vector_compatible_cuts.length} vector-compatible sequences remain"
 
   # ============================================================================
   # Attempt to choose a suitable enzyme
@@ -351,7 +355,7 @@ if $0 == __FILE__
           (0..4).each do |primer_number|
             puts "Found primer #{primer_number}: left: #{result["PRIMER_LEFT_#{primer_number}_SEQUENCE"]}"
             puts "Found primer #{primer_number}: right: #{result["PRIMER_RIGHT_#{primer_number}_SEQUENCE"]}"
-            puts "Found primer #{primer_number}: template size: #{result["PRIMER_PAIR_#{primer_number}_PRODUCT_SIZE"]}"
+            puts "Found primer #{primer_number}: product size: #{result["PRIMER_PAIR_#{primer_number}_PRODUCT_SIZE"]}"
           end
         found_primer = true #success!
         else
