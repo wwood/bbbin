@@ -12,7 +12,7 @@ $stderr.puts "warning: currently this script does not care about the singletons,
 
 unless ARGV.length == 1
   $stderr.puts "usage: blast_to_blastclust.rb <blast_output>"
-  $stderr.puts "  where <blast_output> is the -m 8 output from blastall"
+  $stderr.puts "  where <blast_output> is the -m 8 output from blastall (or -outfmt 6  BLAST+ blastp)"
   $stderr.puts
   exit 1
 end
