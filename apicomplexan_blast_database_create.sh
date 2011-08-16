@@ -1,10 +1,10 @@
 #!/bin/bash
 
 cd /blastdb
-PLASMODB_VERSION='7.2'
-TOXODB_VERSION='6.4'
-CRYPTODB_VERSION='4.4'
-PIROPLASMADB_VERSION='1.0'
+PLASMODB_VERSION='8.0'
+TOXODB_VERSION='7.0'
+CRYPTODB_VERSION='4.5'
+PIROPLASMADB_VERSION='1.1'
 
 # soft link the necessary files to the /blastdb folder
 # still missing a few species from this section
