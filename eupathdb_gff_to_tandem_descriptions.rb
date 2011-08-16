@@ -12,6 +12,11 @@ require 'bio-orthomcl'
 require 'pp'
 require 'zlib'
 
+unless ARGV.length == 3
+  $stderr.puts "Usage: #{$0} orthomcl_groups_path species_code gff_file_path"
+  exit 1
+end
+
 orthomcl_groups_path = ARGV[0]
 species_code = ARGV[1]
 gff_file_path = ARGV[2]
@@ -45,7 +50,7 @@ while true
   num += 1
   
   # ignore when they cross chromosome boundaries
-  next unless current_gene.seqname == last_gene.seqname
+  if current_gene.seqname == last_gene.seqname
   
   # Go through the OrthoMCL list
   current_orthomcl = get_orthomcl_group.call current_gene
@@ -79,6 +84,7 @@ while true
   last_orthomcl,
   current_orthomcl,
   ].join("\t")
+  end
   
   last_gene = current_gene
   last_orthomcl = current_orthomcl
