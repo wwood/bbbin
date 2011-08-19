@@ -46,6 +46,10 @@ ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/Neospor
 ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta"
 ln -s "/home/ben/phd/data/Neospora caninum/genome/ToxoDB/$TOXODB_VERSION/NeosporaCaninumGenomic_ToxoDB-$TOXODB_VERSION.fasta"
 
+ln -s "/home/ben/phd/data/Eimeria tenella/genome/ToxoDB/$TOXODB_VERSION/EtenellaHoughtonAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta"
+ln -s "/home/ben/phd/data/Eimeria tenella/genome/ToxoDB/$TOXODB_VERSION/EtenellaHoughtonAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta"
+ln -s "/home/ben/phd/data/Eimeria tenella/genome/ToxoDB/$TOXODB_VERSION/EtenellaHoughtonGenomic_ToxoDB-$TOXODB_VERSION.fasta"
+
 # CryptoDB
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/CryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedProteins_CryptoDB-$CRYPTODB_VERSION.fasta
 ln -s ~/phd/data/Cryptosporidium\ parvum/genome/CryptoDB/$CRYPTODB_VERSION/CparvumAnnotatedTranscripts_CryptoDB-$CRYPTODB_VERSION.fasta
@@ -83,6 +87,7 @@ export APICOMPLEXAN_PROTEIN_DATABASES=`echo\
  PfalciparumAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiME49AnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
  NeosporaCaninumAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
+ EtenellaHoughtonAnnotatedProteins_ToxoDB-$TOXODB_VERSION.fasta\
  PbergheiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  PvivaxAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
  PyoeliiAnnotatedProteins_PlasmoDB-$PLASMODB_VERSION.fasta\
@@ -98,7 +103,7 @@ cat\
  PfalciparumAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  TgondiiME49AnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
  NeosporaCaninumAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
- GeneDB_Etenella_Genes\
+ EtenellaHoughtonAnnotatedTranscripts_ToxoDB-$TOXODB_VERSION.fasta\
  PbergheiAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  PvivaxAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
  PyoeliiAnnotatedTranscripts_PlasmoDB-$PLASMODB_VERSION.fasta\
