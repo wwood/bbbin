@@ -49,14 +49,15 @@ if __FILE__ == $0
   options = {
   :orthomcl_groups_filename => '/home/ben/phd/data/orthomcl/v4/groups_OrthoMCL-4.txt.gz', #ben is the creator of this script, so gets dibs.
   :input_species_code => nil,
-  :output_species_codes => nil
+  :output_species_codes => nil,
+  :inverse => false, #as per grep -v
   }
   
   # parse options
   o = OptionParser.new do |opts|
     opts.banner = [
       'Usage: orthomcl_species_jumper.rb -g <orthomcl_groups_filename> -i <input_species_orthomcl_species_code> -o <output_species_orthomcl_species_code>',
-      "A list of input IDs is piped in via STDIN. Requires grep, and zcat if the orthomcl file is gzipped",
+      "\nA list of input IDs is piped in via STDIN. Requires grep, and zcat if the orthomcl file is gzipped\n",
     ]
     
     opts.on('-g','--orthomcl-gzip-groups-filename GZIP_FILENAME','Path to the OrthoMCL groups file (either gzipped or not - that is autodetected), downloadable from orthomcl.org') do |filename|
@@ -67,6 +68,9 @@ if __FILE__ == $0
     end
     opts.on('-o','--output-species-codes SPECIES_CODE','output OrthoMCL species code(s), comma-separated. Default nil, meaning inputs are only mapped to OrthoMCL group IDs') do |s|
       options[:output_species_codes] = s.split(',')
+    end
+    opts.on('-v','--inverse','output OrthoMCL genes NOT matching the input specie codes') do
+      options[:inverse] = true
     end
   end
   o.parse!
@@ -94,15 +98,16 @@ if __FILE__ == $0
         lines = `#{cmd}`.strip.split(/\n/)
         #$stderr.puts lines
       else
+        cmd = nil
         if use_zcat
-          cmd = `zcat '#{options[:orthomcl_groups_filename]}' |grep '^#{gene_id}:'`
+          command = "zcat '#{options[:orthomcl_groups_filename]}' |grep '^#{gene_id}:'" 
         else
-          cmd = "grep '^#{gene_id}:' #{options[:orthomcl_groups_filename]}"
+          command = "grep '^#{gene_id}:' #{options[:orthomcl_groups_filename]}"
         end
-        lines = `#{cmd}`.strip.split(/\n/)
+        lines = `#{command}`.strip.split(/\n/)
       end
       
-      # convert to parsed OrthoMCL groups 
+      # convert to parsed OrthoMCL groups
       groups = lines.collect do |l|
         Bio::OrthoMCL::Group.create_from_groups_file_line l
       end
@@ -110,20 +115,23 @@ if __FILE__ == $0
       # if searching by genes and not by groups
       # multiple genes can be found, because the some gene names are the beginnings of others, e.g. MAL13P1.15 and MAL13P1.150
       # remove those genes that are longer
+      found_group = false
       if options[:input_species_code]
         groups = groups.select do |g|
+          selected = nil
           if options[:input_species_code] == '-'
             # Don't bother matching on species code, since we don't know it
-            g.genes_without_species_codes.include? gene_id
+            selected = g.genes_without_species_codes.include? gene_id
           else
             # match on species ID
-            g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
+            selected = g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
           end
+          found_group = g if selected
         end
       end
       
       # Error checking
-      if groups.length == 0
+      if !found_group
         $stderr.puts "No groups found for input #{gene_id}, skipping"
         next
       elsif groups.length > 1
@@ -132,15 +140,21 @@ if __FILE__ == $0
       end
       
       # output
-      group = groups[0]
+      group = found_group
       to_output = []
       if options[:input_species_code]
         to_output.push gene_id
       end
       to_output.push group.group_id
       unless options[:output_species_codes].nil?
-        options[:output_species_codes].each do |code|
-          to_output.push group.genes_with_species_code(code).join(',')
+        if options[:inverse]
+          to_output.push group.genes.reject{|d|
+            options[:output_species_codes].include?(group.split_species_and_id(d)[0])
+          }.join(',')
+        else
+          options[:output_species_codes].each do |code|
+            to_output.push group.genes_with_species_code(code).join(',')
+          end
         end
       end
       puts to_output.join("\t")
