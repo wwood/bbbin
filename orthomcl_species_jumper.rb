@@ -69,7 +69,7 @@ if __FILE__ == $0
     opts.on('-o','--output-species-codes SPECIES_CODE','output OrthoMCL species code(s), comma-separated. Default nil, meaning inputs are only mapped to OrthoMCL group IDs') do |s|
       options[:output_species_codes] = s.split(',')
     end
-    opts.on('-v','--inverse','output OrthoMCL genes NOT matching the input specie codes') do
+    opts.on('-v','--inverse','output OrthoMCL genes NOT matching the input species codes') do
       options[:inverse] = true
     end
   end
