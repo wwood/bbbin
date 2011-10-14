@@ -41,6 +41,24 @@ module Bio
           raise ParseException, "Couldn't parse OrthoMCL gene ID `#{gene_id}'"
         end
       end
+      
+      # Return an array of groups that are found by grepping the groups file
+      # If the groups file path ends in .gz, then zcat is used to uncompress
+      # the groups file before the grep
+      def self.groups_by_grep(groups_file, grep_string)
+        use_zcat = groups_file.match(/gz$/) #is this a gz file, or just a regular text file?
+        if use_zcat
+          cmd = "zcat '#{groups_file}' |grep '#{grep_string}'"
+        else
+          cmd = "grep '#{grep_string}' '#{groups_file}'"
+        end
+        
+        groups = []
+        `#{cmd}`.strip.split(/\n/).each do |line|
+          groups.push create_from_groups_file_line(line)
+        end
+        return groups
+      end
     end
   end
 end
@@ -82,35 +100,20 @@ if __FILE__ == $0
   # split on line breaks and whitespace
   ARGF.each_line do |line|
     line.split(/\s+/).each do |gene_id|
-      lines = []
-      use_zcat = options[:orthomcl_groups_filename].match(/gz$/) #is this a gz file, or just a regular text file?
+      to_grep = nil
+      
       if options[:input_species_code]
         # Are we grepping for species?
         to_grep = gene_id
         to_grep = add_species_code.call(options[:input_species_code],gene_id) unless options[:input_species_code] == '-'
-        
-        if use_zcat
-          cmd = "zcat '#{options[:orthomcl_groups_filename]}' |grep '#{to_grep}'"
-        else
-          cmd = "grep '#{to_grep}' '#{options[:orthomcl_groups_filename]}'"
-        end
-        #$stderr.puts cmd
-        lines = `#{cmd}`.strip.split(/\n/)
-        #$stderr.puts lines
       else
-        cmd = nil
-        if use_zcat
-          command = "zcat '#{options[:orthomcl_groups_filename]}' |grep '^#{gene_id}:'" 
-        else
-          command = "grep '^#{gene_id}:' #{options[:orthomcl_groups_filename]}"
-        end
-        lines = `#{command}`.strip.split(/\n/)
+        to_grep = "^#{gene_id}:"
       end
       
-      # convert to parsed OrthoMCL groups
-      groups = lines.collect do |l|
-        Bio::OrthoMCL::Group.create_from_groups_file_line l
-      end
+      groups = Bio::OrthoMCL::Group.groups_by_grep(
+        options[:orthomcl_groups_filename],
+        to_grep
+      )
       
       # if searching by genes and not by groups
       # multiple genes can be found, because the some gene names are the beginnings of others, e.g. MAL13P1.15 and MAL13P1.150
