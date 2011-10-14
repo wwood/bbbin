@@ -1,0 +1,2 @@
+OG1: pfal|1 pcha|1 pfal|2
+OG2: pfal|1 pcha|1
