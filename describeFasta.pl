@@ -6,6 +6,7 @@ use Bio::SeqIO;
 #use Getopt::Std;
 
 #read it in from STDIN
+my $original = undef;
 if ($#ARGV==-1){
   $original = Bio::SeqIO->new(-fh => \*STDIN,
 			      '-format' => 'fasta');
