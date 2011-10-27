@@ -9,7 +9,7 @@ require 'reach'
 
 if __FILE__ == $0
   options = {
-  :orthomcl_groups_filename => '/home/ben/phd/data/orthomcl/v4/groups_OrthoMCL-4.txt.gz', #ben is the creator of this script, so gets dibs.
+  :orthomcl_groups_filename => '/home/ben/phd/data/orthomcl/v5/groups_OrthoMCL-5.txt.gz', #ben is the creator of this script, so gets dibs.
   :input_species_codes => nil,
   }
   
