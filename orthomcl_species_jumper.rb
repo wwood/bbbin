@@ -69,7 +69,7 @@ if __FILE__ == $0
     opts.on('-o','--output-species-codes SPECIES_CODE','output OrthoMCL species code(s), comma-separated. Default nil, meaning inputs are only mapped to OrthoMCL group IDs') do |s|
       options[:output_species_codes] = s.split(',')
     end
-    opts.on('-v','--inverse','output OrthoMCL genes NOT matching the input specie codes') do
+    opts.on('-v','--inverse','output OrthoMCL genes NOT matching the input species codes') do
       options[:inverse] = true
     end
   end
@@ -116,18 +116,19 @@ if __FILE__ == $0
       # multiple genes can be found, because the some gene names are the beginnings of others, e.g. MAL13P1.15 and MAL13P1.150
       # remove those genes that are longer
       found_group = false
-      if options[:input_species_code]
-        groups = groups.select do |g|
-          selected = nil
-          if options[:input_species_code] == '-'
-            # Don't bother matching on species code, since we don't know it
-            selected = g.genes_without_species_codes.include? gene_id
-          else
-            # match on species ID
-            selected = g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
-          end
-          found_group = g if selected
+      groups = groups.select do |g|
+        selected = nil
+        if options[:input_species_code] == '-'
+          # Don't bother matching on species code, since we don't know it
+          selected = g.genes_without_species_codes.include? gene_id
+        elsif options[:input_species_code].nil?
+          # matching on OrthoMCL group name, so we are already happy
+          selected = true
+        else
+          # match on species ID
+          selected = g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
         end
+        found_group = g if selected
       end
       
       # Error checking
