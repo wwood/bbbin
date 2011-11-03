@@ -88,6 +88,7 @@ elsif options['a']
 elsif options['d']
   pp hash
 else
+  puts amino_acids.join(',')
   amino_acids.each_with_index do |aa, i|
     print ',' unless i==0 #print comma before each count, except if this is the first count
     if hash[aa]
