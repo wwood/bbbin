@@ -74,18 +74,32 @@ if options['i']
   # do nothing
 elsif options['a']
   puts amino_acids.join(',')
-  alignment_hash.each do |hash|
+  alignment_hash.each do |hash2|
     amino_acids.each_with_index do |aa, i|
       print ',' unless i==0 #print comma before each count, except if this is the first count
-      if hash[aa]
-        print hash[aa]
+      if hash2[aa]
+        print hash2[aa]
       else
         print 0
       end
     end
     puts
   end
-else
+elsif options['d']
   pp hash
+else
+  amino_acids.each_with_index do |aa, i|
+    print ',' unless i==0 #print comma before each count, except if this is the first count
+    if hash[aa]
+      print hash[aa]
+    else
+      print 0
+    end
+  end
+  puts
+  
+  unfounds = hash.keys.reject{|a| amino_acids.include?(a)}
+  if unfounds.length > 0
+    $stderr.puts "Not reporting these amino acid occurrences: #{unfounds.join(', ')}."
+  end
 end
-
