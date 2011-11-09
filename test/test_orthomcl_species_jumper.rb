@@ -6,7 +6,7 @@ require 'test/unit'
 class OrthoMCLSpeciesJumperTest < Test::Unit::TestCase
   # Path to the script
   def jumper
-    "#{File.join('.','..','orthomcl_species_jumper.rb')}"    
+    "#{File.join('.','..','orthomcl_species_jumper_faster.rb')}"    
   end
   
   def test_groups_input
