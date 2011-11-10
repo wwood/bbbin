@@ -48,7 +48,7 @@ module Bio
       def self.groups_by_grep(groups_file, grep_string)
         use_zcat = groups_file.match(/gz$/) #is this a gz file, or just a regular text file?
         if use_zcat
-          cmd = "zcat '#{groups_file}' |grep '#{grep_string}'"
+          cmd = "zcat '#{groups_file}' |egrep '#{grep_string}'"
         else
           cmd = "grep '#{grep_string}' '#{groups_file}'"
         end
@@ -98,47 +98,53 @@ if __FILE__ == $0
   end
   
   # split on line breaks and whitespace
-  ARGF.each_line do |line|
-    line.split(/\s+/).each do |gene_id|
-      to_grep = nil
-      
-      if options[:input_species_code]
-        # Are we grepping for species?
-        to_grep = gene_id
-        to_grep = add_species_code.call(options[:input_species_code],gene_id) unless options[:input_species_code] == '-'
-      else
-        to_grep = "^#{gene_id}:"
-      end
-      
-      groups = Bio::OrthoMCL::Group.groups_by_grep(
-        options[:orthomcl_groups_filename],
-        to_grep
-      )
-      
+  matchers = ARGF.read.split(/\s+/)
+  
+  # Narrow the list of groups to iterate through for performance reasons
+  grep_term = nil
+  if options[:input_species_code] == '-'
+    # Don't bother matching on species code, since we don't know it
+    grep_term = matchers.join('|')
+  elsif options[:input_species_code].nil?
+    # matching on OrthoMCL group name so just match all of those
+    grep_term = matchers.collect{|g| "#{g}:"}.join('|')
+  else
+    # match on species ID
+    grep_term = '.' #could be faster likely, but can't be bothered testing it well enough
+  end
+  
+  # Cache all the groups, grepping on lines with stuff in them (grep not really needed)
+  groups = Bio::OrthoMCL::Group.groups_by_grep(
+    options[:orthomcl_groups_filename], grep_term
+  )
+  $stderr.puts "Found #{groups.length} groups to further filter. Filtering now.."
+  
+  matchers.each do |gene_id|
       # if searching by genes and not by groups
       # multiple genes can be found, because the some gene names are the beginnings of others, e.g. MAL13P1.15 and MAL13P1.150
       # remove those genes that are longer
       found_group = false
-      groups = groups.select do |g|
+      this_groups = groups.select do |g|
         selected = nil
         if options[:input_species_code] == '-'
           # Don't bother matching on species code, since we don't know it
           selected = g.genes_without_species_codes.include? gene_id
         elsif options[:input_species_code].nil?
           # matching on OrthoMCL group name, so we are already happy
-          selected = true
+          selected = (g.group_id == gene_id)
         else
           # match on species ID
           selected = g.genes.include? add_species_code.call(options[:input_species_code],gene_id)
         end
         found_group = g if selected
+        selected
       end
       
       # Error checking
       if !found_group
         $stderr.puts "No groups found for input #{gene_id}, skipping"
         next
-      elsif groups.length > 1
+      elsif this_groups.length > 1
         $stderr.puts "More than expected (#{groups.length}) OrthoMCL groups found for input #{gene_id}, skipping"
         next
       end
@@ -162,6 +168,5 @@ if __FILE__ == $0
         end
       end
       puts to_output.join("\t")
-    end
   end
 end

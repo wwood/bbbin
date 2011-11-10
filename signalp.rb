@@ -11,15 +11,16 @@ if $0 == __FILE__
   
   runner = Bio::SignalP::Wrapper.new
   
-  options = ARGV.getopts("sShvf") #s for summary, no args required
+  options = ARGV.getopts("sShvfF") #s for summary, no args required
   if options['h']
     $stderr.puts "Usage: signalp.rb [-svf] <my.fasta>"
     $stderr.puts "Where my.fasta is the name of the fasta file you want to analyse. Default output is all the sequences with their signal sequences cleaved."
     $stderr.puts "-s: summary: print a tab separated table indicating if the sequence had a signal peptide according to the HMM and NN results, respectively."
     $stderr.puts "-S: bigger_summary: like -s, except also includes where the cleavage site is predicted"
     $stderr.puts "-v: verbose summary: much like -s except more details of the prediction are predicted."
-    $stderr.puts "-f: filter: print those sequences that have a signal peptide"
-    return
+    $stderr.puts "-f: filter in: print those sequences that have a signal peptide"
+    $stderr.puts "-F: filter out: print those sequences that don't have a signal peptide"
+    exit
   end
   
   # Print headers if required
@@ -100,6 +101,10 @@ if $0 == __FILE__
       puts taputs.join("\t")
     elsif options['f']
       if result.signal?
+        puts seq
+      end
+    elsif options['F']
+      if !result.signal?
         puts seq
       end
     else
