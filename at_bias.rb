@@ -7,7 +7,7 @@ if __FILE__ == $0
   require 'bio'
   require 'optparse'
   
-  options = ARGV.getopts('n:hl:')
+  options = ARGV.getopts('n:hl:s:')
   number = options['n'].to_i
   number ||= 3 #default to codons
   
@@ -19,6 +19,11 @@ if __FILE__ == $0
   if options['h']
     $stderr.puts "Usage: at_bias.rb [-n <number_of_bases_to_search>] [-l length] <fasta_path>"
     exit 1
+  end
+  
+  golds = %W(A T)
+  if options['s']
+    golds = options['s'].split(',')
   end
   
   Bio::FlatFile.foreach(ARGF) do |entry|
@@ -38,7 +43,9 @@ if __FILE__ == $0
         end
       end
 
-      print ",#{atgc['A']+atgc['T']}"
+      gold_count = 0
+      golds.each{|g| gold_count += atgc[g]}
+      print ",#{gold_count}"
       
       count += 1
       break if count > length
