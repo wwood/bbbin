@@ -5,7 +5,21 @@ require 'bio'
 
 module Bio
   class DCNLS
-    def predictions(bio_msa_object)
+    DEFAULT_NUMBER_BASIC_RESIDUES_IN_NLS = 4
+    
+    # Given a Bio::Alignment object, 
+    # return a list of (bioinformatics style 1-based) indexes
+    # of the alignment that correspond to predicted NLSs.
+    # 
+    # bio_msa_object: the Bio::Alignment object filled with one
+    # or more (aligned) sequences
+    #
+    # options: tweaks to the algorithm, given as a Hash. Acceptable Hash keys:
+    # * :required_number_of_basic_residues - default 4
+    #
+    def predictions(bio_msa_object, options={})
+      options[:required_number_of_basic_residues] ||= DEFAULT_NUMBER_BASIC_RESIDUES_IN_NLS
+      
       # Iterate through the columns, taking 5 columns at a time
       acceptable_indices = []
        (0..bio_msa_object[bio_msa_object.keys[0]].length-1).each do |start|
@@ -22,8 +36,10 @@ module Bio
           # p num_basic
           num_basics.push num_basic
         end
-        if num_basics.select{|n| n>3}.length > num_basics.length/2
-          acceptable_indices.push start
+        if num_basics.select{
+            |n| n >= options[:required_number_of_basic_residues]
+          }.length > num_basics.length/2
+          acceptable_indices.push start+1
         end
       end
       return acceptable_indices
@@ -51,6 +67,16 @@ if __FILE__ == $0
     opts.on("-s", "--single", "Compute results on each sequence in the provided fasta file individually (default: treat the file as a multiple sequence alignment)") do
       options[:single_sequence] = true
     end
+    
+    opts.on("-b", '--basics BASICS', 'Required number of basic residues within a sub-alignment (or subsequence) of the alignment (or seqeunce) to qualify as an NLS. Deafult: 4') do |basics|
+      i = basics.to_i
+      if i > 5 or i < 1
+        $stderr.puts "Unexpected number of basic residues specified: `#{i}' - has to be between 1 and 5"
+        exit
+      end
+      
+      options[:required_number_of_basic_residues] = i
+    end
   end
   o.parse!
   msa_path = ARGV[0]
@@ -65,7 +91,7 @@ if __FILE__ == $0
     
     if options[:verbose]
       acceptable_indices.each do |i|
-        aln.alignment_slice(i..i+4).alignment_collect do |seq|
+        aln.alignment_slice(i-1..i+3).alignment_collect do |seq|
           subseq = seq.seq
           puts subseq
         end
@@ -74,11 +100,17 @@ if __FILE__ == $0
     end
   end
   
+  # Setup options to be used regardless of if it a single sequence or MSA is to be used.
+  tweaks = {}
+  unless options[:required_number_of_basic_residues].nil?
+    tweaks[:required_number_of_basic_residues] = options[:required_number_of_basic_residues]
+  end
+  
   if options[:single_sequence]
     # Predict each sequence individually, not using a MSA as input
     Bio::FlatFile.open(msa_path).each do |s|
       aln = Bio::Alignment.new([s.seq])
-      print_results.call(Bio::DCNLS.new.predictions(aln), aln)
+      print_results.call(Bio::DCNLS.new.predictions(aln, tweaks), aln)
     end
   else
     # Predict a multiple sequence alignment
@@ -92,6 +124,6 @@ if __FILE__ == $0
     # Creates a multiple sequence alignment (possibly unaligned) named
     # 'seqs' from array 'seq_ary'.
     aln = Bio::Alignment.new(seq_ary)
-    print_results.call(Bio::DCNLS.new.predictions(aln), aln)
+    print_results.call(Bio::DCNLS.new.predictions(aln, tweaks), aln)
   end  
 end
