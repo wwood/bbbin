@@ -5,6 +5,16 @@ require 'bio'
 
 module Bio
   class DCNLS
+    # Length upon which to make predictions
+    attr_accessor :nls_length
+    
+    # default @nls_length
+    DEFAULT_NLS_LENGTH = 5
+    
+    def initialise
+      @nls_length = DEFAULT_NLS_LENGTH
+    end
+    
     def predictions(bio_msa_object)
       # Iterate through the columns, taking 5 columns at a time
       acceptable_indices = []
@@ -15,7 +25,7 @@ module Bio
         #puts start
         bio_msa_object.alignment_collect do |seq|
           num_basic = 0
-          subseq = seq[start..start+4]
+          subseq = seq[start..start+@nls_length-1]
           subseq.each_char do |c|
             num_basic += 1 if %w(R K).include?(c)
           end
@@ -40,6 +50,7 @@ if __FILE__ == $0
   options = {
     :verbose => true,
     :single_sequence => false,
+    :nls_length => nil,
   }
   o = OptionParser.new do |opts|
     opts.banner = USAGE
@@ -50,6 +61,14 @@ if __FILE__ == $0
     
     opts.on("-s", "--single", "Compute results on each sequence in the provided fasta file individually (default: treat the file as a multiple sequence alignment)") do
       options[:single_sequence] = true
+    end
+    
+    opts.on(nil, "--nls-length LENGTH", "Require NLS predictions to be LENGTH residues long") do |length|
+      length = length.to_i
+      if length < 1
+        raise Exception, "Unexpected --nls-length parameter given"
+      end
+      options[:nls_length] = length
     end
   end
   o.parse!
