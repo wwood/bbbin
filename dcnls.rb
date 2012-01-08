@@ -55,7 +55,7 @@ end
 if __FILE__ == $0
   require 'optparse'
   
-  USAGE = "Usage: dcnls.rb [-q] [-s] <multiple_sequence_alignment_file>"
+  USAGE = "Usage: dcnls.rb [-q] [-s] [--id] [--basics <min_basics>] [--nls-length <nls_window_length>] <multiple_sequence_alignment_file>"
   options = {
     :verbose => true,
     :single_sequence => false,
@@ -71,7 +71,7 @@ if __FILE__ == $0
       options[:single_sequence] = true
     end
 
-    opts.on(nil, "--nls-length LENGTH", "Require NLS predictions to be LENGTH residues long") do |length|
+    opts.on('-l', "--nls-length LENGTH", "Require NLS predictions to be LENGTH residues long") do |length|
       length = length.to_i
       if length < 1
         raise Exception, "Unexpected --nls-length parameter given"
@@ -79,10 +79,10 @@ if __FILE__ == $0
       options[:nls_length] = length
     end
 
-    opts.on("-b", '--basics BASICS', 'Required number of basic residues within a sub-alignment (or subsequence) of the alignment (or seqeunce) to qualify as an NLS. Deafult: 4') do |basics|
+    opts.on("-b", '--basics BASICS', 'Required number of basic residues within a sub-alignment (or subsequence) of the alignment (or sequence) to qualify as an NLS. Deafult: 4') do |basics|
       i = basics.to_i
-      if i > 5 or i < 1
-        $stderr.puts "Unexpected number of basic residues specified: `#{i}' - has to be between 1 and 5"
+      if i < 1
+        $stderr.puts "Unexpected number of basic residues specified: `#{i}' - has to be >1"
         exit
       end
       options[:required_number_of_basic_residues] = i
