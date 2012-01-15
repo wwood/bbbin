@@ -19,6 +19,7 @@ module Bio
     #
     # options: tweaks to the algorithm, given as a Hash. Acceptable Hash keys:
     # * :required_number_of_basic_residues - default 4
+    # * :nls_length - default 5
     #
     def predictions(bio_msa_object, options={})
       options[:required_number_of_basic_residues] ||= DEFAULT_NUMBER_BASIC_RESIDUES_IN_NLS

@@ -23,7 +23,7 @@ CORE_NUCLEAR_PROTEOME_PLASMODB_IDS_PATH = '/home/ben/phd/voss_proteome/June2010/
 # Obtained from Till
 HP1_POSITIVE_GENES_PATH = '/home/ben/phd/data/Plasmodium falciparum/HP1chip/hp1.txt'
 # Obtained by running falciparum_unconserved_regions.rb
-FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS = 'falciparum_unconserved_region_genes.csv'
+FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS = 'falciparum_unconserved_region_genes.window5max1.csv'
 
 if __FILE__ == $0
   # Take a file that contains 1 PlasmoDB ID per line, and generate a matrix that 
@@ -217,6 +217,8 @@ if __FILE__ == $0
     output_line.push unconserved_region_genes.include?(plasmodb)
 
     # dcnls
+    
+
     # conserved 5' end when blasted against toxo orthologue?
     
     # The answer. What is the localisation?
