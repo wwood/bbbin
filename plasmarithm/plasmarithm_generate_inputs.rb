@@ -22,6 +22,8 @@ DERISI_3D7_MICROARRAY_LIFECYCLE_PATH = '/home/ben/phd/data/Plasmodium falciparum
 CORE_NUCLEAR_PROTEOME_PLASMODB_IDS_PATH = '/home/ben/phd/voss_proteome/June2010/nuclear_bioinfo_final6.ids'
 # Obtained from Till
 HP1_POSITIVE_GENES_PATH = '/home/ben/phd/data/Plasmodium falciparum/HP1chip/hp1.txt'
+# Obtained by running falciparum_unconserved_regions.rb
+FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS = 'falciparum_unconserved_region_genes.csv'
 
 if __FILE__ == $0
   # Take a file that contains 1 PlasmoDB ID per line, and generate a matrix that 
@@ -117,7 +119,10 @@ if __FILE__ == $0
   hp1_positive_genes = []
   File.open(HP1_POSITIVE_GENES_PATH).each_line do |line|
     hp1_positive_genes.push line.strip
-  end  
+  end
+  
+  # Cache unconserved region genes
+  unconserved_region_genes = File.open(FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS).readlines.collect{|l| l.strip}
 
   
   
@@ -206,10 +211,10 @@ if __FILE__ == $0
     output_line.push result.transmembrane_domains.length > 0
 
     # Contained in HP1 associated genomic regions?
-    hp1_positive_genes.include?(plasmodb)
+    output_line.push hp1_positive_genes.include?(plasmodb)
     
     # In un-aligned regions of the genome (sub-telomeric)?
-    
+    output_line.push unconserved_region_genes.include?(plasmodb)
 
     # dcnls
     # conserved 5' end when blasted against toxo orthologue?

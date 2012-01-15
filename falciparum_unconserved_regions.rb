@@ -11,7 +11,7 @@ if __FILE__ == $0
   FALCIPARUM_GENE_INFORMATION_FILE = '/home/ben/phd/data/Plasmodium falciparum/genome/PlasmoDB/8.2/PfalciparumGene_PlasmoDB-8.2.txt'
   FALCIPARUM_ONE_TO_ONE_ORTHOLOGUES_FILE = '/home/ben/phd/amino_acid_overrepresentation/1/plasmodium_orthologues/pfal_pviv_pber_pcha.pfal.genes'
   
-  WINDOW_SIZE=10
+  WINDOW_SIZE=5
   MAX_ONE_TO_ONE_ORTHOLOGUES_PER_WINDOW=1
   
   falciparum_chromosomes = {} #Hash of chromosome => plasmodb_id => gene start 
