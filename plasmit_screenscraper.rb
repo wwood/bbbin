@@ -5,7 +5,7 @@ require 'progressbar'
 require 'reubypathdb'
 
 if __FILE__ == $0
-  USAGE = 'plasmit_screenscraper.rb <eupathdb_fasta_file>'
+  USAGE = 'plasmit_screenscraper.rb <fasta_file>'
   
   inputs = Bio::FlatFile.open(ARGF).entries
   progress = ProgressBar.new('plasmit',inputs.length)
@@ -18,7 +18,7 @@ if __FILE__ == $0
     # output recorded for a 24 amino acid length protein is 23, I'm playing
     # it safe here
     if aa.seq.length < 25
-      $stderr.puts "Found sequence #{aa.name} with fewer than 25 amino acids, ignoring"
+      $stderr.puts "Found sequence #{aa.definition} with fewer than 25 amino acids, ignoring"
     else
       command = "curl -s 'http://gecco.org.chemie.uni-frankfurt.de/cgi-bin/plasmit/runanalysis.cgi?output=simple&sequence=>dummy%0A#{aa.seq[0..24]}'"
       
