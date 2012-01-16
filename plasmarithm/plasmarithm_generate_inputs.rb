@@ -18,12 +18,18 @@ CRYPTO_ORTHOLOGUES_FILE = 'crypto_orthologues.csv.failed'
 FALCIPARUM_GENE_INFORMATION_PATH = '/home/ben/phd/data/Plasmodium falciparum/genome/PlasmoDB/8.2/PfalciparumGene_PlasmoDB-8.2.txt'
 # Supplementary data to the 2006 microarray paper
 DERISI_3D7_MICROARRAY_LIFECYCLE_PATH = '/home/ben/phd/data/Plasmodium falciparum/microarray/DeRisi2006/3D7_overview_S6.csv'
-# Oehring and Woodcroft et. al. 2012 (hopefully - not yet published)
+# Oehring and Woodcroft et. al. 2012 (hopefully - not yet accepted!)
 CORE_NUCLEAR_PROTEOME_PLASMODB_IDS_PATH = '/home/ben/phd/voss_proteome/June2010/nuclear_bioinfo_final6.ids'
 # Obtained from Till
 HP1_POSITIVE_GENES_PATH = '/home/ben/phd/data/Plasmodium falciparum/HP1chip/hp1.txt'
 # Obtained by running falciparum_unconserved_regions.rb
 FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS = 'falciparum_unconserved_region_genes.window5max1.csv'
+# used dcnls.rb and some other things for these two
+DCNLS_4_OF_5_PATH = 'dcnls.4of5.csv'
+DCNLS_5_OF_6_PATH = 'dcnls.5of6.csv'
+
+
+
 
 if __FILE__ == $0
   # Take a file that contains 1 PlasmoDB ID per line, and generate a matrix that 
@@ -123,6 +129,27 @@ if __FILE__ == $0
   
   # Cache unconserved region genes
   unconserved_region_genes = File.open(FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS).readlines.collect{|l| l.strip}
+  
+  # Cache DCNLS output files
+  dcnls4of5 = File.open(DCNLS_4_OF_5_PATH).readlines.collect{ |l|
+    splits = l.split("\t")
+    plasmodb = splits[1]
+    if splits[2].length > 0
+      splits[2].split(',')
+    else
+      nil
+    end
+  }
+  dcnls5of6 = File.open(DCNLS_5_OF_6_PATH).readlines.collect{ |l|
+    splits = l.split("\t")
+    plasmodb = splits[1]
+    if splits[2].length > 0
+      splits[2].split(',')
+    else
+      nil
+    end
+  }
+  
 
   
   
@@ -217,11 +244,11 @@ if __FILE__ == $0
     output_line.push unconserved_region_genes.include?(plasmodb)
 
     # dcnls
-    
+    output_line.push !dcnls4of5[plasmodb].nil? and [2,3,4].include?(dcnls4of5[plasmodb].length)
+    output_line.push !dcnls5of6[plasmodb].nil? and [2].include?(dcnls5of6[plasmodb].length)
 
     # conserved 5' end when blasted against toxo orthologue?
     
-    # The answer. What is the localisation?
     
     puts output_line.join(",")
   end
