@@ -9,15 +9,19 @@ GEM
     bio-signalp (0.2.0)
     bio-tm_hmm (0.2.0)
       bio (>= 1.4.1)
+    bio-wolf_psort_wrapper (0.0.3)
+    progressbar (0.9.2)
     reubypathdb (0.3.1)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
-  bio (>= 1.4.2)
-  bio-exportpred (>= 0.0.1)
-  bio-plasmoap (>= 0.0.2)
-  bio-signalp (>= 0.2.0)
-  bio-tm_hmm (>= 0.2.0)
+  bio (= 1.4.2)
+  bio-exportpred (= 0.0.1)
+  bio-plasmoap (= 0.0.2)
+  bio-signalp (= 0.2.0)
+  bio-tm_hmm (= 0.2.0)
+  bio-wolf_psort_wrapper (= 0.0.3)
+  progressbar
   reubypathdb (= 0.3.1)

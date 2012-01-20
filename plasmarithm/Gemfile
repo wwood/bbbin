@@ -1,9 +1,11 @@
 source "http://rubygems.org"
 
-gem 'bio', '>=1.4.2'
-gem 'bio-plasmoap', '>=0.0.2'
-gem 'bio-signalp', '>=0.2.0'
+gem 'bio', '=1.4.2'
+gem 'bio-plasmoap', '=0.0.2'
+gem 'bio-signalp', '=0.2.0'
 gem 'reubypathdb', '=0.3.1' #has to be this exact version so that EuPathDB database versions are locked in. However it should work just the same with newer versions of this gem also.
-gem 'bio-tm_hmm', '>=0.2.0'
-gem 'bio-exportpred', '>=0.0.1'
+gem 'bio-tm_hmm', '=0.2.0'
+gem 'bio-exportpred', '=0.0.1'
+gem 'bio-wolf_psort_wrapper','=0.0.3'
+gem 'progressbar'
 

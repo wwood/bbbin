@@ -9,6 +9,7 @@ require 'bio-exportpred'
 require 'bio-wolf_psort_wrapper'
 
 require 'pp'
+require 'progressbar'
 
 # Generated using plasmit_screenscraper.rb
 PLASMIT_PREDICTIONS_FILE = '/home/ben/phd/data/Plasmodium falciparum/plasmit/PlasmoDB8.2.plasmit_screenscraped.csv'
@@ -29,11 +30,17 @@ DCNLS_4_OF_5_PATH = 'dcnls.4of5.csv'
 DCNLS_5_OF_6_PATH = 'dcnls.5of6.csv'
 
 
+class Array
+    def sum
+        self.inject{|sum,x| sum + x }
+    end
+end
+
 
 
 if __FILE__ == $0
   # Take a file that contains 1 PlasmoDB ID per line, and generate a matrix that 
-  # corresponds to the inputs for use in R.
+  # corresponds to the inputs for use in the R package glmnet.
   
   USAGE = 'plasmarithm_generate_inputs.rb <plasmodb_id_list_file>'
   
@@ -84,13 +91,13 @@ if __FILE__ == $0
   
   # Cache chromosome numbers for each gene
   falciparum_chromosomes = {}
-  #  EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
-  #    plasmodb = info.get_info('Gene ID')
-  #    chromosome = info.get_info('Chromosome')
-  #    raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
-  #    falciparum_chromosomes[plasmodb] = chromosome
-  #  end
-  #  $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
+   # EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
+     # plasmodb = info.get_info('Gene ID')
+     # chromosome = info.get_info('Chromosome')
+     # raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
+     # falciparum_chromosomes[plasmodb] = chromosome
+   # end
+   # $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
   
   # Cache Bozdech/DeRisi 2006 data
   in_header_section = true
@@ -105,13 +112,16 @@ if __FILE__ == $0
     info = {
     :amplitude => splits[9],
     :phase => splits[8],
-    :timepoint22 => splits[32],
-    :timepoint23 => splits[33],
-    :timepoint47 => splits[56],
-    :timepoint49 => splits[58],
     }
     falciparum_lifecycle_data[plasmodb] ||= []
     falciparum_lifecycle_data[plasmodb].push info
+    info[:timepoints] = []
+    (1..53).each do |i|
+      meas = splits[i+9]
+      meas = 1 if meas=='NA'
+      meas = meas.to_f
+      info[:timepoints].push meas
+    end
   end
   $stderr.puts "Cached lifecycle microarray data for #{falciparum_lifecycle_data.length} genes"
   
@@ -131,24 +141,20 @@ if __FILE__ == $0
   unconserved_region_genes = File.open(FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS).readlines.collect{|l| l.strip}
   
   # Cache DCNLS output files
-  dcnls4of5 = File.open(DCNLS_4_OF_5_PATH).readlines.collect{ |l|
+  dcnls4of5 = {}
+  File.open(DCNLS_4_OF_5_PATH).readlines.each do |l|
     splits = l.split("\t")
     plasmodb = splits[1]
-    if splits[2].length > 0
-      splits[2].split(',')
-    else
-      nil
-    end
-  }
-  dcnls5of6 = File.open(DCNLS_5_OF_6_PATH).readlines.collect{ |l|
+    num = splits[2].length > 0 ? splits[2].split(',') : nil
+    dcnls4of5[plasmodb] = num
+  end
+  dcnls5of6 = {}
+  File.open(DCNLS_5_OF_6_PATH).readlines.each do |l|
     splits = l.split("\t")
     plasmodb = splits[1]
-    if splits[2].length > 0
-      splits[2].split(',')
-    else
-      nil
-    end
-  }
+    num = splits[2].length > 0 ? splits[2].split(',') : nil
+    dcnls5of6[plasmodb] = num
+  end
   
 
   
@@ -158,7 +164,11 @@ if __FILE__ == $0
   
   
   # For each PlasmoDB ID provided in the input file
-  ARGF.each do |line|
+  do_headers = true
+  headers = []
+  plasmodbs = ARGF.readlines
+  progress = ProgressBar.new('inputs', plasmodbs.length)
+  plasmodbs.each do |line|
     plasmodb = line.strip
     protein_sequence = falciparum_protein_sequences[plasmodb]
     if protein_sequence.nil?
@@ -169,55 +179,129 @@ if __FILE__ == $0
     output_line = []
     
     #  SignalP Prediction(2): Localisation
+    headers.push 'signalp' if do_headers
     signalp = Bio::SignalP::Wrapper.new.calculate(protein_sequence)
     output_line.push signalp.signal?
     
     #  PlasmoAP Score(2): Localisation
     # We already know whether there is a SignalP prediction or not, so just go with that. Re-calculating takes time.
+    headers.push 'plasmoap' if do_headers
     output_line.push Bio::PlasmoAP.new.calculate_score(protein_sequence, signalp.signal?, signalp.cleave(protein_sequence)).points
     
     #  ExportPred?(2): Localisation
-    output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
-    output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_kld?
+    # headers.push ['exportpredRLE', 'exportpredKLD'] if do_headers
+    # output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
+    # output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_kld?
     
     #  WoLF_PSORT prediction Plant(16): Localisation
     #  WoLF_PSORT prediction Animal(15): Localisation
     #  WoLF_PSORT prediction Fungi(12): Localisation
-    %w(plant animal fungi).each do |lineage|
-      output_line.push Bio::PSORT::WoLF_PSORT::Wrapper.new.run(protein_sequence, lineage).highest_predicted_localization
+    # Encode each with the scores that they were given, accounting for dual locations
+    wolfer = lambda do |lineage, all_locations|
+      all_locations.each{|l| headers.push "wolf_#{lineage}_#{l}"} if do_headers
+      result = Bio::PSORT::WoLF_PSORT::Wrapper.new.run(protein_sequence, lineage)
+      
+      # Initialise 
+      location_scores = {}
+      all_locations.each {|l| location_scores[l] = 0.0}
+      result.score_hash.each do |loc, score|
+        score = score.to_f
+        raise unless score >0.0
+        if matches = loc.match(/(.+)_(.+)/) #if dual localised, add the score to both locations
+          raise unless location_scores[matches[1]] and location_scores[matches[2]]
+          location_scores[matches[1]] += score
+          location_scores[matches[2]] += score
+        else #regular 1 location prediction
+          raise Exception, "WoLF PSORT predicted an unexpected #{lineage} location: `#{loc}'" unless location_scores[loc]
+          location_scores[loc] += score
+        end
+      end
+      # Write out
+      location_scores.to_a.sort{|a,b| a[0]<=>b[0]}.each do |array|
+        output_line.push array[1]
+      end
     end
+    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS)
+    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS)
+    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS)
     
     #  Plasmit(2): Localisation
+    headers.push 'plasmit' if do_headers
     if falciparum_plasmit_predictions[plasmodb].nil?
-      $stderr.puts "Warning: No PlasMit prediction found for `#{plasmodb}'"
+      $stderr.puts "Warning: No PlasMit prediction found for `#{plasmodb} '"
     end
     output_line.push falciparum_plasmit_predictions[plasmodb]
     
     #  Number of C. hominis Genes in Official Orthomcl Group(1): Localisation
+    if do_headers
+      headers.push 'Chominis_orthologues'
+      headers.push 'Cparvum_orthologues'
+      headers.push 'Cmuris_orthologues'
+    end
     output_line.push !falciparum_chom_orthologues[plasmodb].nil?
     output_line.push !falciparum_cpar_orthologues[plasmodb].nil?
     output_line.push !falciparum_cmur_orthologues[plasmodb].nil?
     
     #  Chromosome(14): Localisation
-    output_line.push falciparum_chromosomes[plasmodb]
+    # Encode as 14 dummy variables
+    if do_headers
+      (1..14).each do |chr| headers.push "chromosome#{chr}"; end
+    end
+    (1..14).each do |chr|
+      output_line.push falciparum_chromosomes[plasmodb].to_s == chr.to_s
+    end
+    
     
     #  DeRisi 2006 3D7 Timepoint 22(2): Localisation
     #  DeRisi 2006 3D7 Timepoint 23(2): Localisation
     #  DeRisi 2006 3D7 Timepoint 47(2): Localisation
     #  DeRisi 2006 3D7 Timepoint 49(2): Localisation
-    if falciparum_lifecycle_data[plasmodb]
-      lifecycle_sample = falciparum_lifecycle_data[plasmodb].sample
-      [:timepoint22,
+    interests = [:timepoint22,
        :timepoint23,
        :timepoint47,
-       :timepoint49].each do |timepoint|
-        output_line.push lifecycle_sample[timepoint]
+       :timepoint49,
+       :amplitude]
+    if do_headers
+      interests.each do |time|
+        headers.push time.to_s
       end
+      headers.push 'distanceTo48hrs'
+    end
+    if falciparum_lifecycle_data[plasmodb]
+      lifecycle_sample = falciparum_lifecycle_data[plasmodb].sample
+      [22,23,47,49].each do |i|
+        output_line.push lifecycle_sample[:timepoints][i-1]
+      end
+      output_line.push lifecycle_sample[:amplitude].to_f
+      # Distance to typical invasion maximum hr.
+      supplemented_array = [lifecycle_sample[:timepoints],lifecycle_sample[:timepoints]].flatten
+      max_hr = nil
+      max_average = 0
+      (3..55).each do |possible|
+        average = supplemented_array[possible-2..possible+2].sum/5.0
+        if max_average < average
+          hr = possible % 53 #54=> 1 and 55=>2
+          max_hr = hr
+          max_average = average
+        end
+      end
+      # Now we have the maximum hr, how far away from 48 is it?
+      distance_from_max_invasion = nil
+      if max_hr < 22 #48-53/2 = 21.5
+        distance_from_max_invasion = 53-48+max_hr
+      else
+        distance_from_max_invasion = (48-max_hr).abs
+      end
+      output_line.push distance_from_max_invasion
     else
-      output_line.push [nil,nil,nil,nil]
+      4.times do output_line.push 1; end #average timepoint
+      output_line.push 2.3731476877 #average ampltude
+      output_line.push 12 #approx half-way between 48 and max distance to 48
     end
     
+    
     # proteomes
+    headers.push 'nuclear_proteome' if do_headers
     output_line.push nuclear_proteome_plasmodb_ids.include?(plasmodb)
     
     # number of acidic / basic residue in the first 25 amino acids
@@ -225,31 +309,69 @@ if __FILE__ == $0
     protein_sequence[0..24].each_char do |aa|
       acidics += 1 if %w(D E).include?(aa)
     end
+    headers.push 'acidics_in_first25' if do_headers
     output_line.push acidics
+    
     basics = 0
     protein_sequence[0..24].each_char do |aa|
       basics += 1 if %w(R K H).include?(aa)
     end
+    headers.push 'basics_in_first25' if do_headers
     output_line.push basics
     
     # number of transmembrane domains, after the Signal peptide has been removed
     tmhmm = Bio::TMHMM::TmHmmWrapper.new
     result = tmhmm.calculate(signalp.cleave(protein_sequence))
+    headers.push 'TMDs' if do_headers
     output_line.push result.transmembrane_domains.length > 0
 
     # Contained in HP1 associated genomic regions?
+    headers.push 'hp1' if do_headers
     output_line.push hp1_positive_genes.include?(plasmodb)
     
     # In un-aligned regions of the genome (sub-telomeric)?
+    headers.push 'unconserved_genomic_region' if do_headers
     output_line.push unconserved_region_genes.include?(plasmodb)
 
     # dcnls
-    output_line.push !dcnls4of5[plasmodb].nil? and [2,3,4].include?(dcnls4of5[plasmodb].length)
-    output_line.push !dcnls5of6[plasmodb].nil? and [2].include?(dcnls5of6[plasmodb].length)
+    headers.push 'dcNLS_4of5' if do_headers
+    if dcnls4of5[plasmodb] and [2,3,4].include?(dcnls4of5[plasmodb].length)
+      output_line.push true
+    else
+      output_line.push false
+    end
+    headers.push 'dcNLS_5of6' if do_headers
+    if dcnls5of6[plasmodb] and [2].include?(!dcnls5of6[plasmodb].length)
+      output_line.push true
+    else
+      output_line.push false
+    end
 
     # conserved 5' end when blasted against toxo orthologue?
     
+    # Output headers
+    puts headers.join(',') if do_headers
+    do_headers = false
     
-    puts output_line.join(",")
+    # Convert
+    output_line.flatten!
+    output2 = []
+    output_line.each_with_index do |output, i|
+      if output.kind_of?(TrueClass)
+        output2.push 1
+      elsif output.kind_of?(FalseClass)
+        output2.push 0
+      elsif output.kind_of?(Numeric)
+        output2.push output
+      else
+        pp output_line
+        raise Exception, "Unexpected output class for #{output.inspect} when investigating #{plasmodb}, index #{i}\nTotal output"
+      end
+    end
+    puts output2.join(",")
+    
+    # progress
+    progress.inc
   end
+  progress.finish
 end
