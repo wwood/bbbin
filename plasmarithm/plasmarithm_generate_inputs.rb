@@ -91,13 +91,13 @@ if __FILE__ == $0
   
   # Cache chromosome numbers for each gene
   falciparum_chromosomes = {}
-   # EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
-     # plasmodb = info.get_info('Gene ID')
-     # chromosome = info.get_info('Chromosome')
-     # raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
-     # falciparum_chromosomes[plasmodb] = chromosome
-   # end
-   # $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
+    EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
+      plasmodb = info.get_info('Gene ID')
+      chromosome = info.get_info('Chromosome')
+      raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
+      falciparum_chromosomes[plasmodb] = chromosome
+    end
+    $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
   
   # Cache Bozdech/DeRisi 2006 data
   in_header_section = true
