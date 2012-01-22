@@ -28,6 +28,9 @@ FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS = 'falciparum_unconserved_region_gene
 # used dcnls.rb and some other things for these two
 DCNLS_4_OF_5_PATH = 'dcnls.4of5.csv'
 DCNLS_5_OF_6_PATH = 'dcnls.5of6.csv'
+# Conservation of 5' end of the gene
+FALCIPARUM_TO_TOXO_BLAST_CSV = 'falciparum8.2versusToxo8.2.blast.csv'
+
 
 
 class Array
@@ -43,6 +46,18 @@ if __FILE__ == $0
   # corresponds to the inputs for use in the R package glmnet.
   
   USAGE = 'plasmarithm_generate_inputs.rb <plasmodb_id_list_file>'
+  
+  # Cache the falciparum->toxo prediction
+  falciparum_to_toxo_min_starts = {}
+  File.open(FALCIPARUM_TO_TOXO_BLAST_CSV).each_line do |line|
+    splits = line.strip.split("\t")
+    pl = splits[0].gsub(/^..../,'') #get rid of the 'psu|' at the start
+    # Fields: 0query id, 1subject id, 2% identity, 3alignment length, 4ismatches, 5gap opens, 6q. start, q. end, s. start, s. end, evalue, bit score
+    start = splits[6].to_i
+    if falciparum_to_toxo_min_starts[pl].nil? or falciparum_to_toxo_min_starts[pl]>start
+      falciparum_to_toxo_min_starts[pl] = start
+    end 
+  end
   
   # First, cache the protein sequences
   falciparum = EuPathDBSpeciesData.new('Plasmodium falciparum','/home/ben/phd/data')
@@ -91,13 +106,13 @@ if __FILE__ == $0
   
   # Cache chromosome numbers for each gene
   falciparum_chromosomes = {}
-   # EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
-     # plasmodb = info.get_info('Gene ID')
-     # chromosome = info.get_info('Chromosome')
-     # raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
-     # falciparum_chromosomes[plasmodb] = chromosome
-   # end
-   # $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
+  EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
+    plasmodb = info.get_info('Gene ID')
+    chromosome = info.get_info('Chromosome')
+    raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
+    falciparum_chromosomes[plasmodb] = chromosome
+  end
+  $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
   
   # Cache Bozdech/DeRisi 2006 data
   in_header_section = true
@@ -178,6 +193,9 @@ if __FILE__ == $0
     # This gets progressively filled with data about the current gene
     output_line = []
     
+    headers.push 'plasmodb' if do_headers
+    output_line.push plasmodb
+    
     #  SignalP Prediction(2): Localisation
     headers.push 'signalp' if do_headers
     signalp = Bio::SignalP::Wrapper.new.calculate(protein_sequence)
@@ -189,16 +207,16 @@ if __FILE__ == $0
     output_line.push Bio::PlasmoAP.new.calculate_score(protein_sequence, signalp.signal?, signalp.cleave(protein_sequence)).points
     
     #  ExportPred?(2): Localisation
-    # headers.push ['exportpredRLE', 'exportpredKLD'] if do_headers
-    # output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
-    # output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_kld?
+    headers.push ['exportpredRLE', 'exportpredKLD'] if do_headers
+    output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
+    output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_kld?
     
     #  WoLF_PSORT prediction Plant(16): Localisation
     #  WoLF_PSORT prediction Animal(15): Localisation
     #  WoLF_PSORT prediction Fungi(12): Localisation
     # Encode each with the scores that they were given, accounting for dual locations
     wolfer = lambda do |lineage, all_locations|
-      all_locations.each{|l| headers.push "wolf_#{lineage}_#{l}"} if do_headers
+      all_locations.collect{|l| l.downcase}.sort.each{|l| headers.push "wolf_#{lineage}_#{l}"} if do_headers
       result = Bio::PSORT::WoLF_PSORT::Wrapper.new.run(protein_sequence, lineage)
       
       # Initialise 
@@ -209,15 +227,15 @@ if __FILE__ == $0
         raise unless score >0.0
         if matches = loc.match(/(.+)_(.+)/) #if dual localised, add the score to both locations
           raise unless location_scores[matches[1]] and location_scores[matches[2]]
-          location_scores[matches[1]] += score
-          location_scores[matches[2]] += score
+          location_scores[matches[1]] += score/2.0
+          location_scores[matches[2]] += score/2.0
         else #regular 1 location prediction
           raise Exception, "WoLF PSORT predicted an unexpected #{lineage} location: `#{loc}'" unless location_scores[loc]
           location_scores[loc] += score
         end
       end
       # Write out
-      location_scores.to_a.sort{|a,b| a[0]<=>b[0]}.each do |array|
+      location_scores.to_a.sort{|a,b| a[0].downcase<=>b[0].downcase}.each do |array|
         output_line.push array[1]
       end
     end
@@ -348,6 +366,21 @@ if __FILE__ == $0
     end
 
     # conserved 5' end when blasted against toxo orthologue?
+    headers.push 'falciparum_toxo_blast_start' if do_headers
+    if falciparum_to_toxo_min_starts[plasmodb]
+      output_line.push falciparum_to_toxo_min_starts[plasmodb]
+    else
+      output_line.push 500 
+    end
+    
+    # conserved between 20 and 100 amino acids after the start?
+    headers.push 'falciparum_toxo_blast_start_20_to_100' if do_headers
+    if falciparum_to_toxo_min_starts[plasmodb]
+      start = falciparum_to_toxo_min_starts[plasmodb]
+      output_line.push start>20 and start<100
+    else
+      output_line.push false
+    end
     
     # Output headers
     puts headers.join(',') if do_headers
@@ -362,6 +395,8 @@ if __FILE__ == $0
       elsif output.kind_of?(FalseClass)
         output2.push 0
       elsif output.kind_of?(Numeric)
+        output2.push output
+      elsif i==0 # Special case for the first column which is the PlasmoDB ID
         output2.push output
       else
         pp output_line
