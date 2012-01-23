@@ -208,8 +208,8 @@ if __FILE__ == $0
     
     #  ExportPred?(2): Localisation
     headers.push ['exportpredRLE', 'exportpredKLD'] if do_headers
-    output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
-    output_line.push !Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_kld?
+    output_line.push Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_rle?
+    output_line.push Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
     
     #  WoLF_PSORT prediction Plant(16): Localisation
     #  WoLF_PSORT prediction Animal(15): Localisation
@@ -377,7 +377,7 @@ if __FILE__ == $0
     headers.push 'falciparum_toxo_blast_start_20_to_100' if do_headers
     if falciparum_to_toxo_min_starts[plasmodb]
       start = falciparum_to_toxo_min_starts[plasmodb]
-      output_line.push start>20 and start<100
+      output_line.push (start>20 and start<100)
     else
       output_line.push false
     end
