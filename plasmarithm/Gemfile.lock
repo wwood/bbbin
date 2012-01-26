@@ -3,6 +3,7 @@ GEM
   specs:
     bio (1.4.2)
     bio-exportpred (0.0.1)
+    bio-isoelectric_point (0.1.1)
     bio-plasmoap (0.0.2)
       bio (>= 1.4.1)
       bio-signalp (>= 0.2.0)
@@ -19,6 +20,7 @@ PLATFORMS
 DEPENDENCIES
   bio (= 1.4.2)
   bio-exportpred (= 0.0.1)
+  bio-isoelectric_point (= 0.1.1)
   bio-plasmoap (= 0.0.2)
   bio-signalp (= 0.2.0)
   bio-tm_hmm (= 0.2.0)

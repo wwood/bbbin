@@ -7,5 +7,9 @@ gem 'reubypathdb', '=0.3.1' #has to be this exact version so that EuPathDB datab
 gem 'bio-tm_hmm', '=0.2.0'
 gem 'bio-exportpred', '=0.0.1'
 gem 'bio-wolf_psort_wrapper','=0.0.3'
+gem 'bio-isoelectric_point', '=0.1.1'
+gem 'bio-aliphatic_index', '=0.0.1'
+gem 'bio-hydropathy', '=0.0.1'
+
 gem 'progressbar'
 

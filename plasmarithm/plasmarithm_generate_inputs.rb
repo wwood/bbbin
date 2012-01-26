@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+# biology related gems
 require 'bio'
 require 'bio-plasmoap'
 require 'bio-signalp'
@@ -7,9 +8,12 @@ require 'reubypathdb'
 require 'bio-tm_hmm'
 require 'bio-exportpred'
 require 'bio-wolf_psort_wrapper'
-
-require 'pp'
+require 'bio-isoelectric_point'
+# regular gems
 require 'progressbar'
+# stdlib includes
+require 'pp'
+
 
 # Generated using plasmit_screenscraper.rb
 PLASMIT_PREDICTIONS_FILE = '/home/ben/phd/data/Plasmodium falciparum/plasmit/PlasmoDB8.2.plasmit_screenscraped.csv'
@@ -19,8 +23,6 @@ CRYPTO_ORTHOLOGUES_FILE = 'crypto_orthologues.csv.failed'
 FALCIPARUM_GENE_INFORMATION_PATH = '/home/ben/phd/data/Plasmodium falciparum/genome/PlasmoDB/8.2/PfalciparumGene_PlasmoDB-8.2.txt'
 # Supplementary data to the 2006 microarray paper
 DERISI_3D7_MICROARRAY_LIFECYCLE_PATH = '/home/ben/phd/data/Plasmodium falciparum/microarray/DeRisi2006/3D7_overview_S6.csv'
-# Oehring and Woodcroft et. al. 2012 (hopefully - not yet accepted!)
-CORE_NUCLEAR_PROTEOME_PLASMODB_IDS_PATH = '/home/ben/phd/voss_proteome/June2010/nuclear_bioinfo_final6.ids'
 # Obtained from Till
 HP1_POSITIVE_GENES_PATH = '/home/ben/phd/data/Plasmodium falciparum/HP1chip/hp1.txt'
 # Obtained by running falciparum_unconserved_regions.rb
@@ -30,14 +32,36 @@ DCNLS_4_OF_5_PATH = 'dcnls.4of5.csv'
 DCNLS_5_OF_6_PATH = 'dcnls.5of6.csv'
 # Conservation of 5' end of the gene
 FALCIPARUM_TO_TOXO_BLAST_CSV = 'falciparum8.2versusToxo8.2.blast.csv'
+# Sir2 A and B microarray data - Downloaded from PlasmoDB 8.2 with New Search>Search for Genes>Transcript Expression>Microarray evidence
+# then selecting "P.f. sir2 KO (percentile)", min expression 1, max expression 100, and then downloading the table as a CSV, not downloading the "Product Description" column
+SIR2_KO_MICROARRAYS = {
+:sir2a_ring => 'input_data/Sir2AringPercentiles.csv',
+:sir2a_trophozoite => 'input_data/Sir2AtrophozoitePercentiles.csv',
+:sir2a_schizont => 'input_data/Sir2AschizontPercentiles.csv',
+:sir2b_ring => 'input_data/Sir2BringPercentiles.csv',
+:sir2b_trophozoite => 'input_data/Sir2BtrophozoitePercentiles.csv',
+:sir2b_schizont => 'input_data/Sir2BschizontPercentiles.csv',
+}
+# Invasion pathway KO data, derived from PlasmoDB 8.2 similarly to above, but instead using a 2 fold up/down regulation cutoff, compared to the reference experiment "3D7 WT 48hr"
+INVASION_KO_MICROARRAYS = {
+:eba140down => 'input_data/eba140downregulated2fold.txt',
+:eba140up => 'input_data/eba140upregulated2fold.txt',
+:eba175down => 'input_data/eba175downregulated2fold.txt',
+:eba175up => 'input_data/eba175upregulated2fold.txt',
+:rh2b_down => 'input_data/rh2bDownregulated2fold.txt',
+:rh2b_up => 'input_data/rh2bUpregulated2fold.txt',
+}
+PROTEOMES = {
+  # Oehring and Woodcroft et. al. 2012 (hopefully - not yet accepted, but on PlasmoDB at least)
+:core_nuclear => '/home/ben/phd/voss_proteome/June2010/nuclear_bioinfo_final6.ids',
+  # Modified by taking the PlasmoDBs from the manuscript itself.
+:food_vacuole => 'input_data/food_vacuole_proteome.txt',
+  # Modified from table 2
+:maurers_cleft => '/home/ben/phd/data/Plasmodium falciparum/proteomics/MaurersCleft2005/table2.ids',
+}
 
 
-
-class Array
-    def sum
-        self.inject{|sum,x| sum + x }
-    end
-end
+class Array; def sum; self.inject{|sum,x| sum + x }; end; end
 
 
 
@@ -106,13 +130,33 @@ if __FILE__ == $0
   
   # Cache chromosome numbers for each gene
   falciparum_chromosomes = {}
+  metabolic_pathways = {} # hash of PlasmoDB ID => array of metabolic pathways
+  gene_starts = {}
+  number_of_exons = {}
   EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
     plasmodb = info.get_info('Gene ID')
     chromosome = info.get_info('Chromosome')
     raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
     falciparum_chromosomes[plasmodb] = chromosome
+    
+    # MPMP
+    metabolic_pathways[plasmodb] = info.get_table('Metabolic Pathways').collect{|t| "MPMP_#{t['pathway_id']}"}
+    
+    # Gene position (for in relation to the chromosome ends (min start of exon)
+    gene_starts[plasmodb] = info.get_table('Gene Model').select{|entry|
+      entry['Type']=='exon'
+    }.collect{|entry|
+      entry['Start']
+    }.min.to_i
+    
+    # Number of exons
+    number_of_exons[plasmodb] = info.get_table('Gene Model').select{|entry|
+      entry['Type']=='exon'
+    }.length
   end
+  all_metabolic_pathways = metabolic_pathways.values.flatten.uniq.sort
   $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
+  $stderr.puts "Cached #{metabolic_pathways.length} proteins with MPMP"
   
   # Cache Bozdech/DeRisi 2006 data
   in_header_section = true
@@ -131,7 +175,7 @@ if __FILE__ == $0
     falciparum_lifecycle_data[plasmodb] ||= []
     falciparum_lifecycle_data[plasmodb].push info
     info[:timepoints] = []
-    (1..53).each do |i|
+     (1..53).each do |i|
       meas = splits[i+9]
       meas = 1 if meas=='NA'
       meas = meas.to_f
@@ -140,10 +184,15 @@ if __FILE__ == $0
   end
   $stderr.puts "Cached lifecycle microarray data for #{falciparum_lifecycle_data.length} genes"
   
-  # Cache nuclear proteome
-  nuclear_proteome_plasmodb_ids = []
-  File.open(CORE_NUCLEAR_PROTEOME_PLASMODB_IDS_PATH).each_line do |line|
-    nuclear_proteome_plasmodb_ids.push line.strip
+  # Cache proteomes
+  proteome_entrants = {} # hash of proteome name to array of plasmodb IDs
+  PROTEOMES.each do |name, filename|
+    raise if proteome_entrants[name]
+    proteome_entrants[name] = []
+    File.open(filename).each_line do |line|
+      pl = line.strip
+      proteome_entrants[name].push pl unless pl == ''
+    end
   end
   
   # Cache HP1 associations
@@ -171,7 +220,38 @@ if __FILE__ == $0
     dcnls5of6[plasmodb] = num
   end
   
-
+  ##### Cache the length of the chromosomes
+  chromosome_lengths = {} # hash of chromosome name to length
+  # Copied this from the top of the GFF file manually.
+  top_of_gff = <<END_OF_TOP
+##sequence-region psu|Pf3D7_01  1 643292
+##sequence-region psu|Pf3D7_02  1 947102
+##sequence-region psu|Pf3D7_03  1 1060087
+##sequence-region psu|Pf3D7_04  1 1204112
+##sequence-region psu|Pf3D7_05  1 1343552
+##sequence-region psu|Pf3D7_06  1 1418244
+##sequence-region psu|Pf3D7_07  1 1501717
+##sequence-region psu|Pf3D7_08  1 1419563
+##sequence-region psu|Pf3D7_09  1 1541723
+##sequence-region psu|Pf3D7_10  1 1687655
+##sequence-region psu|Pf3D7_11  1 2038337
+##sequence-region psu|Pf3D7_12  1 2271478
+##sequence-region psu|Pf3D7_13  1 2895605
+##sequence-region psu|Pf3D7_14  1 3291871
+END_OF_TOP
+  top_of_gff.split("\n").each do |line|
+    splits = line.strip.split ' '
+    regex = /^psu|Pf3D7_(\d\d)$/
+    raise unless splits[1].match(regex)
+    chromosome_number = splits[1].gsub(regex, '').to_i
+    chromosome_lengths[chromosome_number] = splits[4].to_i
+    raise if chromosome_lengths[chromosome_number] < 400
+  end
+  
+  
+  
+  
+  
   
   
   
@@ -262,12 +342,40 @@ if __FILE__ == $0
     
     #  Chromosome(14): Localisation
     # Encode as 14 dummy variables
-    if do_headers
-      (1..14).each do |chr| headers.push "chromosome#{chr}"; end
+    #    if do_headers
+    #     (1..14).each do |chr| headers.push "chromosome#{chr}"; end
+    #    end
+    #     (1..14).each do |chr|
+    #      output_line.push falciparum_chromosomes[plasmodb].to_s == chr.to_s
+    #    end
+    
+    # Metabolic pathways
+    all_metabolic_pathways.each do |mpmp| 
+      headers.push mpmp if do_headers
+      output_line.push metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include(mpmp) 
     end
-    (1..14).each do |chr|
-      output_line.push falciparum_chromosomes[plasmodb].to_s == chr.to_s
+    
+    # Distance from chromosome ends
+    min_distance = gene_starts[plasmodb]
+    raise "No chromosome found for #{plasmodb}" if falciparum_chromosomes[plasmodb].nil?
+    distance_from_arbitrary_end = chromosome_lengths[falciparum_chromosomes[plasmodb]]-gene_starts[plasmodb]
+    min_distance = distance_from_arbitrary_end if distance_from_arbitrary_end < min_distance
+    [100000,200000].each do |cutoff|
+      kb = cutoff/1000
+      headers.push "within#{kb}_kb_of_chromosome_end" if do_headers
+      output_line.push min_distance < cutoff
     end
+    
+    # number of exons
+    headers.push 'num_exons' if do_headers
+    output_line.push number_of_exons
+    headers.push '2exons' if do_headers
+    output_line.push number_of_exons==2
+    
+    # isoelectric point
+    headers.push 'isoelectric_point' if do_headers
+    output_line.push Bio::Sequence::AA.new(protein_sequence).calculate_iep
+
     
     
     #  DeRisi 2006 3D7 Timepoint 22(2): Localisation
@@ -288,14 +396,14 @@ if __FILE__ == $0
     if falciparum_lifecycle_data[plasmodb]
       lifecycle_sample = falciparum_lifecycle_data[plasmodb].sample
       [22,23,47,49].each do |i|
-        output_line.push lifecycle_sample[:timepoints][i-1]
+        output_line.push Math.log(lifecycle_sample[:timepoints][i-1])
       end
       output_line.push lifecycle_sample[:amplitude].to_f
       # Distance to typical invasion maximum hr.
       supplemented_array = [lifecycle_sample[:timepoints],lifecycle_sample[:timepoints]].flatten
       max_hr = nil
       max_average = 0
-      (3..55).each do |possible|
+       (3..55).each do |possible|
         average = supplemented_array[possible-2..possible+2].sum/5.0
         if max_average < average
           hr = possible % 53 #54=> 1 and 55=>2
@@ -312,15 +420,19 @@ if __FILE__ == $0
       end
       output_line.push distance_from_max_invasion
     else
-      4.times do output_line.push 1; end #average timepoint
+      4.times do output_line.push Math.log(1); end #average timepoint
       output_line.push 2.3731476877 #average ampltude
       output_line.push 12 #approx half-way between 48 and max distance to 48
     end
     
     
     # proteomes
-    headers.push 'nuclear_proteome' if do_headers
-    output_line.push nuclear_proteome_plasmodb_ids.include?(plasmodb)
+    proteome_entrants.sort{|a,b| a[0]<=> b[0]}.each do |arr|
+      name = arr[0]
+      plasmodb_ids = arr[1]
+      headers.push name if do_headers
+      output_line.push plasmodb_ids.include?(plasmodb)
+    end
     
     # number of acidic / basic residue in the first 25 amino acids
     acidics = 0
@@ -342,7 +454,7 @@ if __FILE__ == $0
     result = tmhmm.calculate(signalp.cleave(protein_sequence))
     headers.push 'TMDs' if do_headers
     output_line.push result.transmembrane_domains.length > 0
-
+    
     # Contained in HP1 associated genomic regions?
     headers.push 'hp1' if do_headers
     output_line.push hp1_positive_genes.include?(plasmodb)
@@ -350,7 +462,7 @@ if __FILE__ == $0
     # In un-aligned regions of the genome (sub-telomeric)?
     headers.push 'unconserved_genomic_region' if do_headers
     output_line.push unconserved_region_genes.include?(plasmodb)
-
+    
     # dcnls
     headers.push 'dcNLS_4of5' if do_headers
     if dcnls4of5[plasmodb] and [2,3,4].include?(dcnls4of5[plasmodb].length)
@@ -364,7 +476,7 @@ if __FILE__ == $0
     else
       output_line.push false
     end
-
+    
     # conserved 5' end when blasted against toxo orthologue?
     headers.push 'falciparum_toxo_blast_start' if do_headers
     if falciparum_to_toxo_min_starts[plasmodb]
