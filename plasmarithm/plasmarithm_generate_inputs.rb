@@ -9,6 +9,8 @@ require 'bio-tm_hmm'
 require 'bio-exportpred'
 require 'bio-wolf_psort_wrapper'
 require 'bio-isoelectric_point'
+require 'bio-aliphatic_index'
+require 'bio-hydropathy'
 # regular gems
 require 'progressbar'
 # stdlib includes
@@ -17,13 +19,15 @@ require 'pp'
 
 # Generated using plasmit_screenscraper.rb
 PLASMIT_PREDICTIONS_FILE = '/home/ben/phd/data/Plasmodium falciparum/plasmit/PlasmoDB8.2.plasmit_screenscraped.csv'
+# Generated using plasmit_screenscraper.rb, after removing the signal peptides
+PLASMIT_SP_CLEAVED_PREDICTIONS_FILE = '/home/ben/phd/data/Plasmodium falciparum/plasmit/PlasmoDB8.2.signalp_cleaved.plasmit_screenscraped.csv'
 # Generated using orthomcl_species_jumper.rb
-CRYPTO_ORTHOLOGUES_FILE = 'crypto_orthologues.csv.failed'
+ORTHOLOGUES_FILE = '/home/ben/phd/data/Plasmodium falciparum/genome/PlasmoDB/8.2/orthologues.txt'
 # Downloaded directly PlasmoDB
 FALCIPARUM_GENE_INFORMATION_PATH = '/home/ben/phd/data/Plasmodium falciparum/genome/PlasmoDB/8.2/PfalciparumGene_PlasmoDB-8.2.txt'
 # Supplementary data to the 2006 microarray paper
 DERISI_3D7_MICROARRAY_LIFECYCLE_PATH = '/home/ben/phd/data/Plasmodium falciparum/microarray/DeRisi2006/3D7_overview_S6.csv'
-# Obtained from Till
+# Obtained from Till Voss
 HP1_POSITIVE_GENES_PATH = '/home/ben/phd/data/Plasmodium falciparum/HP1chip/hp1.txt'
 # Obtained by running falciparum_unconserved_regions.rb
 FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS = 'falciparum_unconserved_region_genes.window5max1.csv'
@@ -34,6 +38,7 @@ DCNLS_5_OF_6_PATH = 'dcnls.5of6.csv'
 FALCIPARUM_TO_TOXO_BLAST_CSV = 'falciparum8.2versusToxo8.2.blast.csv'
 # Sir2 A and B microarray data - Downloaded from PlasmoDB 8.2 with New Search>Search for Genes>Transcript Expression>Microarray evidence
 # then selecting "P.f. sir2 KO (percentile)", min expression 1, max expression 100, and then downloading the table as a CSV, not downloading the "Product Description" column
+# For WT ones, chose min 0, max 100 instead.
 SIR2_KO_MICROARRAYS = {
 :sir2a_ring => 'input_data/Sir2AringPercentiles.csv',
 :sir2a_trophozoite => 'input_data/Sir2AtrophozoitePercentiles.csv',
@@ -41,6 +46,9 @@ SIR2_KO_MICROARRAYS = {
 :sir2b_ring => 'input_data/Sir2BringPercentiles.csv',
 :sir2b_trophozoite => 'input_data/Sir2BtrophozoitePercentiles.csv',
 :sir2b_schizont => 'input_data/Sir2BschizontPercentiles.csv',
+:sir2_wild_type_ring => 'input_data/Sir2wildTypeRingPercentiles.csv',
+:sir2_wild_type_trophozoite => 'input_data/Sir2wildTypeTrophozoitePercentiles.csv',
+:sir2_wild_type_schizont => 'input_data/Sir2wildTypeSchizontPercentiles.csv',
 }
 # Invasion pathway KO data, derived from PlasmoDB 8.2 similarly to above, but instead using a 2 fold up/down regulation cutoff, compared to the reference experiment "3D7 WT 48hr"
 INVASION_KO_MICROARRAYS = {
@@ -70,6 +78,33 @@ if __FILE__ == $0
   # corresponds to the inputs for use in the R package glmnet.
   
   USAGE = 'plasmarithm_generate_inputs.rb <plasmodb_id_list_file>'
+  
+  
+  # Cache Sir2 KO percentiles
+  sir2_percentiles = {} #hash of experiment name => plasmodb => percentile
+  SIR2_KO_MICROARRAYS.each do |experiment_name, filename|
+    sir2_percentiles[experiment_name.to_s] = {}
+    File.open(filename).readlines.each do |l|
+      splits = l.split("\t")
+      plasmodb = splits[0]
+      next if plasmodb == '[Gene ID]'
+      percentile = splits[1].to_f
+      sir2_percentiles[experiment_name.to_s][plasmodb] = percentile
+    end
+  end
+  all_sir2_microarrays = sir2_percentiles.keys.sort
+  
+  # Cache Invasion KO 2fold enrichment lists
+  invasion_microarrays = {}
+  INVASION_KO_MICROARRAYS.each do |experiment_name, filename|
+    invasion_microarrays[experiment_name.to_s] = {}
+    File.open(filename).readlines.each do |l|
+      plasmodb = l.strip
+      next if plasmodb == '[Gene ID]'
+      invasion_microarrays[experiment_name.to_s][plasmodb] = true
+    end
+  end
+  all_invasion_microarrays = invasion_microarrays.keys.sort
   
   # Cache the falciparum->toxo prediction
   falciparum_to_toxo_min_starts = {}
@@ -106,27 +141,29 @@ if __FILE__ == $0
     elsif splits[1] == 'non-mito (99%)'
       classification = false
     else
-      raise Exception, "Unexpected Plasmarithm output: `#{splits[1]}'"
+      raise Exception, "Unexpected PlasMit output: `#{splits[1]}'"
     end
     falciparum_plasmit_predictions[gene_id] = classification
   end
-  $stderr.puts "Cached #{falciparum_plasmit_predictions.length} Cryptosporidium OrthoMCL orthologues"
+  $stderr.puts "Cached #{falciparum_plasmit_predictions.length} PlasMit predictions"
   
   # Cache Crypto orthologues file
-  falciparum_chom_orthologues = {}
-  falciparum_cpar_orthologues = {}
-  falciparum_cmur_orthologues = {}
+  falciparum_orthologues = {} # hash of target non-falciparum species => plasmodb => output chunk
   file_counter = 0
-  File.open(CRYPTO_ORTHOLOGUES_FILE).each_line do |line|
+  all_orthologue_species = [:chom, :cpar, :cmur, :tgon, :bbov, :tann, :tpar, :pber, :pviv]
+  File.open(ORTHOLOGUES_FILE).each_line do |line|
     splits = line.strip.split("\t")
     raise unless splits.length >= 2 or splits.length > 5
-    raise if falciparum_chom_orthologues[splits[0]]
-    falciparum_chom_orthologues[splits[0]] = splits[2]
-    falciparum_cpar_orthologues[splits[0]] = splits[3]
-    falciparum_cmur_orthologues[splits[0]] = splits[4]
+    plasmodb = splits[2]
+    raise if falciparum_orthologues[plasmodb]
+    all_orthologue_species.each_with_index do |sp, i|
+      index = 2+i
+      falciparum_orthologues[sp] ||= {}
+      falciparum_orthologues[sp][plasmodb] = splits[index]
+    end
     file_counter += 1
   end
-  $stderr.puts "Cached #{file_counter} PlasMit predictions"
+  $stderr.puts "Cached sets of orthologues for #{file_counter} P. falciparum sequences"
   
   # Cache chromosome numbers for each gene
   falciparum_chromosomes = {}
@@ -137,7 +174,7 @@ if __FILE__ == $0
     plasmodb = info.get_info('Gene ID')
     chromosome = info.get_info('Chromosome')
     raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
-    falciparum_chromosomes[plasmodb] = chromosome
+    falciparum_chromosomes[plasmodb] = chromosome.to_i
     
     # MPMP
     metabolic_pathways[plasmodb] = info.get_table('Metabolic Pathways').collect{|t| "MPMP_#{t['pathway_id']}"}
@@ -241,11 +278,11 @@ if __FILE__ == $0
 END_OF_TOP
   top_of_gff.split("\n").each do |line|
     splits = line.strip.split ' '
-    regex = /^psu|Pf3D7_(\d\d)$/
+    regex = /^psu\|Pf3D7_(\d\d)$/
     raise unless splits[1].match(regex)
-    chromosome_number = splits[1].gsub(regex, '').to_i
-    chromosome_lengths[chromosome_number] = splits[4].to_i
-    raise if chromosome_lengths[chromosome_number] < 400
+    chromosome_number = splits[1].match(regex)[1].to_i
+    chromosome_lengths[chromosome_number] = splits[3].to_i
+    raise Exception, "Found unexpectedly low chromosome length for `#{chromosome_number}' from #{splits[1]}: #{chromosome_lengths[chromosome_number]}" if chromosome_lengths[chromosome_number] < 400
   end
   
   
@@ -272,7 +309,6 @@ END_OF_TOP
     
     # This gets progressively filled with data about the current gene
     output_line = []
-    
     headers.push 'plasmodb' if do_headers
     output_line.push plasmodb
     
@@ -280,24 +316,29 @@ END_OF_TOP
     headers.push 'signalp' if do_headers
     signalp = Bio::SignalP::Wrapper.new.calculate(protein_sequence)
     output_line.push signalp.signal?
+    signalp_cleaved = signalp.cleave(protein_sequence)
     
     #  PlasmoAP Score(2): Localisation
     # We already know whether there is a SignalP prediction or not, so just go with that. Re-calculating takes time.
     headers.push 'plasmoap' if do_headers
-    output_line.push Bio::PlasmoAP.new.calculate_score(protein_sequence, signalp.signal?, signalp.cleave(protein_sequence)).points
+    output_line.push Bio::PlasmoAP.new.calculate_score(protein_sequence, signalp.signal?, signalp_cleaved).points
     
     #  ExportPred?(2): Localisation
     headers.push ['exportpredRLE', 'exportpredKLD'] if do_headers
     output_line.push Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_rle?
     output_line.push Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
     
-    #  WoLF_PSORT prediction Plant(16): Localisation
-    #  WoLF_PSORT prediction Animal(15): Localisation
-    #  WoLF_PSORT prediction Fungi(12): Localisation
+    headers.push 'aliphatic_index' if do_headers
+    output_line.push Bio::Sequence::AA.new(protein_sequence).aliphatic_index
+    
+    headers.push 'gravy' if do_headers
+    output_line.push Bio::Sequence::AA.new(protein_sequence).gravy
+    
+    #  WoLF_PSORT 
     # Encode each with the scores that they were given, accounting for dual locations
-    wolfer = lambda do |lineage, all_locations|
-      all_locations.collect{|l| l.downcase}.sort.each{|l| headers.push "wolf_#{lineage}_#{l}"} if do_headers
-      result = Bio::PSORT::WoLF_PSORT::Wrapper.new.run(protein_sequence, lineage)
+    wolfer = lambda do |lineage, all_locations, header_pre, sequence|
+      all_locations.collect{|l| l.downcase}.sort.each{|l| headers.push "#{header_pre}wolf_#{lineage}_#{l}"} if do_headers
+      result = Bio::PSORT::WoLF_PSORT::Wrapper.new.run(sequence, lineage)
       
       # Initialise 
       location_scores = {}
@@ -319,29 +360,36 @@ END_OF_TOP
         output_line.push array[1]
       end
     end
-    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS)
-    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS)
-    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS)
+    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS, '', protein_sequence)
+    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS, '', protein_sequence)
+    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS, '', protein_sequence)
+    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS, 'SPcleaved_', signalp_cleaved)
+    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS, 'SPcleaved_', signalp_cleaved)
+    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS, 'SPcleaved_', signalp_cleaved)
     
-    #  Plasmit(2): Localisation
+    #  PlasMit
     headers.push 'plasmit' if do_headers
     if falciparum_plasmit_predictions[plasmodb].nil?
       $stderr.puts "Warning: No PlasMit prediction found for `#{plasmodb} '"
     end
     output_line.push falciparum_plasmit_predictions[plasmodb]
     
-    #  Number of C. hominis Genes in Official Orthomcl Group(1): Localisation
-    if do_headers
-      headers.push 'Chominis_orthologues'
-      headers.push 'Cparvum_orthologues'
-      headers.push 'Cmuris_orthologues'
+    #    headers.push 'plasmit_after_signalp' if do_headers
+    #    if falciparum_sp_cleaved_plasmit_predictions[plasmodb].nil?
+    #      $stderr.puts "Warning: No sp_cleaved PlasMit prediction found for `#{plasmodb} '"
+    #    end
+    #    output_line.push falciparum_sp_cleaved_plasmit_predictions[plasmodb]
+    
+    #  Number Genes in Official OrthoMC Group for various species
+    all_orthologue_species.each do |sp|      
+      if do_headers
+        headers.push "#{sp}_orthologues"
+      end
+      output_line.push !falciparum_orthologues[sp][plasmodb].nil?
     end
-    output_line.push !falciparum_chom_orthologues[plasmodb].nil?
-    output_line.push !falciparum_cpar_orthologues[plasmodb].nil?
-    output_line.push !falciparum_cmur_orthologues[plasmodb].nil?
     
     #  Chromosome(14): Localisation
-    # Encode as 14 dummy variables
+    # Encode as 14 dummy variables. Not doing this any more because we don't believe they are predictive and are just noise.
     #    if do_headers
     #     (1..14).each do |chr| headers.push "chromosome#{chr}"; end
     #    end
@@ -352,7 +400,7 @@ END_OF_TOP
     # Metabolic pathways
     all_metabolic_pathways.each do |mpmp| 
       headers.push mpmp if do_headers
-      output_line.push metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include(mpmp) 
+      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
     end
     
     # Distance from chromosome ends
@@ -368,20 +416,20 @@ END_OF_TOP
     
     # number of exons
     headers.push 'num_exons' if do_headers
-    output_line.push number_of_exons
+    exons = number_of_exons[plasmodb]
+    if exons.nil?
+      output_line.push 1
+    else
+      output_line.push exons
+    end
     headers.push '2exons' if do_headers
-    output_line.push number_of_exons==2
+    output_line.push number_of_exons[plasmodb]==2
     
     # isoelectric point
     headers.push 'isoelectric_point' if do_headers
-    output_line.push Bio::Sequence::AA.new(protein_sequence).calculate_iep
-
+    output_line.push Bio::Sequence::AA.new(protein_sequence).isoelectric_point
     
-    
-    #  DeRisi 2006 3D7 Timepoint 22(2): Localisation
-    #  DeRisi 2006 3D7 Timepoint 23(2): Localisation
-    #  DeRisi 2006 3D7 Timepoint 47(2): Localisation
-    #  DeRisi 2006 3D7 Timepoint 49(2): Localisation
+    #  Bozdech/DeRisi 2006 Microarray data
     interests = [:timepoint22,
        :timepoint23,
        :timepoint47,
@@ -449,6 +497,21 @@ END_OF_TOP
     headers.push 'basics_in_first25' if do_headers
     output_line.push basics
     
+    # Number of acidics/basics after the SP has been removed
+    acidics = 0
+    signalp_cleaved[0..24].each_char do |aa|
+      acidics += 1 if %w(D E).include?(aa)
+    end
+    headers.push 'acidics_in_first25_afterSPcleavage' if do_headers
+    output_line.push acidics
+    
+    basics = 0
+    signalp_cleaved[0..24].each_char do |aa|
+      basics += 1 if %w(R K H).include?(aa)
+    end
+    headers.push 'basics_in_first25_afterSPcleavage' if do_headers
+    output_line.push basics
+    
     # number of transmembrane domains, after the Signal peptide has been removed
     tmhmm = Bio::TMHMM::TmHmmWrapper.new
     result = tmhmm.calculate(signalp.cleave(protein_sequence))
@@ -494,6 +557,25 @@ END_OF_TOP
       output_line.push false
     end
     
+    # Sir2 arrays
+    all_sir2_microarrays.each do |experiment_name|
+      headers.push experiment_name if do_headers
+      if sir2_percentiles[experiment_name][plasmodb]
+        output_line.push sir2_percentiles[experiment_name][plasmodb]
+      else
+        output_line.push 50 #hopefully not very prevalent
+      end
+    end
+    
+    # Invasion arrays
+    all_invasion_microarrays.each do |experiment_name|
+      headers.push experiment_name if do_headers
+      output_line.push !(invasion_microarrays[experiment_name][plasmodb].nil?)
+    end
+    
+    
+    
+    ##################################################################
     # Output headers
     puts headers.join(',') if do_headers
     do_headers = false
@@ -512,7 +594,7 @@ END_OF_TOP
         output2.push output
       else
         pp output_line
-        raise Exception, "Unexpected output class for #{output.inspect} when investigating #{plasmodb}, index #{i}\nTotal output"
+        raise Exception, "Unexpected output class for #{output.inspect} when investigating #{plasmodb}, index #{i} (header? #{headers[i]})\nTotal output"
       end
     end
     puts output2.join(",")
