@@ -549,6 +549,12 @@ END_OF_TOP
       output_line.push 500 
     end
     
+    # BLAST hits against the various species
+    all_blast_targets.each do |species|
+      headers.push "#{species}_blast_hit" if do_headers
+      output_line.push !(blast_hits[species][plasmodb].nil?)
+    end
+    
     # conserved between 20 and 100 amino acids after the start?
     headers.push 'falciparum_toxo_blast_start_20_to_100' if do_headers
     if falciparum_to_toxo_min_starts[plasmodb]
