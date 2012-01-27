@@ -170,6 +170,7 @@ if __FILE__ == $0
   metabolic_pathways = {} # hash of PlasmoDB ID => array of metabolic pathways
   gene_starts = {}
   number_of_exons = {}
+  interpro_domains = {}
   EuPathDBGeneInformationTable.new(File.open(FALCIPARUM_GENE_INFORMATION_PATH)).each do |info|
     plasmodb = info.get_info('Gene ID')
     chromosome = info.get_info('Chromosome')
@@ -190,8 +191,14 @@ if __FILE__ == $0
     number_of_exons[plasmodb] = info.get_table('Gene Model').select{|entry|
       entry['Type']=='exon'
     }.length
+    
+    # Interpro domains
+    interpro_domains[plasmodb] = info.get_table('InterPro Domains').collect{|entry|
+      entry['Interpro ID']
+    }.uniq
   end
   all_metabolic_pathways = metabolic_pathways.values.flatten.uniq.sort
+  all_interpro_domains = interpro_domains.values.flatten.uniq.sort.reject{|i| i.to_s == ''}
   $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
   $stderr.puts "Cached #{metabolic_pathways.length} proteins with MPMP"
   
@@ -397,12 +404,6 @@ END_OF_TOP
     #      output_line.push falciparum_chromosomes[plasmodb].to_s == chr.to_s
     #    end
     
-    # Metabolic pathways
-    all_metabolic_pathways.each do |mpmp| 
-      headers.push mpmp if do_headers
-      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
-    end
-    
     # Distance from chromosome ends
     min_distance = gene_starts[plasmodb]
     raise "No chromosome found for #{plasmodb}" if falciparum_chromosomes[plasmodb].nil?
@@ -572,6 +573,19 @@ END_OF_TOP
       headers.push experiment_name if do_headers
       output_line.push !(invasion_microarrays[experiment_name][plasmodb].nil?)
     end
+    
+    # Metabolic pathways
+    all_metabolic_pathways.each do |mpmp| 
+      headers.push mpmp if do_headers
+      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
+    end
+    
+    # InterPro domains
+    all_interpro_domains.each do |ipr|
+      headers.push "InterPro_#{ipr}" if do_headers
+      output_line.push interpro_domains[plasmodb].include?(ipr)
+    end
+    
     
     
     

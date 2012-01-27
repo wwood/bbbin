@@ -17,6 +17,7 @@ if __FILE__ == $0
     'hp1' => 1,
     'unconserved_genomic_region' => 1,
     'exportpredKLD' => 1,
+    'falciparum_toxo_blast_start' => 500,
     
   },
   
@@ -33,6 +34,7 @@ if __FILE__ == $0
     'acidics_in_first25_afterSPcleavage' => 5,
     'basics_in_first25_afterSPcleavage' => 3,
     'sir2_wild_type_schizont' => 96.5,
+    'InterPro_IPR007740' => 0, #Mitochondrial large subunit ribosomal protein (Img2)
 
       
     },
@@ -45,7 +47,9 @@ if __FILE__ == $0
     'falciparum_toxo_blast_start_20_to_100' => 1,
     'maurers_cleft' => 0,
     'exportpredKLD' => 0,
-      
+    'InterPro_IPR007740' => 1, #Mitochondrial large subunit ribosomal protein (Img2)
+    
+
     }
   }
   
