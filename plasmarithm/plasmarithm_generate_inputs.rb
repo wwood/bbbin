@@ -421,12 +421,6 @@ END_OF_TOP
     end
     output_line.push falciparum_plasmit_predictions[plasmodb]
     
-    #    headers.push 'plasmit_after_signalp' if do_headers
-    #    if falciparum_sp_cleaved_plasmit_predictions[plasmodb].nil?
-    #      $stderr.puts "Warning: No sp_cleaved PlasMit prediction found for `#{plasmodb} '"
-    #    end
-    #    output_line.push falciparum_sp_cleaved_plasmit_predictions[plasmodb]
-    
     #  Number Genes in Official OrthoMC Group for various species
     all_orthologue_species.each do |sp|      
       if do_headers
@@ -436,7 +430,7 @@ END_OF_TOP
     end
     
     #  Chromosome(14): Localisation
-    # Encode as 14 dummy variables. Not doing this any more because we don't believe they are predictive and are just noise.
+    ## Encode as 14 dummy variables. Not doing this any more because we don't believe they are predictive and are just noise.
     #    if do_headers
     #     (1..14).each do |chr| headers.push "chromosome#{chr}"; end
     #    end
@@ -620,17 +614,17 @@ END_OF_TOP
       output_line.push blast_hits[sp].key?(plasmodb)
     end
     
-#    # Metabolic pathways
-#    all_metabolic_pathways.each do |mpmp| 
-#      headers.push mpmp if do_headers
-#      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
-#    end
-#    
-#    # InterPro domains
-#    all_interpro_domains.each do |ipr|
-#      headers.push "InterPro_#{ipr}" if do_headers
-#      output_line.push interpro_domains[plasmodb].include?(ipr)
-#    end
+    # Metabolic pathways
+    all_metabolic_pathways.each do |mpmp| 
+      headers.push mpmp if do_headers
+      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
+    end
+    
+    # InterPro domains
+    all_interpro_domains.each do |ipr|
+      headers.push "InterPro_#{ipr}" if do_headers
+      output_line.push interpro_domains[plasmodb].include?(ipr)
+    end
     
     
     
