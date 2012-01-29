@@ -67,6 +67,26 @@ PROTEOMES = {
   # Modified from table 2
 :maurers_cleft => '/home/ben/phd/data/Plasmodium falciparum/proteomics/MaurersCleft2005/table2.ids',
 }
+# Blast hits. Generated using blast_inputs_creation.rb
+pros = %w(
+PbergheiAnnotatedProteins_PlasmoDB-8.2.fasta
+PvivaxAnnotatedProteins_PlasmoDB-8.2.fasta
+
+TgondiiME49AnnotatedProteins_ToxoDB-7.2.fasta
+
+CmurisAnnotatedProteins_CryptoDB-4.6.fasta
+ChominisAnnotatedProteins_CryptoDB-4.6.fasta
+CparvumAnnotatedProteins_CryptoDB-4.6.fasta
+
+BbovisT2BoAnnotatedProteins_PiroplasmaDB-1.1.fasta
+TannulataAnkaraAnnotatedProteins_PiroplasmaDB-1.1.fasta
+TparvaMugugaAnnotatedProteins_PiroplasmaDB-1.1.fasta
+)
+BLAST_RESULT_FILENAMES = {}
+%w(pberghei pvivax tgondii cmuris chominis cparvum bbovis tannulata tparva).each_with_index do |sp, i|
+  pro = pros[i]
+  BLAST_RESULT_FILENAMES[sp] = "input_data/falciparum8.2versus#{pro}.blast.csv" 
+end
 
 
 class Array; def sum; self.inject{|sum,x| sum + x }; end; end
@@ -79,6 +99,26 @@ if __FILE__ == $0
   
   USAGE = 'plasmarithm_generate_inputs.rb <plasmodb_id_list_file>'
   
+  
+  # Cache blast hits
+  blast_hits = {} # Hash of target species => plasmodbid => true
+  # e.g. psu|MAL13P1.200 Genbank|BBOV_III001790  41.41 99  57  1 14  111 5 103 3e-18 84.3
+  all_blast_target_species = BLAST_RESULT_FILENAMES.keys.sort
+  all_blast_target_species.each do |sp|
+    File.open(BLAST_RESULT_FILENAMES[sp]).each_line do |line|
+      first = line.strip.split("\t")[0]
+      matches = first.match(/^psu\|([^\t]+)/)
+      raise Exception, "Unexpected blast line found: #{line} / #{first}" unless matches
+      plasmodb = matches[1]
+      blast_hits[sp] ||= {}
+      blast_hits[sp][plasmodb] = true
+    end
+  end
+  all_blast_target_species.each do |sp|
+    $stderr.puts "Cached #{blast_hits[sp].length} straight out BLAST hits to #{sp}"
+  end
+  
+
   
   # Cache Sir2 KO percentiles
   sir2_percentiles = {} #hash of experiment name => plasmodb => percentile
@@ -367,12 +407,12 @@ END_OF_TOP
         output_line.push array[1]
       end
     end
-    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS, '', protein_sequence)
-    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS, '', protein_sequence)
-    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS, '', protein_sequence)
-    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS, 'SPcleaved_', signalp_cleaved)
-    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS, 'SPcleaved_', signalp_cleaved)
-    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS, 'SPcleaved_', signalp_cleaved)
+#    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS, '', protein_sequence)
+#    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS, '', protein_sequence)
+#    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS, '', protein_sequence)
+#    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS, 'SPcleaved_', signalp_cleaved)
+#    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS, 'SPcleaved_', signalp_cleaved)
+#    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS, 'SPcleaved_', signalp_cleaved)
     
     #  PlasMit
     headers.push 'plasmit' if do_headers
@@ -549,12 +589,6 @@ END_OF_TOP
       output_line.push 500 
     end
     
-    # BLAST hits against the various species
-    all_blast_targets.each do |species|
-      headers.push "#{species}_blast_hit" if do_headers
-      output_line.push !(blast_hits[species][plasmodb].nil?)
-    end
-    
     # conserved between 20 and 100 amino acids after the start?
     headers.push 'falciparum_toxo_blast_start_20_to_100' if do_headers
     if falciparum_to_toxo_min_starts[plasmodb]
@@ -580,17 +614,23 @@ END_OF_TOP
       output_line.push !(invasion_microarrays[experiment_name][plasmodb].nil?)
     end
     
-    # Metabolic pathways
-    all_metabolic_pathways.each do |mpmp| 
-      headers.push mpmp if do_headers
-      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
+    # blast hits
+    all_blast_target_species.each do |sp|
+      headers.push "blast_#{sp}" if do_headers
+      output_line.push blast_hits[sp].key?(plasmodb)
     end
     
-    # InterPro domains
-    all_interpro_domains.each do |ipr|
-      headers.push "InterPro_#{ipr}" if do_headers
-      output_line.push interpro_domains[plasmodb].include?(ipr)
-    end
+#    # Metabolic pathways
+#    all_metabolic_pathways.each do |mpmp| 
+#      headers.push mpmp if do_headers
+#      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
+#    end
+#    
+#    # InterPro domains
+#    all_interpro_domains.each do |ipr|
+#      headers.push "InterPro_#{ipr}" if do_headers
+#      output_line.push interpro_domains[plasmodb].include?(ipr)
+#    end
     
     
     

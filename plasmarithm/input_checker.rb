@@ -18,10 +18,11 @@ if __FILE__ == $0
     'unconserved_genomic_region' => 1,
     'exportpredKLD' => 1,
     'falciparum_toxo_blast_start' => 500,
-    
+    'blast_pvivax' => 1,
+    'blast_tgondii' => 0,
   },
   
-  'PFI1475w' => {#MSP1
+  'PFI1475w' => { #MSP1
     'signalp' => 1,
     'aliphatic_index' => 85.73837209302324,
     'gravy' => '-0.6550581395348859',
@@ -35,9 +36,11 @@ if __FILE__ == $0
     'basics_in_first25_afterSPcleavage' => 3,
     'sir2_wild_type_schizont' => 96.5,
     'InterPro_IPR007740' => 0, #Mitochondrial large subunit ribosomal protein (Img2)
+    'blast_pberghei' => 1,
+    'blast_tgondii' => 0,
 
-      
-    },
+
+   },
   'MAL13P1.200' => { #mito ribosomal protein
     'plasmit' => 1,
     'chom_orthologues' => 0,
@@ -48,6 +51,9 @@ if __FILE__ == $0
     'maurers_cleft' => 0,
     'exportpredKLD' => 0,
     'InterPro_IPR007740' => 1, #Mitochondrial large subunit ribosomal protein (Img2)
+    'blast_pberghei' => 1,
+    'blast_tgondii' => 1,
+    'blast_tparva' => 1,
     
 
     }
