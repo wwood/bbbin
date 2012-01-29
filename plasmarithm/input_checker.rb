@@ -56,6 +56,9 @@ if __FILE__ == $0
     'blast_tparva' => 1,
     
 
+    },
+    'PFL0480w' => {
+      'timepoint22' => 0.0, # not recorded in the DeRisi data, so caused problems when imported into R
     }
   }
   
