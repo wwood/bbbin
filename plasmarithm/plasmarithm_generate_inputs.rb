@@ -618,6 +618,14 @@ END_OF_TOP
       output_line.push blast_hits[sp].key?(plasmodb)
     end
     
+    # Protein length
+    headers.push 'protein_length' if do_headers
+    output_line.push protein_sequence.length
+    
+    # Protein length after N/K removal
+    headers.push 'protein_length_NK_removed' if do_headers
+    output_line.push protein_sequence.gsub(/[NK]/,'').length
+    
     # Metabolic pathways
     all_metabolic_pathways.each do |mpmp| 
       headers.push mpmp if do_headers
