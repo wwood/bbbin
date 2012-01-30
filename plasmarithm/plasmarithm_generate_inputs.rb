@@ -354,6 +354,13 @@ END_OF_TOP
       raise Exception, "Unable able to find protein sequence for PlasmoDB ID `#{plasmodb}'"
     end
     
+    # Ignore a few very whacky and likely incorrect genes
+    if protein_sequence.match(/\*.+/)
+      $stderr.puts "Ignoring #{plasmodb} since the sequence contained a stop codon not at the end of the protein"
+      next
+    end
+  
+    
     # This gets progressively filled with data about the current gene
     output_line = []
     headers.push 'plasmodb' if do_headers
@@ -418,13 +425,16 @@ END_OF_TOP
     headers.push 'plasmit' if do_headers
     if falciparum_plasmit_predictions[plasmodb].nil?
       $stderr.puts "Warning: No PlasMit prediction found for `#{plasmodb} '"
+      output_line.push 0.2
+    else
+      output_line.push falciparum_plasmit_predictions[plasmodb]
     end
-    output_line.push falciparum_plasmit_predictions[plasmodb]
+    
     
     #  Number Genes in Official OrthoMC Group for various species
     all_orthologue_species.each do |sp|      
       if do_headers
-        headers.push "#{sp}_orthologues"
+        headers.push "#{sp}_orthologues" if do_headers
       end
       output_line.push !falciparum_orthologues[sp][plasmodb].nil?
     end
