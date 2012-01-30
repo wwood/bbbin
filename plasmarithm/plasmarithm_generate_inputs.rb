@@ -479,10 +479,8 @@ END_OF_TOP
     if falciparum_lifecycle_data[plasmodb]
       lifecycle_sample = falciparum_lifecycle_data[plasmodb].sample
       [22,23,47,49].each do |i|
-        $stderr.puts lifecycle_sample[:timepoints][i-1].inspect if plasmodb =='PFL0480w'
         measure = lifecycle_sample[:timepoints][i-1]
         measure = 1 if measure == 0.0 #to avoid log(0) calculations
-        $stderr.puts measure
         output_line.push Math.log(measure)
       end
       output_line.push lifecycle_sample[:amplitude].to_f
