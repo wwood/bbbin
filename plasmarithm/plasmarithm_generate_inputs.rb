@@ -451,6 +451,7 @@ END_OF_TOP
     # Distance from chromosome ends
     min_distance = gene_starts[plasmodb]
     raise "No chromosome found for #{plasmodb}" if falciparum_chromosomes[plasmodb].nil?
+    raise "No chromosome length found for #{plasmodb} / #{falciparum_chromosomes[plasmodb]}" if chromosome_lengths[falciparum_chromosomes[plasmodb]].nil?
     distance_from_arbitrary_end = chromosome_lengths[falciparum_chromosomes[plasmodb]]-gene_starts[plasmodb]
     min_distance = distance_from_arbitrary_end if distance_from_arbitrary_end < min_distance
     [100000,200000].each do |cutoff|
