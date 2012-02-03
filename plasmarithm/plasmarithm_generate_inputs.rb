@@ -359,6 +359,11 @@ END_OF_TOP
       $stderr.puts "Ignoring #{plasmodb} since the sequence contained a stop codon not at the end of the protein"
       next
     end
+
+if chromosome_lengths[falciparum_chromosome[plasmodb]].nil?
+$stderr.puts "Ignoring #{plasmodb} since it has no associated chromosome, Not nuclear encoded?"
+next
+end
   
     
     # This gets progressively filled with data about the current gene
