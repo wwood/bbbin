@@ -24,11 +24,13 @@ file1_foundeds = {}
 num_splits_in_file1 = nil
 File.foreach(ARGV[1]) do |line|
   splits = line.chomp.split(separator)
+
   if num_splits_in_file1.nil?
     num_splits_in_file1 = splits.length #assume all lines have the same number of splits, fail otherwise
   elsif num_splits_in_file1 != splits.length
     raise Exception, "Unexpected number of splits over '#{separator}' found in the first file. I give up so I don't cause you pain later"
   end
+
   key = splits[join_field].strip
   file2_data = splits[1..splits.length-1]
   if file1_hash[key]
