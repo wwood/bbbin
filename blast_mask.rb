@@ -10,14 +10,14 @@ require 'csv'
 class BlastHitArray < Array
   # Taking a string sequence, apply the mask encoded in the Array superclass
   # and return the masked string sequence
-  def masked_sequence(sequence)
+  def masked_sequence(sequence, surrounds = nil)
     seq = ''
     
      (1..sequence.length).each do |i|
       # run the gauntlet of masks, innocent until proven guilty
       masked = false
       each do |hit|
-        if hit.contains?(i)
+        if hit.contains?(i, surrounds)
           masked = true
           break
         end
@@ -42,12 +42,13 @@ class Hit
     @to = to
   end
   
-  def contains?(one_based_index)
+  def contains?(one_based_index, surrounds = nil)
+    surrounds ||= 0
     # If hit is a forward hit
     if from < to
-      one_based_index >= from and one_based_index <= to
+      one_based_index >= from-surrounds and one_based_index <= to+surrounds
     else #If hit is a reverse hit
-      one_based_index >= to and one_based_index <= from
+      one_based_index >= to-surrounds and one_based_index <= from+surrounds
     end
   end
 end
@@ -65,6 +66,11 @@ if __FILE__ == $0
     
     opts.on("-m", "--masked-only", "Print out only those sequences that have blast hits (or equivalently, only those that are masked") do |v|
       options[:print_masked_sequences_only] = true
+    end
+    
+    opts.on("-s", "--mask-surrounds AMOUNT_SURROUNDING", "Print out only those sequences that have blast hits (or equivalently, only those that are masked") do |v|
+      options[:surrounding_to_mask] = v.to_i
+      raise if options[:surrounding_to_mask] < 0
     end
   end
   o.parse!
@@ -94,7 +100,7 @@ if __FILE__ == $0
   Bio::FlatFile.foreach(Bio::FastaFormat, fasta_filename) do |entry|
     # Apply masking if required
     if blasts[entry.definition]
-      masked = blasts[entry.definition].masked_sequence(entry.seq)
+      masked = blasts[entry.definition].masked_sequence(entry.seq, options[:surrounding_to_mask])
       puts ">#{entry.definition}"
       puts masked
     else
