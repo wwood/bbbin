@@ -21,8 +21,10 @@ end
 
 # Go through file 2
 file1_foundeds = {}
+num_splits_in_file1 = nil
 File.foreach(ARGV[1]) do |line|
   splits = line.chomp.split(separator)
+  num_splits_in_file1 ||= splits.length
   key = splits[join_field].strip
   if file1_hash[key]
     if file1_foundeds[key].nil?

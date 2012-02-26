@@ -40,7 +40,7 @@ if __FILE__ == $0
   o = OptionParser.new do |opts|
     opts.banner = USAGE
 
-    opts.on("-w", "--window-size", "Length of the window to be used") do |v|
+    opts.on("-w", "--window-size SIZE", "Length of the window to be used") do |v|
       window = v.to_i
       unless window > 0
         raise Exception, "Unexpected window size specified: #{v} - it must be greater than 0 residues long!"
@@ -50,10 +50,10 @@ if __FILE__ == $0
   end
   o.parse!
 
-  puts %w(name max_number max_sequence)
+  puts %w(name window_size max_number max_sequence).join("\t")
   Bio::FlatFile.foreach(ARGF) do |seq|
     desc = Bio::SequenceWindowDescriptor.new
-    desc.calculate(seq, options[:window_size])
-    puts [seq.definition, desc.maximum_counts[:gly], desc.maximum_sequences[:gly]].join("\t")
+    desc.calculate(seq.seq, options[:window_size])
+    puts [seq.definition, options[:window_size], desc.maximum_counts[:gly], desc.maximum_sequences[:gly]].join("\t")
   end
 end
