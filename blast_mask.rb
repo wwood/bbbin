@@ -2,7 +2,7 @@
 
 require 'rubygems'
 require 'bio'
-require 'fastercsv'
+require 'csv'
 
 # A script to mask out certain sections of a fasta file as
 # specified by their homology to some blast database
@@ -81,7 +81,7 @@ if __FILE__ == $0
   
   # read in blast data
   blasts = {} #hash of sequence identifiers to arrays of blasthits
-  FasterCSV.foreach(blast_filename, :col_sep => "\t") do |row|
+  CSV.foreach(blast_filename, :col_sep => "\t") do |row|
     query = row[0]
     from = row[6].to_i
     to = row[7].to_i
