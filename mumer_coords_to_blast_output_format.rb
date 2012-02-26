@@ -9,14 +9,32 @@
 # =====================================================================================
 # 1      186  |      199      384  |      186      186  |   100.00  | 164  metagenome2_c17478
 
+indices = {}
+
 ARGF.each_line do |line|
+  if $. == 4
+    headers = line.strip.split(/[ \|]\s+/)
+    {
+      '[S1]' => :query_start,
+      '[S2]' => :query_end,
+      '[TAGS]' => :query_name
+    }.each do |header, sym|
+      headers.each_with_index do |head, i|
+        if head == header
+          indices[sym] = i
+        end
+      end
+      raise Exception, "Unable to find index for #{sym}" if indices[sym].nil?
+    end
+  end
+  
   next unless $. > 5 #skip header bits
   splits = line.strip.split(/\s+/)
-  raise unless splits.length == 19
+
   puts [
-    splits[17],
+    splits[indices[:query_name]],
     %w(. . . . . ),
-    splits[0],
-    splits[3],
+    splits[indices[:query_start]],
+    splits[indices[:query_end]],
   ].join("\t")
 end
