@@ -219,7 +219,7 @@ for my $file ( @files ) {
 		}		
 	    } 
 	    my ($kingdom) = $gi2node{$gi};
-            print($hname."\t".$gi2node{$gi}."\n") if ($print_individuals);
+            print($qname."\t".$hname."\t".$gi2node{$gi}."\n") if ($print_individuals);
 	    unless( defined $kingdom && length($kingdom) ) {
 		    warn("no kingdom for $hname\n");
 	    } else {
