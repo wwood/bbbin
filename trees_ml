@@ -45,13 +45,18 @@ stdout = 'uniqued_phylip_stdout.txt'
 # If repetitions is defined do that, otherwise do the default likelihood test
 cmd = "error if you see this"
 if options[:repetitions] and options[:repetitions] > 0
-cmd = "phyml -d aa -i #{input} -b #{options[:repetitions]} #{options[:arguments]} >#{stdout}"
+#cmd = "phyml -d aa -i #{input} -b #{options[:repetitions]} #{options[:arguments]} >#{stdout}"
+# raxmlHPC -s TF105399.phy -n TF105399.raxml.singleTree -c 4 -f d -m PROTGAMMAJTT
+cmd = "mpirun -np 10 raxmlHPC-MPI -s #{input} -n #{stdout} -f d -m PROTGAMMAJTT -N #{options[:repetitions]} -p 234534251 -c 4 >RAxML.stdout"
 else
-cmd = "phyml -d aa -b -1 -i #{input} #{options[:arguments]} >#{stdout}"
+raise Exception, "Not implemented!!"
+#cmd = "phyml -d aa -b -1 -i #{input} #{options[:arguments]} >#{stdout}"
 end
-puts "Running phyml: #{cmd}";
+puts "Running raxml: #{cmd}";
 system(cmd)
 
 #convert the names on the tree back to sensible land
 Dir.chdir('..')
-system("ununiqify_standard_tree.rb #{fasta_file_input} #{dir}/uniqued.phylip #{dir}/uniqued.phylip_phyml_tree.txt >#{dir}/ml.tree")
+cmd = "ununiqify_standard_tree.rb #{fasta_file_input} #{dir}/uniqued.phylip #{dir}/RAxML_bestTree.phylip_phyml_tree.txt >#{dir}/ml.tree";
+puts "Running uniniquify_treeing: #{cmd}"
+system(cmd)

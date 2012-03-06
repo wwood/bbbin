@@ -12,7 +12,7 @@
 
 require 'rubygems'
 require 'bio'
-require File.dirname(__FILE__) + '/species_id_prefixes'
+#require File.dirname(__FILE__) + '/species_id_prefixes'
 
 class TipLabel
 
@@ -99,7 +99,7 @@ USAGE = "Usage: ununiqify_ensembl_tree [-c] [-m <manual_names_filename>] <fasta_
 options = {
   :common_names => false,
   :manual_names => {},
-  :phylip_manual_names = {},
+  :phylip_manual_names => {},
 }
 OptionParser.new do |opts|
   opts.banner = USAGE
@@ -150,6 +150,7 @@ tree.leaves.each do |node|
   # 4. Use the original name (and warn that this is happening)
 
   # 3. happens first because this is what is used in the manual matching
+  next if node.name.nil?
   newname = phylip_to_fasta_name_hash[node.name]
   newname = phylip_to_fasta_name_hash[node.name.gsub(' ','_')] if newname.nil? #bit of a hack
 
