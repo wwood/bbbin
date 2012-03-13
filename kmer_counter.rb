@@ -35,10 +35,11 @@ if __FILE__ == $0
   require 'optparse'
 
   # Parse cmd line options
-  USAGE = "Usage: kmer_counter.rb [-w window_size] [-m minimum_window_size] <fasta_filename>"
+  USAGE = "Usage: kmer_counter.rb [-w window_size] [-W window_offset] [-m minimum_window_size] <fasta_filename>"
   options = {
     :window_size => 5000,
     :minimum_window_size => 2000,
+    :window_offset => 5000,
     :kmer => 4,
     :contig_name => false,
   }
@@ -53,7 +54,15 @@ if __FILE__ == $0
       end
       options[:window_size] = window
     end
-
+    
+    opts.on("-W", "--window-offset SIZE", "Length of the offset between windows") do |v|
+      offset = v.to_i
+      unless offset > 0
+        offset = options[:window_isze]
+      end
+      options[:window_offset] = offset
+    end
+           
     opts.on("-m", "--minimum-window-size SIZE", "Length of the minimum window to be used") do |v|
       window = v.to_i
       unless window > 0
@@ -105,7 +114,7 @@ if __FILE__ == $0
 
   Bio::FlatFile.open(ARGF).each do |sequence|
     window_counter = 0
-    sequence.seq.window_search(options[:window_size],options[:window_size]) do |window|
+    sequence.seq.window_search(options[:window_size],options[:window_offset]) do |window|
       process_window.call(window, options[:kmer], "#{sequence.definition}_#{window_counter}",sequence.definition)
       window_counter += 1
     end
