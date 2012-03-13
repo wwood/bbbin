@@ -42,6 +42,7 @@ if __FILE__ == $0
     :window_offset => 5000,
     :kmer => 4,
     :contig_name => false,
+    :sequence_length => false
   }
 
   OptionParser.new do |opts|
@@ -82,6 +83,10 @@ if __FILE__ == $0
     opts.on("-n", "--contig-name", "Output the contig name, on top of the default contig chunk name [default: false]") do |v|
       options[:contig_name] = true
     end
+    
+    opts.on("-l", "--window-length", "print the length of the window in the output") do |v|
+      options[:sequence_length] = true
+    end
   end.parse!
 
   print "ID\t"
@@ -107,7 +112,7 @@ if __FILE__ == $0
     counts.keys.each do |tetramer|
       print "\t#{counts[tetramer].to_f/num_kmers_counted}"
     end
-    print "\t#{window.length}"
+    print "\t#{window.length}" if options[:sequence_length]
     print "\t#{contig_name}" if options[:contig_name]
     puts
   end
