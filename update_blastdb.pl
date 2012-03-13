@@ -41,7 +41,7 @@ use File::stat;
 
 use constant VERSION => 1.2;
 use constant NCBI_FTP => "biomirror.aarnet.edu.au";
-use constant BLAST_DB_DIR => "/biomirror/blast";
+use constant BLAST_DB_DIR => "/nr";
 use constant USER => "anonymous";
 use constant PASSWORD => "anonymous";
 use constant DEBUG => 0;
