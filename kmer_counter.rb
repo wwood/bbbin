@@ -35,7 +35,7 @@ if __FILE__ == $0
   require 'optparse'
 
   # Parse cmd line options
-  USAGE = "Usage: kmer_counter.rb [-w window_size] [-W window_offset] [-m minimum_window_size] <fasta_filename>"
+  USAGE = "Usage: kmer_counter.rb [-w window_size] [-W window_offset] [-m minimum_window_size] [--window-length] [-k kmer_length] [--contig-name] <fasta_filename>"
   options = {
     :window_size => 5000,
     :minimum_window_size => 2000,
