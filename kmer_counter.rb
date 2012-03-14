@@ -6,23 +6,34 @@ require 'pp'
 # Initialise the hash of the different
 module Bio
   class Sequence
+    class NA
+      # Return the current object or its reverse complement, whichever
+      # has the sequence that comes first in lexigraphical (alphabetical)
+      # order
+      def lowest_lexigraphical_form
+        rev = self.reverse_complement
+        to_s < rev.to_s ? self : rev
+      end
+    end
+
     class Kmer
       def self.empty_kmer_hash(k=4)
         counts = {}
 
-        keys = %w(A T C G)
+        # construct an array of all possible kmers
+        ordered_possibilities = %w(A T C G)
+        keys = ordered_possibilities
         (k-1).times do
-          keys = keys.collect{|k| %w(A T G C).collect{|n| "#{k}#{n}"}.flatten}.flatten
+          keys = keys.collect{|k| ordered_possibilities.collect{|n| "#{k}#{n}"}.flatten}.flatten
         end
 
-        new_keys = []
+        # remove keys that are not in their lowest lexigraphical form.
+        # Because all possible kmers are already present, the reverse complement of these must already be present in the array
+        keys.select! do |key|
+          Bio::Sequence::NA.new(key).lowest_lexigraphical_form.to_s.upcase == key
+        end
+
         keys.each do |key|
-          unless new_keys.include?(Bio::Sequence::NA.new(key).reverse_complement.to_s.upcase)
-          new_keys.push key
-          end
-        end
-
-        new_keys.each do |key|
           counts[key] = 0
         end
         return counts
@@ -54,8 +65,9 @@ if __FILE__ == $0
         raise Exception, "Unexpected window size specified: #{v} - it must be greater than 0 residues long!"
       end
       options[:window_size] = window
+      options[:window_offset] = window
     end
-    
+
     opts.on("-W", "--window-offset SIZE", "Length of the offset between windows") do |v|
       offset = v.to_i
       unless offset > 0
@@ -63,7 +75,7 @@ if __FILE__ == $0
       end
       options[:window_offset] = offset
     end
-           
+
     opts.on("-m", "--minimum-window-size SIZE", "Length of the minimum window to be used") do |v|
       window = v.to_i
       unless window > 0
@@ -79,11 +91,11 @@ if __FILE__ == $0
       end
       options[:kmer] = window
     end
-    
+
     opts.on("-n", "--contig-name", "Output the contig name, on top of the default contig chunk name [default: false]") do |v|
       options[:contig_name] = true
     end
-    
+
     opts.on("-l", "--window-length", "print the length of the window in the output") do |v|
       options[:sequence_length] = true
     end
@@ -92,7 +104,7 @@ if __FILE__ == $0
   print "ID\t"
 
   print Bio::Sequence::Kmer.empty_kmer_hash(options[:kmer]).keys.join("\t")
-  print "\tWindowLength"
+  print "\tWindowLength" if options[:sequence_length]
   print "\tcontig" if options[:contig_name]
   puts
 
@@ -102,11 +114,7 @@ if __FILE__ == $0
     window.window_search(options[:kmer],1) do |tetranucleotide|
       next unless tetranucleotide.upcase.gsub(/[ATGC]+/,'') == ''
       num_kmers_counted += 1
-      if counts.key?(tetranucleotide.upcase.to_s)
-      counts[tetranucleotide.upcase.to_s] += 1
-      else
-      counts[Bio::Sequence::NA.new(tetranucleotide).reverse_complement.upcase.to_s] += 1
-      end
+      counts[Bio::Sequence::NA.new(tetranucleotide).lowest_lexigraphical_form.to_s.upcase] += 1
     end
     print "#{sequence_name}"
     counts.keys.each do |tetramer|
