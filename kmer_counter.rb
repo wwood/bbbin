@@ -10,7 +10,7 @@ module Bio
       def self.empty_kmer_hash(k=4)
         counts = {}
 
-        keys = %w(A T G C)
+        keys = %w(A T C G)
         (k-1).times do
           keys = keys.collect{|k| %w(A T G C).collect{|n| "#{k}#{n}"}.flatten}.flatten
         end
