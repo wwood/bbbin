@@ -15,7 +15,7 @@ my $acefile = shift or die $usage;
 
 
 
-my $io = new Bio::Assembly::IO(-file=>$acefile, -format=>'ace');
+my $io = new Bio::Assembly::IO(-file=>$acefile, -format=>'ace', -variant => '454');
 
 
 my $assembly = $io->next_assembly();

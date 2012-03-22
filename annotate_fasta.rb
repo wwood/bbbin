@@ -4,6 +4,7 @@
 
 require 'bio'
 require 'optparse'
+require 'open3'
 
 options = {
   :blast_db_path => '/srv/whitlam/bio/db/ncbi/nr', #where to get the sequence information from
@@ -46,7 +47,8 @@ Bio::FlatFile.foreach(options[:fasta]) do |s|
   name = 'hypothetical'
   if query_to_hit[s.entry_id]
     # extract best blast hit full name
-    cmd = "blastdbcmd -entry '#{s.entry_id}' -db #{options[:db]} -outfmt '%t'"
+    cmd = "blastdbcmd -entry '#{query_to_hit[s.entry_id]}' -db #{options[:blast_db_path]} -outfmt '%t'"
+
     # execute command and capture both stdout, and stderr
     Open3.popen3(cmd) do |stdin, stdout, stderr|
       error = stderr.readlines
