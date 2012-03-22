@@ -25,11 +25,16 @@ OptionParser.new do |opts|
   opts.on('-a', "--threads NUM_THREADS", "Number of CPUs to spread the load across") do |v|
     options[:threads] = v.to_i
   end
+  
+  opts.on('-o', "--output OUTPUT_FILE", "File to dump blast results to. Note that the sequences with blast hits are probably not in the same order as the input file") do |v|
+    options[:output_file] = v.to_i
+  end
 end.parse!
 
 raise unless options[:query]
 raise unless options[:db]
 raise unless options[:threads] > 0
+raise Exception, "You must specify an output file (-o/--output)" unless options[:output_file]
 
 input_temps = (1..options[:threads]).collect{Tempfile.new('blast_by_splitsIn')}
 
@@ -53,11 +58,15 @@ blast_threads = (1..options[:threads]).collect do |i|
   end
 end
 
+# Setup the output file, and try writing to it so it fails asap, so you don't have to wait for the blast to finish to find out there's a problem
+out = File.open(options[:output_file],'w')
+out.print ''
+
 #wait for the all to be finished, then print all the results out as they finish
-blast_threads.each_with_index do |thread, i|
+blast_threads.each_with_index do |thread, i|  
   thread.join
     File.open(output_temps[i]).each_line do |line| 
-    print line
+    out.print line
   end
 end
 
