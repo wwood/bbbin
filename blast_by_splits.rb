@@ -59,5 +59,5 @@ blast_threads.each_with_index do |thread, i|
     File.open(output_temps[i]).each_line do |line| 
     print line
   end
-end 
+end
 
