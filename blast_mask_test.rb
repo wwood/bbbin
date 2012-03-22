@@ -31,6 +31,9 @@ Aqu1.200001	Aqu1.200001	100.00	294	0	0	1	5	1	294	2e-166	583
 Aqu1.200001	Aqu1.200002	100.00	74	0	0	7	8	237	164	5e-35	147
 Aqu1.200002	Aqu1.200002	98.00	74	0	223	5	7	237	164	5e-35	147
 EOF
+    input_blast.gsub!(/ +/,"\t")
+    p input_blast
+    puts input_blast
     input_fasta=<<EOF
 >Aqu1.200001
 ATGCATGC
@@ -79,6 +82,7 @@ EOF
     input_blast = <<EOF
 Aqu1.200001 one	Aqu1.200001	100.00	294	0	0	1	5	1	294	2e-166	583
 EOF
+    input_blast.gsub!(/ +/,"\t")
     input_fasta= <<EOF
 >Aqu1.200001 blah
 ATGCATGC
