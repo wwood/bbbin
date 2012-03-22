@@ -18,7 +18,7 @@ raise unless seqs.collect{|s| s.length}.uniq.length==1
 aln = Bio::Alignment.new(seqs)
 	dN = 0
 	dS = 0
-      aln.each_window(3) do |seq_array|
+      aln.each_window(3,3) do |seq_array|
 
 	translates = seq_array.collect{|s| Bio::Sequence::NA.new(s).translate}
 	if translates[0] == translates[1] and seq_array[0] != seq_array[1]
