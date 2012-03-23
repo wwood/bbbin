@@ -9,7 +9,6 @@ require 'open3'
 options = {
   :blast_db_path => '/srv/whitlam/bio/db/ncbi/nr', #where to get the sequence information from
   :min_evalue => 1e-5,
-  :species_name => 'RCIIv2.3.1_',
 }
 OptionParser.new do |opts|
   opts.banner = "Usage: annotate_fasta.rb -f <fasta_path> -b <blast_results_path>"
@@ -21,8 +20,13 @@ OptionParser.new do |opts|
   opts.on('-b', "--blast BLAST_FILE", "BLAST of fasta against the db (-outfmt 6)") do |v|
     options[:blast] = v
   end
+
+  opts.on('-s', "--species SPECIES_NAME", "Name of the species/community/genome build e.g. 'RCIIv2.3.1_'. You probably want an underscore at the end so that the gene IDs are separated from the species name visually, yet still both are before the first space.") do |v|
+    options[:species_name] = v
+  end
 end.parse!
 
+raise Exception, "Please specify a species/community name (-s/--species)" unless options[:species]
 raise unless options[:fasta]
 raise unless options[:blast]
 
