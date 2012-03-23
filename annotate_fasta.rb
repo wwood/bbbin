@@ -26,7 +26,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-raise Exception, "Please specify a species/community name (-s/--species)" unless options[:species]
+raise Exception, "Please specify a species/community name (-s/--species)" unless options[:species_name]
 raise unless options[:fasta]
 raise unless options[:blast]
 
