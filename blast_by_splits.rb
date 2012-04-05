@@ -66,10 +66,12 @@ output_temps = (1..options[:threads]).collect{Tempfile.new('blast_by_splitsOut')
 blast_threads = (1..options[:threads]).collect do |i|
   Thread.new do
     num_sequences_argument = "-max_target_seqs #{options[:max_target_seqs]}"
-    if options[:outfmt] == 1
-      num_sequences_argument = "--num_descriptions #{options[:max_target_seqs]} -num_alignments #{options[:max_target_seqs]}"
+    if options[:outfmt].to_s == 1.to_s
+      num_sequences_argument = "-num_descriptions #{options[:max_target_seqs]} -num_alignments #{options[:max_target_seqs]}"
     end
-    `blastp -query '#{input_temps[i-1].path}' -db '#{options[:db]}' #{num_sequences_argument} -outfmt #{options[:outfmt]} -out #{output_temps[i-1].path}`
+    cmd = "blastp -query '#{input_temps[i-1].path}' -db '#{options[:db]}' #{num_sequences_argument} -outfmt #{options[:outfmt]} -out #{output_temps[i-1].path}"
+    #$stderr.puts "Running: #{cmd}"
+    `#{cmd}`
   end
 end
 
