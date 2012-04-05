@@ -4,6 +4,8 @@
 
 require 'rubygems'
 require 'bio'
+require 'bio-signalp'
+require 'csv'
 
 module Bio
   class SequenceWindowDescriptor
@@ -36,6 +38,7 @@ if __FILE__ == $0
   USAGE = "Usage: gly_sliding_window.rb <fasta_filename>"
   options = {
     :window_size => 25,
+    :signalp_file => nil,
   }
   o = OptionParser.new do |opts|
     opts.banner = USAGE
@@ -47,13 +50,57 @@ if __FILE__ == $0
       end
       options[:window_size] = window
     end
+    
+    opts.on("-s", "--signalp_overview SIGNALP_SUMMRY_FILE", "Path to a bio-signalp derived summary file. Implies that only signalp-positive proteins are considered, and the gly sliding window cannot overlap with the signal peptide") do |v|
+      options[:signalp_file] = v
+    end
   end
   o.parse!
+  
+  signalp_cleavages = {}
+  if options[:signalp_file]
+    # Name NN Prediction HMM Prediction  Predicted?  Cleavege site (if predicted)
+    CSV.foreach(options[:signalp_file],:col_sep => "\t") do |row|
+      name = row[0]
+      cleavage = row[4].to_i
+      # Check for duplicates
+      if signalp_cleavages[name]
+        raise Exception, "Unexpectedly found sequence with name #{name.inspect} (at least) twice in the signalp_overview file, giving up"
+      end
+      signalp_cleavages[name] = cleavage
+    end
+  end
 
-  puts %w(name window_size max_number max_sequence).join("\t")
+  headers = %w(name window_size max_number max_sequence)
+  headers.push 'signalp?' if options[:signalp_file]
+  puts headers.join("\t")
+  
   Bio::FlatFile.foreach(ARGF) do |seq|
     desc = Bio::SequenceWindowDescriptor.new
-    desc.calculate(seq.seq, options[:window_size])
-    puts [seq.definition, options[:window_size], desc.maximum_counts[:gly], desc.maximum_sequences[:gly]].join("\t")
+    
+    # By default use the whole sequence
+    sequence = seq.seq
+    
+    # If a signal peptide was predicted, cleave
+    result = Bio::SignalP::Result.new
+    if options[:signalp_file]
+      # bit of a hack - artificially set the signalp value to true
+      signalp_result = signalp_cleavages[seq.entry_id]
+      if signalp_result.nil?
+        $stderr.puts "Didn't find sequence #{seq.entry_id} in the signalp overview file, is that right?"
+        signalp_result = 0
+      end
+      result.nn_D_prediction = (signalp_result != 0)
+      result.nn_Ymax_position = signalp_result
+      sequence = result.cleave(seq.seq)
+    end
+    
+    desc.calculate(sequence, options[:window_size])
+    print [seq.definition, options[:window_size], desc.maximum_counts[:gly], desc.maximum_sequences[:gly]].join("\t")
+    if options[:signalp_file]
+      print "\t"
+      print signalp_cleavages[seq.entry_id] != 0
+    end
+    puts
   end
 end
