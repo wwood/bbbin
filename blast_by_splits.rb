@@ -11,6 +11,7 @@ require 'optparse'
 options = {
   :threads => 24,
   :max_target_seqs => 1,
+  :outfmt => 6,
 }
 OptionParser.new do |opts|
   opts.banner = "Usage: blast_by_splits.rb --query <query_fasta> --db <blast_database_path>"
@@ -31,8 +32,12 @@ OptionParser.new do |opts|
     options[:threads] = v.to_i
   end
     
-  opts.on('-t', "--max_target_seqs NUM_SEQS", "How many hits to report for each query sequence? [default: #{options[:max_target_seqs]}") do |v|
+  opts.on('-t', "--max_target_seqs NUM_SEQS", "How many hits to report for each query sequence? [default: #{options[:max_target_seqs]}]") do |v|
     options[:max_target_seqs] = v.to_i
+  end
+
+  opts.on('-m', "--outfmt FORMAT_NUMBER", "Output format [default: #{options[:max_target_seqs]}, csv]") do |v|
+    options[:outfmt] = v
   end
 end.parse!
 
@@ -60,7 +65,7 @@ output_temps = (1..options[:threads]).collect{Tempfile.new('blast_by_splitsOut')
 # Start each of the threads
 blast_threads = (1..options[:threads]).collect do |i|
   Thread.new do
-    `blastp -query '#{input_temps[i-1].path}' -db '#{options[:db]}' -max_target_seqs #{options[:max_target_seqs]} -outfmt 6 -out #{output_temps[i-1].path}`
+    `blastp -query '#{input_temps[i-1].path}' -db '#{options[:db]}' -max_target_seqs #{options[:max_target_seqs]} -outfmt #{options[:outfmt]} -out #{output_temps[i-1].path}`
   end
 end
 
