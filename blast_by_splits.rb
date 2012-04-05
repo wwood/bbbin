@@ -36,7 +36,7 @@ OptionParser.new do |opts|
     options[:max_target_seqs] = v.to_i
   end
 
-  opts.on('-m', "--outfmt FORMAT_NUMBER", "Output format [default: #{options[:max_target_seqs]}, csv]") do |v|
+  opts.on('-m', "--outfmt FORMAT_NUMBER", "Output format [default: #{options[:max_target_seqs]} (tab-separated values)]") do |v|
     options[:outfmt] = v
   end
 end.parse!
@@ -65,7 +65,11 @@ output_temps = (1..options[:threads]).collect{Tempfile.new('blast_by_splitsOut')
 # Start each of the threads
 blast_threads = (1..options[:threads]).collect do |i|
   Thread.new do
-    `blastp -query '#{input_temps[i-1].path}' -db '#{options[:db]}' -max_target_seqs #{options[:max_target_seqs]} -outfmt #{options[:outfmt]} -out #{output_temps[i-1].path}`
+    num_sequences_argument = "-max_target_seqs #{options[:max_target_seqs]}"
+    if options[:outfmt] == 1
+      num_sequences_argument = "--num_descriptions #{options[:max_target_seqs]} -num_alignments #{options[:max_target_seqs]}"
+    end
+    `blastp -query '#{input_temps[i-1].path}' -db '#{options[:db]}' #{num_sequences_argument} -outfmt #{options[:outfmt]} -out #{output_temps[i-1].path}`
   end
 end
 
