@@ -59,7 +59,7 @@ if __FILE__ == $0
   OptionParser.new do |opts|
     opts.banner = USAGE
 
-    opts.on("-w", "--window-size SIZE", "Length of the window to be used") do |v|
+    opts.on("-w", "--window-size SIZE", "Length of the window to be used [default #{options[:window_size]}]") do |v|
       window = v.to_i
       unless window > 0
         raise Exception, "Unexpected window size specified: #{v} - it must be greater than 0 residues long!"
@@ -68,7 +68,7 @@ if __FILE__ == $0
       options[:window_offset] = window
     end
 
-    opts.on("-W", "--window-offset SIZE", "Length of the offset between windows") do |v|
+    opts.on("-W", "--window-offset SIZE", "Length of the offset between windows [default #{options[:window_offset]}]") do |v|
       offset = v.to_i
       unless offset > 0
         offset = options[:window_isze]
@@ -76,7 +76,7 @@ if __FILE__ == $0
       options[:window_offset] = offset
     end
 
-    opts.on("-m", "--minimum-window-size SIZE", "Length of the minimum window to be used") do |v|
+    opts.on("-m", "--minimum-window-size SIZE", "Length of the minimum window to be used [default #{options[:minimum_window_size]}]") do |v|
       window = v.to_i
       unless window > 0
         raise Exception, "Unexpected minimum window size specified: #{v} - it must be greater than 0 residues long!"
@@ -84,7 +84,7 @@ if __FILE__ == $0
       options[:minimum_window_size] = window
     end
 
-    opts.on("-k", "--kmer-length SIZE", "Length of the kmer to be used") do |v|
+    opts.on("-k", "--kmer-length SIZE", "Length of the kmer to be used [default #{options[:kmer]}]") do |v|
       window = v.to_i
       unless window > 0
         raise Exception, "Unexpected minimum window size specified: #{v} - it must be greater than 0 residues long!"
@@ -92,11 +92,11 @@ if __FILE__ == $0
       options[:kmer] = window
     end
 
-    opts.on("-n", "--contig-name", "Output the contig name, on top of the default contig chunk name [default: false]") do |v|
+    opts.on("-n", "--contig-name", "Output the contig name, on top of the default contig chunk name [default: #{options[:contig_name]}]") do |v|
       options[:contig_name] = true
     end
 
-    opts.on("-l", "--window-length", "print the length of the window in the output") do |v|
+    opts.on("-l", "--window-length", "print the length of the window in the output [default #{options[:sequence_length]}]") do |v|
       options[:sequence_length] = true
     end
   end.parse!
