@@ -13,22 +13,23 @@ options = {
   :max_target_seqs => 1,
   :outfmt => 6,
 }
-OptionParser.new do |opts|
-  opts.banner = "Usage: blast_by_splits.rb --query <query_fasta> --db <blast_database_path>"
+o = OptionParser.new do |opts|
+  opts.banner = "Usage: blast_by_splits.rb --query <query_fasta> --db <blast_database_path> --out <output_filename>"
 
-  opts.on('-i', "--query QUERY", "Query fasta file") do |v|
+  opts.on('-i', "--query QUERY", "Query fasta file [required]") do |v|
     options[:query] = v
   end
   
-  opts.on('-d', "--db DB", "path to blast database") do |v|
+  opts.on('-d', "--db DB", "path to blast database [required]") do |v|
     options[:db] = v
   end
   
-  opts.on('-o', "--out OUTPUT_FILE", "File to dump blast results to. Note that the sequences with blast hits are probably not in the same order as the input file") do |v|
+  opts.on('-o', "--out OUTPUT_FILE", "File to dump blast results to. Note that the sequences with blast hits are probably not in the same order as the input file [required]") do |v|
     options[:output_file] = v
   end
 
-  opts.on('-a', "--threads NUM_THREADS", "Number of CPUs to spread the load across") do |v|
+  opts.on('-a', "--threads NUM_THREADS", "Number of CPUs to spread the load across [default: #{options[:threads]}]. Note that this doesn't use BLAST's in-built option, but splits up the query file into chunks and uses 1 cpu per chunk (and 1 call to BLAST per chunk, and therefore the db is loaded into memory by BLAST once for each chunk)") do |v|
+    raise Exception, "Number of threads (-a/--threads) must be > 0, quitting" unless options[:threads] > 0
     options[:threads] = v.to_i
   end
     
@@ -39,13 +40,19 @@ OptionParser.new do |opts|
   opts.on('-m', "--outfmt FORMAT_NUMBER", "Output format [default: #{options[:max_target_seqs]} (tab-separated values)]") do |v|
     options[:outfmt] = v
   end
+
+  opts.on('-e', "--evalue E_VALUE", "E-value cutoff [default: use the default in BLAST (10, I think)]}") do |v|
+    options[:evalue] = v
+  end
 end.parse!
 
-raise unless options[:query]
-raise unless options[:db]
-raise unless options[:threads] > 0
-raise Exception, "You must specify an output file (-o/--output)" unless options[:output_file]
-raise Exception, "Unexpected unqualified areguments: #{ARGV.join(' ')}" unless ARGV.length == 0
+unless options[:query] and options[:db] and options[:output_file]
+  $stderr.puts "I need -i/--query, -d/--db and -o/--out arguments before I can run, quitting\n\n"
+  $stderr.puts o.usage
+  exit 1
+end
+
+raise Exception, "Unexpected unqualified arguments: #{ARGV.join(' ')}" unless ARGV.length == 0
 
 input_temps = (1..options[:threads]).collect{Tempfile.new('blast_by_splitsIn')}
 
@@ -70,6 +77,7 @@ blast_threads = (1..options[:threads]).collect do |i|
       num_sequences_argument = "-num_descriptions #{options[:max_target_seqs]} -num_alignments #{options[:max_target_seqs]}"
     end
     cmd = "blastp -query '#{input_temps[i-1].path}' -db '#{options[:db]}' #{num_sequences_argument} -outfmt #{options[:outfmt]} -out #{output_temps[i-1].path}"
+    cmd = "#{cmd} -evalue #{options[:evalue]}" unless options[:evalue].nil?
     #$stderr.puts "Running: #{cmd}"
     `#{cmd}`
   end
