@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'csv'
+
 # Take a blast result of a group of sequences blasted against itself, and print out
 # a list of clusters, just like blastclust
 clusters = {}
@@ -18,10 +20,8 @@ unless ARGV.length == 1
 end
 
 # Read in and parse
-require 'rubygems'
-require 'fastercsv'
 group_number = 1
-FasterCSV.foreach(ARGV[0], :col_sep => "\t") do |row|
+CSV.foreach(ARGV[0], :col_sep => "\t") do |row|
   one = row[0]
   two = row[1]
 
