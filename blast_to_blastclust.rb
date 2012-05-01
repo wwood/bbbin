@@ -21,6 +21,7 @@ end
 
 # Read in and parse
 group_number = 1
+progress = ProgressBar.new('clustering', `wc -l #{ARGV[0]}`.to_i)
 CSV.foreach(ARGV[0], :col_sep => "\t") do |row|
   one = row[0]
   two = row[1]
@@ -46,8 +47,9 @@ CSV.foreach(ARGV[0], :col_sep => "\t") do |row|
     clusters[two] = group_number
     group_number += 1
   end
-
+  progress.inc
 end
+progress.finish
 
 # Print out the clusters
 # Reverse the cluster so that numbers point to arrays
