@@ -1,4 +1,4 @@
-#!/usr/bin/env perl 
+#!/usr/bin/perl 
 
 eval 'exec /usr/bin/perl  -S $0 ${1+"$@"}'
     if 0; # not running under some shell
@@ -68,11 +68,12 @@ $SEP = '_';
 my $evalue_filter = 1e-3;
 my @files;
 my $zcat = 'zcat'; # or gunzip -c 
-my $prefix = undef;
+my $prefix = File::Spec->catfile($HOME,'taxonomy');
 my $gi2taxidfile = undef;
 my $force = 0; # don't use the cached gi2taxid file
 my $print_individuals = 0; # print out what each BLAST hit hits
 my $top_level_ids_string = ''; # comma separated list of extra IDs to look for, other than kingdom and superkingdom.
+my $index_directory = undef;
 
 GetOptions(
 	   'v|verbose|debug' => \$DEBUG,
@@ -80,12 +81,13 @@ GetOptions(
 	   'z|zcat:s'    => \$zcat,
 	   'i|in:s'      => \@files,
 	   'e|evalue:f'  => \$evalue_filter,
-	   't|taxonomy:s'=> \$prefix,
+	   't|taxonomy:s' => \$prefix,
 	   'g|gi|gi2taxid:s' => \$gi2taxidfile,
 	   'h|help'      => sub { system('perldoc', $0);
 				  exit },
            'n|individuals'     => \$print_individuals,
-           'T|top_level_ids:s'  => \$top_level_ids_string,
+           'l|top_level_ids:s'  => \$top_level_ids_string,
+           'x|index:s'  => \$index_directory,
 	   );
 
 # comma separated to list of IDs
@@ -95,28 +97,30 @@ my %top_level_ids_hash = map { $_ => 1 } @top_level_ids_array;
 # Use default values unless the variables have already been defined
 $prefix = File::Spec->catfile($HOME,'taxonomy') unless (defined($prefix));
 $gi2taxidfile = "$prefix/gi_taxid_prot.dmp.gz" unless (defined($gi2taxidfile));
+$index_directory = File::Spec->catfile($prefix,'idx') unless (defined($index_directory));
 
 # Ensure idx location is created
-mkdir(File::Spec->catfile($prefix,'idx')) 
-    unless -d File::Spec->catfile($prefix,'idx');
+warn "Using index directory $index_directory\n" if $DEBUG;
+mkdir $index_directory unless -d $index_directory;
 
 # these files came from ftp://ftp.ncbi.nih.gov/pub/taxonomy
+warn "Attempting to use nodes.dmp and names.dmp in $prefix, creating index in $index_directory\n" if $DEBUG;
+
 my $taxdb = Bio::DB::Taxonomy->new
     (-source => 'flatfile',
-     -directory => File::Spec->catfile
-     ($prefix, 'idx'), 
+     -directory => $index_directory, 
      -nodesfile => File::Spec->catfile($prefix,'nodes.dmp'),
      -namesfile => File::Spec->catfile($prefix,'names.dmp')
      );
 my %query;
 
-warn "Using ben's script version 4\n";
+warn "Using ben's script version 5\n";
 
 # Create an sqlite database to hold taxonomy information in a more
 # useful format.
 my (%taxid4gi,%gi2node);
 my $dbh = tie(%gi2node, 'DB_File', 'gi2class');
-my $giidxfile = File::Spec->catfile($prefix,'idx','gi2taxid');
+my $giidxfile = File::Spec->catfile($index_directory,'gi2taxid');
 my $done = -e $giidxfile;
 $done = 0 if $force;
 my $dbh2 = my $dbh = DBI->connect("dbi:SQLite:dbname=$giidxfile","","");
