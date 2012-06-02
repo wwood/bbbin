@@ -10,6 +10,7 @@ gem 'bio-wolf_psort_wrapper','=0.0.3'
 gem 'bio-isoelectric_point', '=0.1.1'
 gem 'bio-aliphatic_index', '=0.0.1'
 gem 'bio-hydropathy', '=0.0.1'
+gem 'bio-logger', '=1.0.1'
 
 gem 'progressbar'
 

@@ -133,7 +133,7 @@ Bio::HMMER::HMMER3.reports(File.open(options[:results_filename])) do |report|
       # In most cases the conceptually translated and protein sequences will match.
       # However, in rare cases in bacteria/archaea the start codon isn't ATG.
       unless translated == no_gaps or no_gaps.gsub(/^./,'M') == no_gaps
-        log.error "Expected protein sequence #{no_gaps}, but found #{translated} instead. Skipping as I hope this is a rare case."
+        log.warn "Expected protein sequence #{no_gaps}, but found #{translated} instead. Skipping whole sequence as I hope this is a rare case."
         next
       end
       
@@ -149,15 +149,22 @@ Bio::HMMER::HMMER3.reports(File.open(options[:results_filename])) do |report|
         else
           codon = cds_match[seqposition..(seqposition+2)]
           
-          unless hsp.flatseq[position] == Bio::Sequence::NA.new(codon).translate.to_s or (position == 0 and hsp.flatseq[position] == 'M')
-            raise "Unexpected translation found for codon #{codon}"
-          end
-          log.debug "Found match for codon #{cds_match[seqposition..(seqposition+2)]} #{hsp.flatseq[position]}, which matched #{hsp.hmmseq[position]}" if log.debug?
+          expected_translation = Bio::Sequence::NA.new(codon).translate.to_s
+          if hsp.flatseq[position] == expected_translation or (position == 0 and hsp.flatseq[position] == 'M')
+            log.debug "Found match for codon #{cds_match[seqposition..(seqposition+2)]} #{hsp.flatseq[position]}, which matched #{hsp.hmmseq[position]}" if log.debug?
           
-          cur_probabilities = parsed_hmm.match_emissions[hmmposition-1]
-          parsed_hmm.alphabet.each_with_index do |aa, i|
+            cur_probabilities = parsed_hmm.match_emissions[hmmposition-1]
+            parsed_hmm.alphabet.each_with_index do |aa, i|
+            if probabilities[codon].nil?
+              log.warn "Unexpected 'codon' (#{codon}) found at seqposition #{seqposition}, hmmposition #{hmmposition} in result for #{report.query_accession}, sequence #{query_name}. Ignoring codon in the hope it is a rare case."
+              next
+            end
             probabilities[codon][aa] += cur_probabilities[i] #parsed_hmm.match_probability(hmmposition, aa)
+            end
+          else
+            log.warn "Unexpected translation found for codon #{codon}. Expected #{expected_translation}, found #{hsp.flatseq[position]}, ignoring codon in the hope it is a rare case"
           end
+          
         end
         hmmposition += 1 unless hsp.hmmseq[position] == '.'
         seqposition += 3 unless hsp.flatseq[position] == '-'

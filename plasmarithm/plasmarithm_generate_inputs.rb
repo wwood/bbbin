@@ -16,6 +16,7 @@ require 'progressbar'
 # stdlib includes
 require 'pp'
 
+require 'plasmarithm_common'
 
 # Generated using plasmit_screenscraper.rb
 PLASMIT_PREDICTIONS_FILE = '/home/ben/phd/data/Plasmodium falciparum/plasmit/PlasmoDB8.2.plasmit_screenscraped.csv'
@@ -89,9 +90,6 @@ BLAST_RESULT_FILENAMES = {}
 end
 
 
-class Array; def sum; self.inject{|sum,x| sum + x }; end; end
-
-
 
 if __FILE__ == $0
   # Take a file that contains 1 PlasmoDB ID per line, and generate a matrix that 
@@ -159,7 +157,7 @@ if __FILE__ == $0
   end
   
   # First, cache the protein sequences
-  falciparum = EuPathDBSpeciesData.new('Plasmodium falciparum','/home/ben/phd/data')
+  falciparum = EuPathDBSpeciesData.new('Plasmodium falciparum','/home/ben/phd/data', '8.2')
   falciparum_protein_sequences = {}
   falciparum.protein_fasta_file_iterator.each do |prot|
     gene_id = prot.gene_id
@@ -360,11 +358,11 @@ END_OF_TOP
       next
     end
 
-if chromosome_lengths[falciparum_chromosome[plasmodb]].nil?
-$stderr.puts "Ignoring #{plasmodb} since it has no associated chromosome, Not nuclear encoded?"
-next
-end
-  
+    if chromosome_lengths[falciparum_chromosomes[plasmodb]].nil?
+      $stderr.puts "Ignoring #{plasmodb} since it has no associated chromosome, Not nuclear encoded?"
+      next
+    end
+      
     
     # This gets progressively filled with data about the current gene
     output_line = []
