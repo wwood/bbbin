@@ -3,6 +3,9 @@
 require 'optparse'
 require 'bio-logger'
 require 'csv'
+require 'pp'
+
+$:.unshift File.dirname(__FILE__)
 require 'plasmarithm_common'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
@@ -10,8 +13,8 @@ SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 # Parse command line options into the options hash
 options = {
   :logger => 'stderr',
-  :input_data_directory => nil,
-  :plasmo_int_groups_csv => File.join('input_data', 'nbt.1597-S3.csv'),
+  :input_data_directory => '/home/ben/phd/plasmarithm/prediction_set_gathering/conservative_with_old_samples/cv',
+  :plasmo_int_groups_csv => File.join(File.dirname(__FILE__), 'input_data', 'nbt.1597-S3.csv'),
   :all_the_answers_are_at => '/home/ben/phd/plasmarithm/prediction_set_gathering/conservative_with_old_samples/training_set.50percent.manual.csv'
 }
 o = OptionParser.new do |opts|
@@ -23,8 +26,8 @@ o = OptionParser.new do |opts|
 
   opts.on("-d", "--directory", "Directory where the cross validation data lives.
   Need 5 files (1.ids, 2.ids, 3.ids, 4.ids, 5.ids) in that directory that contain
-  the PlasmoDB IDs in each of the 5 folds of cross-validation. [REQUIRED]") do |f|
-    options[:operation] = OVERALL
+  the PlasmoDB IDs in each of the 5 folds of cross-validation. [default: #{options[:input_data_directory]}]") do |f|
+    options[:input_data_directory] = f
   end
 
   # logger options
@@ -74,22 +77,25 @@ nucleus
 parasitophorous_vacuole
 plasma_membrane)
 
-answers = {}
-CSV.foreach(options[:all_the_answers_are_at],col_sep => "\t") do |row|
-  answer = row[1].gsub(' ','_')
-  raise unless localisations.include? answer
-  answers[row[0]] = answer
-end
 
-# Read in the lists of IDs
+
+# Read in the lists of IDs and their classification
 partition_plasmodb_ids = {}
+answers = {}
 i = 1
 while true
   filename = File.join(options[:input_data_directory], "#{i}.ids")
   break unless File.exist?(filename)
 
-  partition_plasmodb_ids[i] = File.open(filename).read.split(/\s+/)
-  log.debug "Found #{partition_plasmodb_ids[i]} PlasmoDB IDs in cross validation IDs file #{filename}"
+  partition_plasmodb_ids[i] = []
+  CSV.foreach(filename, :col_sep => "\t") do |row|
+    plasmodb = row[0]
+    answer = row[1].gsub(' ','_')
+    partition_plasmodb_ids[i].push plasmodb
+    raise unless answers[plasmodb].nil?
+    answers[plasmodb] = answer
+  end
+  log.debug "Found #{partition_plasmodb_ids[i].length} PlasmoDB IDs in cross validation IDs file #{filename}"
 
   i += 1
 end
@@ -133,7 +139,7 @@ end
 partition_plasmodb_ids.each do |testing_partition_id, testing_plasmodb_ids|
 # This iterated set is the testing set. Use the rest of the sets to train.
 # output to trainingX.csv
-  output = File.open(File.join(options[:output_data_directory], "testing#{testing_partition_id}.training_data.csv"))
+  output = File.open(File.join(options[:output_data_directory], "testing#{testing_partition_id}.training_data.csv"), 'w')
 
   # Output headers
   output.puts [
@@ -142,8 +148,10 @@ partition_plasmodb_ids.each do |testing_partition_id, testing_plasmodb_ids|
   ].flatten.join(',')
 
   # work out the background prevalence of each localisation in this training set
-  training_sets = partition_plasmodb_ids.keys.reject{|t| t==testing_partiting_id}
-  training_samples = partition_plasmodb_ids[training_sets].flatten
+  training_sets = partition_plasmodb_ids.keys.reject{|t| t==testing_partition_id}
+  log.debug "Creating traning set, where the testing set is #{testing_partition_id} - training sets #{training_sets.inspect}"
+  
+  training_samples = training_sets.collect{|t_id| partition_plasmodb_ids[t_id]}.flatten
   log.debug "Using #{training_samples.length} training samples for the crossval that tests set #{testing_partition_id}"
   loc_background_counts = {}
   training_samples.each do |plasmodb|
@@ -153,35 +161,48 @@ partition_plasmodb_ids.each do |testing_partition_id, testing_plasmodb_ids|
     loc_background_counts[answers[plasmodb]] ||= 0
     loc_background_counts[answers[plasmodb]] += 1
   end
-  loc_background_percents = loc_background_counts.collect{|c| c.to_f/loc_background_counts.sum}
+  loc_background_percents = {}
+  loc_background_counts.each do |loc, count|
+    loc_background_percents[loc] = count.to_f/loc_background_counts.values.sum
+  end
+  log.info "Found background percentages #{loc_background_percents}"
 
   # for each of the ids in this set,
   training_samples.each do |plasmodb|
-    print plasmodb
-      
     group_id = plasmoint_ids_to_groups[plasmodb]
 
     group_loc_counts = {}
     localisations.each{|loc| group_loc_counts[loc]=0}
-    plasmoint_groups_to_ids[plasmodb].each do |group_plasmodb|
-      next if group_plasmodb == plasmodb # Don't count the training sample itself
-      answer = answers[group_plasmodb] 
-      if answer
-        group_loc_counts[answer] += 1
+    plasmoint_id = plasmoint_ids_to_groups[plasmodb]
+    
+    unknown_count = nil
+    unless plasmoint_id.nil?
+      plasmoint_groups_to_ids[plasmoint_id].each do |group_plasmodb|
+        next if group_plasmodb == plasmodb # Don't count the training sample itself
+        answer = answers[group_plasmodb] 
+        if answer
+          group_loc_counts[answer] += 1
+        end
       end
+      # unknowns = total in group - knowns - this_sample
+      unknown_count = plasmoint_groups_to_ids[plasmoint_id].length - group_loc_counts.values.sum - 1
     end
-    # unknowns = total in group - knowns - this_sample
-    unknown_count = plasmoint_groups_to_ids[plasmodb].length - group_loc_counts.values.sum - 1
+
+    # print headers
+    output.print plasmodb
     
     # for each of the localisations, output the percentage
     localisations.each do |loc|
       # output the percent in this group that have that localisation
-      total = plasmoint_groups_to_ids[plasmodb].length
-      
-      print "\t"
-      print loc_background_percents[loc]*unknown_count + group_loc_counts[loc]
+      output.print "\t"
+      if plasmoint_id.nil?
+        output.print loc_background_percents[loc]
+      else
+        total = plasmoint_groups_to_ids[plasmoint_id].length
+        output.print loc_background_percents[loc]*unknown_count + group_loc_counts[loc]
+      end
     end
-    puts
+    output.puts
   end
 
   output.close
