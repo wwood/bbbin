@@ -2,6 +2,10 @@
 
 require 'bio'
 require 'pp'
+require 'progressbar'
+#gem 'bio-faster', :version => '=0.2.2' #later version drop support for fastA parsing, concentrating on FastQ
+#require 'bio-faster'
+#require 'parallel'
 
 # Initialise the hash of the different
 module Bio
@@ -17,7 +21,26 @@ module Bio
     end
 
     class Kmer
+      def self.empty_full_kmer_hash(k=4)
+        return @empty_full_hash.dup unless @empty_full_hash.nil?
+        
+        counts = {}
+                
+        ordered_possibilities = %w(A T C G)
+        keys = ordered_possibilities
+        (k-1).times do
+          keys = keys.collect{|k| ordered_possibilities.collect{|n| "#{k}#{n}"}.flatten}.flatten
+        end
+        
+        keys.each do |key|
+          counts[key] = 0
+        end
+        counts
+      end
+      
       def self.empty_kmer_hash(k=4)
+        return @empty_hash.dup unless @empty_hash.nil?
+        
         counts = {}
 
         # construct an array of all possible kmers
@@ -32,17 +55,28 @@ module Bio
         keys.select! do |key|
           Bio::Sequence::NA.new(key).lowest_lexigraphical_form.to_s.upcase == key
         end
-
+        
         keys.each do |key|
           counts[key] = 0
         end
+        
+        @empty_hash = counts
         return counts
+      end
+      
+      def self.merge_down_to_lowest_lexigraphical_form(hash)
+        new_hash = empty_kmer_hash
+        hash.each do |kmer, count|
+          key = Bio::Sequence::NA.new(kmer).lowest_lexigraphical_form.to_s.upcase
+          new_hash[key] += count
+        end
+        return new_hash
       end
     end
   end
 end
 
-if __FILE__ == $0
+#if __FILE__ == $0
   require 'optparse'
 
   # Parse cmd line options
@@ -99,6 +133,13 @@ if __FILE__ == $0
     opts.on("-l", "--window-length", "print the length of the window in the output [default #{options[:sequence_length]}]") do |v|
       options[:sequence_length] = true
     end
+    
+    opts.on("-t", "--threads NUM_THREADS", "Use this many threads [default #{options[:threads]}]") do |v|
+      options[:threads] = v.to_i
+      if options[:threads] < 1
+        raise Exception, "Unexpected number of threads specified (after converting to integer) - '#{options[:threads]}'"
+      end
+    end
   end.parse!
 
   print "ID\t"
@@ -108,14 +149,22 @@ if __FILE__ == $0
   print "\tcontig" if options[:contig_name]
   puts
 
+  orig = Bio::Sequence::Kmer.empty_full_kmer_hash(options[:kmer])
   process_window = lambda do |window,kmer,sequence_name,contig_name|
-    counts = Bio::Sequence::Kmer.empty_kmer_hash(kmer)
+    counts = orig.dup
     num_kmers_counted = 0
+    
     window.window_search(options[:kmer],1) do |tetranucleotide|
-      next unless tetranucleotide.upcase.gsub(/[ATGC]+/,'') == ''
+      str = tetranucleotide.to_s
+      next unless str.gsub(/[ATGC]+/,'') == ''
       num_kmers_counted += 1
-      counts[Bio::Sequence::NA.new(tetranucleotide).lowest_lexigraphical_form.to_s.upcase] += 1
+      counts[str]+=1
+      #counts[Bio::Sequence::NA.new(tetranucleotide).lowest_lexigraphical_form.to_s.upcase] += 1
     end
+    
+    # Merge everything into lowest lexigraphical form
+    new_counts = Bio::Sequence::Kmer.merge_down_to_lowest_lexigraphical_form counts
+    
     print "#{sequence_name}"
     counts.keys.each do |tetramer|
       print "\t#{counts[tetramer].to_f/num_kmers_counted}"
@@ -125,7 +174,11 @@ if __FILE__ == $0
     puts
   end
 
-  Bio::FlatFile.open(ARGF).each do |sequence|
+  fasta_filename = ARGV[0]
+  progress = ProgressBar.new('kmer_counter', `grep -c '>' '#{fasta_filename}'`.to_i)
+  ff = Bio::FlatFile.open(fasta_filename) 
+  #Parallel.each(ff, :in_processes => options[:threads]) do |sequence|
+  ff.each do |sequence|
     window_counter = 0
     sequence.seq.window_search(options[:window_size],options[:window_offset]) do |window|
       process_window.call(window, options[:kmer], "#{sequence.definition}_#{window_counter}",sequence.definition)
@@ -137,6 +190,7 @@ if __FILE__ == $0
       sequence.seq[sequence.seq.length-leftover_length..sequence.seq.length],
       options[:kmer], "#{sequence.definition}_leftover_#{window_counter}",sequence.definition)
     end
+    progress.inc
   end
-
-end
+  progress.finish
+#end
