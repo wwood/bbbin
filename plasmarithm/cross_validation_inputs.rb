@@ -140,12 +140,14 @@ partition_plasmodb_ids.each do |testing_partition_id, testing_plasmodb_ids|
 # This iterated set is the testing set. Use the rest of the sets to train.
 # output to trainingX.csv
   output = File.open(File.join(options[:output_data_directory], "testing#{testing_partition_id}.training_data.csv"), 'w')
+  #output = $stderr
 
   # Output headers
   output.puts [
     'plasmodb',
-    localisations
-  ].flatten.join(',')
+    localisations,
+    'answer',
+  ].flatten.join("\t")
 
   # work out the background prevalence of each localisation in this training set
   training_sets = partition_plasmodb_ids.keys.reject{|t| t==testing_partition_id}
@@ -184,9 +186,13 @@ partition_plasmodb_ids.each do |testing_partition_id, testing_plasmodb_ids|
           group_loc_counts[answer] += 1
         end
       end
+      log.debug "Numbers of members of the group: #{plasmoint_groups_to_ids[plasmoint_id].length}"
       # unknowns = total in group - knowns - this_sample
       unknown_count = plasmoint_groups_to_ids[plasmoint_id].length - group_loc_counts.values.sum - 1
+      log.debug "Found unknown count #{unknown_count}"
     end
+    
+    log.debug "Known classifications for this group: #{group_loc_counts}"
 
     # print headers
     output.print plasmodb
@@ -199,9 +205,12 @@ partition_plasmodb_ids.each do |testing_partition_id, testing_plasmodb_ids|
         output.print loc_background_percents[loc]
       else
         total = plasmoint_groups_to_ids[plasmoint_id].length
-        output.print loc_background_percents[loc]*unknown_count + group_loc_counts[loc]
+        num_this_localisation = loc_background_percents[loc]*unknown_count + group_loc_counts[loc] 
+        output.print num_this_localisation.to_f/total
       end
     end
+    output.print "\t"
+    output.print answers[plasmodb]
     output.puts
   end
 
