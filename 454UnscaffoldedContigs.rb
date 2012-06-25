@@ -61,6 +61,9 @@ ignored_contigs_count = 0
 printed_contigs_count = 0
 
 CSV.foreach(options[:contigs_graph_file], :col_sep => "\t") do |row|
+  break if row[0] == 'C'
+  raise unless row[0].to_i > 0 #indicates unexpected file structure
+  
   coverage = row[3].to_f
   contig_name = row[1]
   if coverage < options[:min_coverage]
