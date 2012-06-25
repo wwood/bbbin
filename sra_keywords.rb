@@ -17,10 +17,6 @@ o = OptionParser.new do |opts|
     Usage: #{SCRIPT_NAME} <accession1> [<accession2> ..]
     
     output a list of accession numbers associated with one or more input accession numbers, so you can use google scholar etc.\n"
-  # Example option
-  # opts.on("-d", "--db", "description [default: #{options[:eg]}]") do |f|
-    # options[:operation] = OVERALL
-  # end
   
   # logger options
   opts.on("-q", "--quiet", "Run quietly, set logging to ERROR level [default INFO]") do |q|
