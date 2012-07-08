@@ -50,7 +50,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     # convert it to a fastq file, taking the first 10 sequences, convert to fasta format, save as 10seqs.fa
     command = 'fastq-dump -Z \''+ #dump the lite sra file to fastq format
      sra_lite+
-     '\' |head -n 40 '+ #first 40 lines equals the first 10 sequences
+     '\' |head -n 400 |tail -n 40 '+ #first 40 lines equals the first 10 sequences, and don't take it from the start since they are probably low quality
      '|awk \'{print ">" substr($0,2);getline;print;getline;getline}\' >'+tempfile.path+ #convert to fasta format
      ' && blastn -query '+tempfile.path+' -outfmt 6 -max_target_seqs 1 -db '+ #blast
      options[:ssu_database] # against a reduced set of 16S sequences from greengenes
