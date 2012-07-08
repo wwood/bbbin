@@ -48,10 +48,6 @@ if __FILE__ == $0
       Usage: #{SCRIPT_NAME} <aligned_fasta_file>
       
       Remove columns from an alignment that are definitely phylogenetically uninformative. Specifically, remove columns with all gaps, and remove columns where all except 1 character are the same\n\n"
-    # Example option
-    opts.on("-e", "--eg", "description [default: #{options[:eg]}]") do |f|
-      options[:operation] = OVERALL
-    end
     
     # logger options
     opts.on("-q", "--quiet", "Run quietly, set logging to ERROR level [default INFO]") {Bio::Log::CLI.trace('error')}
