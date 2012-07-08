@@ -3,6 +3,7 @@
 require 'optparse'
 require 'bio-logger'
 require 'open3'
+require 'tempfile'
 
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
   SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
@@ -42,14 +43,16 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   # Dir.mktmpdir do |dir|
     # Dir.chdir dir
-    
+  Tempfile.open('is_it_16s') do |tempfile|
+    tempfile.close
     is_16s = false
+
     # convert it to a fastq file, taking the first 10 sequences, convert to fasta format, save as 10seqs.fa
     command = 'fastq-dump -Z \''+ #dump the lite sra file to fastq format
      sra_lite+
      '\' |head -n 40 '+ #first 40 lines equals the first 10 sequences
-     '|awk \'{print ">" substr($0,2);getline;print;getline;getline}\' >/tmp/10seqs.fa '+ #convert to fasta format
-     '&& blastn -query /tmp/10seqs.fa -outfmt 6 -max_target_seqs 1 -db '+ #blast
+     '|awk \'{print ">" substr($0,2);getline;print;getline;getline}\' >'+tempfile.path+ #convert to fasta format
+     ' && blastn -query '+tempfile.path+' -outfmt 6 -max_target_seqs 1 -db '+ #blast
      options[:ssu_database] # against a reduced set of 16S sequences from greengenes
     log.debug "Running command to extract the first 10 sequences: #{command}"
     Open3.popen3(command) do |stdin, stdout, stderr|
@@ -61,6 +64,6 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       is_16s = true if stdout.readlines.length > 0
     end
     puts [sra_lite, is_16s].join("\t")
-  # end
+  end
   
 end #end if running as a script
