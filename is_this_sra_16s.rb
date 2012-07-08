@@ -3,7 +3,6 @@
 require 'optparse'
 require 'bio-logger'
 require 'open3'
-require 'tmpdir'
 
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
   SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
@@ -36,9 +35,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   # Setup logging. bio-logger defaults to STDERR not STDOUT, I disagree
   Bio::Log::CLI.logger(options[:logger]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME)
   
-  
-  # Take as an argument an sra file
   sra_lite = ARGV[0]
+  #sra_lite = $stdin.readlines[0].strip
+  log.info "Analysing #{sra_lite}"
   
   
   # Dir.mktmpdir do |dir|
@@ -55,7 +54,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     log.debug "Running command to extract the first 10 sequences: #{command}"
     Open3.popen3(command) do |stdin, stdout, stderr|
       err = stderr.readlines
-      if err.length != 2 or err[1].split(' ')[0] != 'Written'
+      if err.length != 0 and (err.length != 2 or err[1].split(' ')[0] != 'Written')
         log.error "Error running command: #{err.join("\n")}"
       end  
       
