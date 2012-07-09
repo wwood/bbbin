@@ -36,6 +36,40 @@ describe script_under_test do
   it 'retain more than one column' do
     seqs = %w(atagy agttk ttgcr)
     trimmed = Bio::Alignment.new(seqs).trim_uninformative_columns
-    assert_equal 'agy', trimmed[0]    
+    assert_equal 'agy', trimmed[0]
   end
+  
+  it "chuck out columns with too many empty chars" do
+    seqs = %w(atg g-t tac)
+    trimmed = Bio::Alignment.new(seqs).trim_uninformative_columns(:maximum_missing_entries => 1.0)
+    assert_equal 'atg', trimmed[0]
+    trimmed = Bio::Alignment.new(seqs).trim_uninformative_columns(:maximum_missing_entries => 0.0)
+    assert_equal 'ag', trimmed[0]
+    trimmed = Bio::Alignment.new(seqs).trim_uninformative_columns(:maximum_missing_entries => 0.5)
+    assert_equal 'atg', trimmed[0]
+    trimmed = Bio::Alignment.new(seqs).trim_uninformative_columns(:maximum_missing_entries => 0.1)
+    assert_equal 'ag', trimmed[0]
+  end
+  
+  it "should work with non-standard missing characters" do
+    seqs = %w(atg g-t tac)
+    trimmed = Bio::Alignment.new(seqs).trim_uninformative_columns(:maximum_missing_entries => 0.0, :missing_character => '?')
+    assert_equal 'atg', trimmed[0]
+  end
+  
+  it 'test_running1' do
+    Tempfile.open('one') do |tempfile|
+      tempfile.puts '>1'
+      tempfile.puts 'atg'
+      tempfile.puts '>2'
+      tempfile.puts 'g-t'
+      tempfile.puts '>3'
+      tempfile.puts 'tac'
+      tempfile.close
+
+      assert_equal %w(>1 atg >2 g-t >3 tac).join("\n")+"\n", `#{script_under_test} #{tempfile.path}`
+      assert_equal %w(>1 ag >2 gt >3 tc).join("\n")+"\n", `#{script_under_test} -m 0.1 #{tempfile.path}`
+    end
+  end
+  
 end
