@@ -2,8 +2,11 @@
 
 require 'optparse'
 require 'bio-logger'
+require File.join(File.basename(__FILE__),'454UnscaffoldedContigs')
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
+
+
 
 # Parse command line options into the options hash
 options = {
@@ -13,7 +16,7 @@ o = OptionParser.new do |opts|
   opts.banner = "
     Usage: #{SCRIPT_NAME} 454ContigGraph.txt
 
-    Convert the 454ContigGraph.txt output into a scaffoldNumber    scaffoldLength    scaffoldCoverage\n\n"
+    Convert the 454ContigGraph.txt output into a \"scaffoldNumber    scaffoldLength    scaffoldCoverage\" tabular form\n\n"
 
   # logger options
   opts.on("-q", "--quiet", "Run quietly, set logging to ERROR level [default INFO]") {Bio::Log::CLI.trace('error')}

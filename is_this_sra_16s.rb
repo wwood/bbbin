@@ -43,16 +43,19 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   # Dir.mktmpdir do |dir|
     # Dir.chdir dir
-  Tempfile.open('is_it_16s') do |tempfile|
-    tempfile.close
+#  Tempfile.open('is_it_16s') do |tempfile|
+#    tempfile.close
     is_16s = false
 
     # convert it to a fastq file, taking the first 10 sequences, convert to fasta format, save as 10seqs.fa
-    command = 'fastq-dump -Z \''+ #dump the lite sra file to fastq format
+    fasta_name = '/var/scratch/uqbwoodc/sra_downloading/heads/'+
+      File.basename(sra_lite, '.lite.sra')+'.fna'
+    log.debug "intermediate fasta file: #{fasta_name}"
+    command = 'fastq-dump -M 200 -Z \''+ #dump the lite sra file to fastq format. Take sequences 100-140
      sra_lite+
-     '\' |head -n 400 |tail -n 40 '+ #first 40 lines equals the first 10 sequences, and don't take it from the start since they are probably low quality
-     '|awk \'{print ">" substr($0,2);getline;print;getline;getline}\' >'+tempfile.path+ #convert to fasta format
-     ' && blastn -query '+tempfile.path+' -outfmt 6 -max_target_seqs 1 -db '+ #blast
+     '\' |head -n 280 |tail -n 120'+#take sequences 30 to 70 (fastq 30*4=120 to 70*4=280)
+     ' |awk \'{print ">" substr($0,2);getline;print;getline;getline}\' >'+fasta_name+ #convert to fasta format
+     ' && blastn -query '+fasta_name+' -outfmt 6 -max_target_seqs 1 -db '+ #blast
      options[:ssu_database] # against a reduced set of 16S sequences from greengenes
     log.debug "Running command to extract the first 10 sequences: #{command}"
     Open3.popen3(command) do |stdin, stdout, stderr|
@@ -64,6 +67,6 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       is_16s = true if stdout.readlines.length > 0
     end
     puts [sra_lite, is_16s].join("\t")
-  end
+#  end
   
 end #end if running as a script
