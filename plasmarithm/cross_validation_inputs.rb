@@ -172,8 +172,9 @@ module Plasmarithm
       
       attr_accessor :ranking_method
 
-      attr_reader :loc_background_counts, :loc_background_percents
+      attr_reader :loc_background_counts, :loc_background_percents, :loc_group_background_percents
 
+      # Compute background percents simply by tallying the number of proteins assigned to each localisation
       def compute_background_percents
         @loc_background_counts = {}
         @training_samples.each do |plasmodb|
@@ -188,6 +189,36 @@ module Plasmarithm
           @loc_background_percents[loc] = count.to_f/@loc_background_counts.values.sum
         end
         log.info "Found background percentages #{loc_background_percents}"
+      end
+      
+      # compute background percentages based on the number of groups that localisations are the most abundant in
+      def compute_background_percents_based_on_groups
+        @loc_group_background_percents = {}
+        groups_loc_tallies = {} #hash of group identifier to hash of localisation to # of members
+        
+        @training_samples.each do |plasmodb|
+          answer = @cv.answers[plasmodb]
+          if answer.nil?
+            raise "I think #{plasmodb} should have known localisation, but it doesn't seem to.. fail"
+          end
+          group = @cv.plasmoint_ids_to_groups[plasmodb]
+          groups_loc_tallies[group] ||= {}
+          groups_loc_tallies[group][answer] ||= 0
+          groups_loc_tallies[group][answer] += 1
+        end
+        loc_winning_group_counts = {}
+        groups_loc_tallies.each do |group, loc_counts|
+          winning_loc = loc_counts.max{|lc1, lc2| lc1[1]<=>lc2[1]}[0]
+          loc_winning_group_counts[winning_loc] ||= 0
+          loc_winning_group_counts[winning_loc] += 1
+        end
+        loc_winning_group_counts.each do |loc, count|
+          @loc_group_background_percents[loc] = count.to_f/loc_winning_group_counts.values.sum
+        end
+        # Ensure all the groups have a percent associated, even if that is 0 (it wins 0 percent of groups)
+        @cv.localisations.each do |loc|
+          @loc_group_background_percents[loc] ||= 0.0
+        end
       end
 
       # Print a particular sample to the output IO given
@@ -208,6 +239,8 @@ module Plasmarithm
             output.print whacky_unknown_thing(loc, group_loc_counts, unknown_count, plasmoint_id)
           elsif @ranking_method == :simple_maximal
             output.print simple_maximal_rank(loc, group_loc_counts, unknown_count, plasmoint_id)
+          elsif @ranking_method == :simple_maximal_with_group_background_percents
+            output.print simple_maximal_rank_with_group_backgrounds(loc, group_loc_counts, unknown_count, plasmoint_id)
           else
             raise "unknown ranking method: #{@ranking_method}"
           end
@@ -239,6 +272,16 @@ module Plasmarithm
         end
 
         return group_loc_counts, unknown_count, plasmoint_id
+      end
+      
+      def simple_maximal_rank_with_group_backgrounds(loc, group_loc_counts, unknown_count, plasmoint_id)
+        if plasmoint_id.nil? or group_loc_counts.values.sum == 0
+          # If there is no group, or the group has no characterised members 
+          return loc_group_background_percents[loc]
+        else
+          # Some thing known. Report what is known
+          return group_loc_counts[loc]
+        end
       end
       
       # Simply return the number of other proteins in the group that have the given localisation.
@@ -297,6 +340,9 @@ cv.partition_plasmodb_ids.each do |testing_partition_id, testing_plasmodb_ids|
   testing_samples = cv.partition_plasmodb_ids[testing_partition_id]
   cross_section = Plasmarithm::CrossValidation::CrossSection.new(cv, training_samples, testing_samples)
   cross_section.compute_background_percents
+  log.debug "Found protein-wise background percents: #{cross_section.loc_background_percents}"
+  cross_section.compute_background_percents_based_on_groups
+  log.debug "Found group background percents: #{cross_section.loc_group_background_percents}"
   
   cross_section.ranking_method = options[:method]
 
