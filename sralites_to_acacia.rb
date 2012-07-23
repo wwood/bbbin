@@ -14,7 +14,7 @@ SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 # Parse command line options into the options hash
 options = {
   :logger => 'stdout',
-  :acacia_jar => '/srv/whitlam/bio/apps/sw/acacia/1.51-beta/acacia-1.51.b0.jar', #/srv/whitlam/home/projects/DATA_MODELLING/acacia-1.50.b05.jar',
+  :acacia_jar => '/srv/whitlam/bio/apps/sw/acacia/1.51-beta/acacia-1.51.b02.jar', #'/srv/whitlam/bio/apps/sw/acacia/1.51-beta/acacia-1.51.b0.jar', #/srv/whitlam/home/projects/DATA_MODELLING/acacia-1.50.b05.jar',
   :num_threads => 1,
   :max_file_size => 1024*1024*10, #default to 10MB maximum
 }
@@ -39,6 +39,9 @@ o = OptionParser.new do |opts|
   end
   opts.on("-m", "--max-file-size NUM_BYTES", "Ignore files larger than this size [default #{options[:max_file_size]}]") do |arg|
     options[:max_file_size] = arg.to_i
+  end
+  opts.on("-a", "--acacia-jar ACACIA_JAR_PATH", "Use a non-standard acacia version [default #{options[:acacia_jar]}]") do |arg|
+    options[:acacia_jar] = arg
   end
   
   # logger options
@@ -110,6 +113,7 @@ sralites.each do |sralite|  # convert to a fastq file in a temporary directory
   begin
     Bio::FastqDumper.dump_in_tmpdir(lite_path) do |fastq|
       # Dir.chdir options[:in_directory] #acacia cannot handle the fastq file not being in the current directory, I think
+      log.debug "In temporary directory '#{Dir.getwd}'"
       
       # Run acacia and output the files into the working directory
       acacia_command = [
@@ -124,6 +128,8 @@ sralites.each do |sralite|  # convert to a fastq file in a temporary directory
       ].flatten
       log.debug "Running acacia with '#{acacia_command}'"
       Bio::Command.call_command_open3(acacia_command) do |stdin, stdout, stderr|
+        #stdin.close
+        out = stdout.readlines
         err = stderr.read
         raise err if err != ''
       end
@@ -131,7 +137,7 @@ sralites.each do |sralite|  # convert to a fastq file in a temporary directory
       progress.inc
     end
   rescue Exception => e #if fastq-dump fails
-    log.error "Something went wrong while executing fastq-dump on #{sralite}, skipping: #{e}"
+    log.error "Something went wrong while executing acacia on #{sralite}, skipping: #{e}"
     next
   end
 end
