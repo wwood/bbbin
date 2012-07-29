@@ -16,6 +16,7 @@ require 'progressbar'
 # stdlib includes
 require 'pp'
 
+$:.push File.dirname(__FILE__)
 require 'plasmarithm_common'
 
 # Generated using plasmit_screenscraper.rb
@@ -96,6 +97,10 @@ if __FILE__ == $0
   # corresponds to the inputs for use in the R package glmnet.
   
   USAGE = 'plasmarithm_generate_inputs.rb <plasmodb_id_list_file>'
+  unless ARGV.length == 1
+    $stderr.puts USAGE
+    exit 1
+  end
   
   
   # Cache blast hits
@@ -231,9 +236,9 @@ if __FILE__ == $0
     }.length
     
     # Interpro domains
-    interpro_domains[plasmodb] = info.get_table('InterPro Domains').collect{|entry|
-      entry['Interpro ID']
-    }.uniq
+    # interpro_domains[plasmodb] = info.get_table('InterPro Domains').collect{|entry|
+      # entry['Interpro ID']
+    # }.uniq
   end
   all_metabolic_pathways = metabolic_pathways.values.flatten.uniq.sort
   all_interpro_domains = interpro_domains.values.flatten.uniq.sort.reject{|i| i.to_s == ''}
