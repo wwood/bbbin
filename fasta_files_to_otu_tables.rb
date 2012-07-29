@@ -2,7 +2,7 @@
 
 require 'optparse'
 require 'bio-logger'
-require 'progress'
+require 'progressbar'
 require 'bio'
 
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
@@ -10,7 +10,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   # Parse command line options into the options hash
   options = {
-    :logger => 'stderr',
+    :logger => 'stdout',
     :db => '/srv/whitlam/bio/db/merged_gg_silva/merged_gg_silva.fna',
     :taxonomy => '/srv/whitlam/bio/db/merged_gg_silva/merged_gg_silva_taxo.txt',
   }
@@ -20,7 +20,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       
       Takes a list of fasta files, and runs QIIME's assign_taxonomy.py on them\n\n"
       
-    opts.on("-f", "--fasta-list", "One path to a fasta file line per line [required]") do |arg|
+    opts.on("-f", "--fasta-list FILE_OF_FASTA_FILES", "One path to a fasta file line per line [required]") do |arg|
       options[:fasta_files_list_file] = arg
     end
     opts.on("-d", "--db SEQUENCE_DATABASE", "Path to the basename of a bwa formatted database [default: #{options[:db]}]") do |arg|
@@ -43,7 +43,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   Bio::Log::CLI.logger(options[:logger]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME)
   
   
-  files_to_interrogate = File.open(options[:fasta_files_list_file]).readlines
+  files_to_interrogate = File.open(options[:fasta_files_list_file]).readlines.collect{|s| s.strip}.reject{|s| s==''}
+  log.info "Found #{files_to_interrogate.length} fasta files to assign taxonomy to. Here we go.."
+
   progress = ProgressBar.new('assign_taxonomy',files_to_interrogate.length)
   files_to_interrogate.each do |fasta|
     assign_taxonomy_command = [
@@ -56,9 +58,13 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       fasta,
       '-d',
       options[:db],
+      '--threads',
+      '24',
+      '-o',
+      File.dirname(fasta),
     ].flatten
     log.debug "Running assign_taxonomy with '#{assign_taxonomy_command}'"
-    Bio::Command.call_command_open3(acacia_command) do |stdin, stdout, stderr|
+    Bio::Command.call_command_open3(assign_taxonomy_command) do |stdin, stdout, stderr|
       err = stderr.read
       raise err if err != ''
     end
