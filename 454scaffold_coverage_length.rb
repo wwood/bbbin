@@ -55,7 +55,7 @@ end
 
 contig_stats = {}
 
-puts %w(scaffold length coverage).join("\t")
+puts %w(scaffold length coverage num_contigs median_coverage).join("\t")
 
 
 # If using contig_graph.txt
@@ -124,6 +124,8 @@ elsif options[:alignment_info_file] and options[:scaffolds_file]
     contig_coverages = []
     contig_lengths = []
     total_scaffold_length = 0
+    contig_coverage_profile = []
+    dummy_contig = Bio::Newbler::Contig.new #for computing median - bit of a hack
     
     scaffold.components.each_with_index do |component, i|
       # Add the length of the component
@@ -134,7 +136,7 @@ elsif options[:alignment_info_file] and options[:scaffolds_file]
       
       contig_name = component.component_id
       contig = contig_hash[contig_name]
-      #contig = contig_hash[contig_hash.keys[i]]
+      #contig = contig_hash[contig_hash.to_a[i][0]] #for testing, please keep
       
       if contig.nil?
         raise "Unable to find contig #{contig_name} in alignment info file #{options[:alignment_info_file]}"
@@ -142,20 +144,26 @@ elsif options[:alignment_info_file] and options[:scaffolds_file]
       
       contig_coverages.push contig.coverage
       contig_lengths.push component.length #maybe not all the contig is included in the scaffold? Use component length to be safe
+      dummy_contig.coverage_profile ||= []
+      dummy_contig.coverage_profile.push contig.coverage_profile
     end
     
-    #coverage (coverage1*length1+coverage2*length2)/(length1+length2)
+    #coverage (coverage1*length1+coverage2*length2+..)/(length1+length2+..)
     numerator = 0
     contig_lengths.each_with_index do |len, i|
       numerator += contig_coverages[i]*len
     end
     coverage = numerator/contig_lengths.inject{|sum,i|sum+=i}
     
+    dummy_contig.coverage_profile.flatten!
+    
     # Print out the answers
     puts [
       scaffold.identifier,
       total_scaffold_length,
       coverage,
+      contig_lengths.length,
+      dummy_contig.median_coverage,
     ].join("\t")
   end
   
