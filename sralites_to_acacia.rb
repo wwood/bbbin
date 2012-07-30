@@ -118,7 +118,6 @@ sralites.each do |sralite|  # convert to a fastq file in a temporary directory
       # Run acacia and output the files into the working directory
       acacia_command = [
         'java',
-        '-XX:+UseConcMarkSweepGC', #use concurrent garbage collection, as suggested by Lauren.
         '-jar',
         options[:acacia_jar],
         %w(-DFASTA=FALSE -DFASTQ=TRUE),

@@ -48,25 +48,33 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
 
   progress = ProgressBar.new('assign_taxonomy',files_to_interrogate.length)
   files_to_interrogate.each do |fasta|
-    assign_taxonomy_command = [
-      'assign_taxonomy.py',
-      '-m',
-      'bwasw',
-      '-t',
-      options[:taxonomy],
-      '-i',
-      fasta,
-      '-d',
-      options[:db],
-      '--threads',
-      '24',
-      '-o',
-      File.dirname(fasta),
-    ].flatten
-    log.debug "Running assign_taxonomy with '#{assign_taxonomy_command}'"
-    Bio::Command.call_command_open3(assign_taxonomy_command) do |stdin, stdout, stderr|
-      err = stderr.read
-      raise err if err != ''
+    if File.exist?(fasta)
+      if File.size(fasta)>0
+        assign_taxonomy_command = [
+                                   'assign_taxonomy.py',
+                                   '-m',
+                                   'bwasw',
+                                   '-t',
+                                   options[:taxonomy],
+                                   '-i',
+                                   fasta,
+                                   '-d',
+                                   options[:db],
+                                   '--threads',
+                                   '24',
+                                   '-o',
+                                   File.dirname(fasta),
+                                  ].flatten
+        log.debug "Running assign_taxonomy with '#{assign_taxonomy_command}'"
+        Bio::Command.call_command_open3(assign_taxonomy_command) do |stdin, stdout, stderr|
+          err = stderr.read
+          raise err if err != ''
+        end
+      else
+        log.error "Unexpectedly the fasta file #{fasta} had zero size, skipping"
+      end
+    else
+      log.error "Unexpectedly wasn't able to find the file #{fasta}, skipping"
     end
     progress.inc
   end
