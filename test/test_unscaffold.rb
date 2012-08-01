@@ -23,7 +23,7 @@ describe script_under_test do
       
       err = stderr.readlines
       raise err unless err == []
-      answer = %w(>scaffold1_1_2 AA >scaffold1_5_8 TGTG).join("\n")+"\n"
+      answer = %w(>scaffold1_1of2_1_2 AA >scaffold1_2of2_5_8 TGTG).join("\n")+"\n"
       stdout.read.should eq(answer)
     end
   end
@@ -37,7 +37,7 @@ describe script_under_test do
       
       err = stderr.readlines
       raise err unless err == []
-      answer = %w(>scaffold1_1_2 AA >scaffold1_5_8 TGTG >s2_1_8 AAAAAAAA).join("\n")+"\n"
+      answer = %w(>scaffold1_1of2_1_2 AA >scaffold1_2of2_5_8 TGTG >s2_1of1_1_8 AAAAAAAA).join("\n")+"\n"
       stdout.read.should eq(answer)
     end
   end

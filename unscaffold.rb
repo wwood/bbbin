@@ -73,7 +73,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     not_N_starts.each_with_index do |start, index|
       stop = not_N_stops[index]
       frag = scaffold.seq[start..stop]
-      puts ">#{scaffold_basename}_#{start+1}_#{stop+1}"
+      puts ">#{scaffold_basename}_#{index+1}of#{not_N_starts.length}_#{start+1}_#{stop+1}"
       puts frag
     end
   end
