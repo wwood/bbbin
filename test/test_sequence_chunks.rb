@@ -29,7 +29,7 @@ describe script_under_test do
     end
   end
   
-  it 'when whole length is exactly a multiple of chunk size' do
+  it 'when whole length is not exactly a multiple of chunk size' do
     seqs = %w(>scaffold1 AANNTGTG)
     
     Open3.popen3("#{path_to_script} -c 4 -s 3") do |stdin, stdout, stderr|
