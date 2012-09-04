@@ -4,6 +4,10 @@ require 'optparse'
 require 'bio-logger'
 require 'bio'
 
+# For the bl2seq function
+$LOAD_PATH.unshift(File.join([ENV['HOME'],%w(git ionpairer lib)].flatten))
+require 'ionpairer'
+
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
   SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
   
@@ -45,6 +49,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   genes2_sequence_to_id_hash = {}
   genes1_matched = []
+  genes2_unmatched = {}
   Bio::FlatFile.foreach(ARGV[1]) do |s|
     ident = s.definition
     seq = s.seq
@@ -60,15 +65,31 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
         genes2_sequence_to_id_hash[seq] = ident
         genes1_matched.push genes1_sequence_to_id_hash[seq]
       else
-        log.warn "Unable to match from 2nd fasta #{ident}"
+        genes2_unmatched[seq] = ident
+        log.debug "Unable to match from 2nd fasta #{ident}"
       end
     end
   end
   
   # Output all those from the first file unmatched
+  genes1_unmatched = {}
   genes1_sequence_to_id_hash.values.each do |ident|
     unless genes1_matched.include?(ident)
-      log.warn "Unable to match from 1st fasta #{ident}"
+      genes2_unmatched[seq] = ident
+      log.debug "Unable to match from 1st fasta #{ident}"
     end
   end
+  
+  # Do a blastclust with the rest
+  File.open('unmatched.fa','w') do |fasta|
+    genes1_unmatched.each do |seq, ident|
+      fasta.puts ">#{ident}"
+      fasta.puts seq
+    end
+    genes2_unmatched.each do |seq, ident|
+      fasta.puts ">#{ident}"
+      fasta.puts seq
+    end
+  end
+  
 end #end if running as a script
