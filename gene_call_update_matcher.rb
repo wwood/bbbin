@@ -4,10 +4,6 @@ require 'optparse'
 require 'bio-logger'
 require 'bio'
 
-# For the bl2seq function
-$LOAD_PATH.unshift(File.join([ENV['HOME'],%w(git ionpairer lib)].flatten))
-require 'ionpairer'
-
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
   SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
   
@@ -20,6 +16,10 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       Usage: #{SCRIPT_NAME} <genes1.nucleotide.fasta> <genes2.nucleotide.fasta>
       
       Takes two sets of gene predictions, and outputs a table that gives the correspondences between them. Matching is based purely on sequence.\n\n"
+      
+    opts.on("-i", "--ids-to-map IDS.TXT", "newline separated file of identifiers to convert. They should be IDs from the first fasta file [optional]") do |arg|
+      options[:ids_to_match_file] = arg
+    end
 
     # logger options
     opts.separator "\nVerbosity:\n\n"
@@ -37,7 +37,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   genes1_sequence_to_id_hash = {}
   Bio::FlatFile.foreach(ARGV[0]) do |s|
-    ident = s.definition
+    ident = s.definition.split(' ')[0]
     seq = s.seq
     
     if genes1_sequence_to_id_hash[seq]
@@ -49,9 +49,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   genes2_sequence_to_id_hash = {}
   genes1_matched = []
-  genes2_unmatched = {}
+  genes1_answers = {}
   Bio::FlatFile.foreach(ARGV[1]) do |s|
-    ident = s.definition
+    ident = s.definition.split(' ')[0]
     seq = s.seq
     
     if genes2_sequence_to_id_hash[seq]
@@ -61,35 +61,37 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
         puts [
           genes1_sequence_to_id_hash[seq],
           ident,
-        ].join("\t")
+        ].join("\t") unless options[:ids_to_match_file]
         genes2_sequence_to_id_hash[seq] = ident
         genes1_matched.push genes1_sequence_to_id_hash[seq]
+        if genes1_answers[genes1_sequence_to_id_hash[seq]].nil?
+          genes1_answers[genes1_sequence_to_id_hash[seq]] = ident
+        else
+          genes1_answers[genes1_sequence_to_id_hash[seq]] = 'multiple matches'
+        end
       else
-        genes2_unmatched[seq] = ident
-        log.debug "Unable to match from 2nd fasta #{ident}"
+        log.warn "Unable to match from 2nd fasta #{ident}"
       end
     end
   end
   
   # Output all those from the first file unmatched
-  genes1_unmatched = {}
   genes1_sequence_to_id_hash.values.each do |ident|
     unless genes1_matched.include?(ident)
-      genes2_unmatched[seq] = ident
-      log.debug "Unable to match from 1st fasta #{ident}"
+      log.warn "Unable to match from 1st fasta #{ident}"
     end
   end
   
-  # Do a blastclust with the rest
-  File.open('unmatched.fa','w') do |fasta|
-    genes1_unmatched.each do |seq, ident|
-      fasta.puts ">#{ident}"
-      fasta.puts seq
-    end
-    genes2_unmatched.each do |seq, ident|
-      fasta.puts ">#{ident}"
-      fasta.puts seq
+  if options[:ids_to_match_file]
+    File.open(options[:ids_to_match_file]).each_line do |line|
+      line.strip!
+      print line
+      print "\t"
+      if genes1_answers[line]
+        puts genes1_answers[line]
+      else
+        puts
+      end
     end
   end
-  
 end #end if running as a script
