@@ -18,27 +18,36 @@ o = OptionParser.new do |opts|
 
     Given a GenBank file (which may have multiple GenBank entries in it) output a tab delimited summary
 "
-  opts.on(nil, "--accession", "Print accession") do |f|
+  opts.on("--accession", "Print accession") do |f|
     options[:interests].push lambda {|e|
       e.accession
     }
   end
-  opts.on(nil, "--pubmed", "Print PubMed ID of associated article") do |f|
+  opts.on("--pubmed", "Print PubMed ID of associated article") do |f|
     options[:interests].push lambda {|e|
       e.references.collect{|ref| ref.pubmed}.join(', ')
     }
   end
-  opts.on(nil, "--title", "Print title of associated article") do |f|
+  opts.on("--title", "Print title of associated article") do |f|
     options[:interests].push lambda {|e|
       e.references.collect{|ref| ref.title}.join(', ')
     }
   end
-  opts.on(nil, "--source:note", "Print /note of each feature") do |f|
+  opts.on("--source:note", "Print /note of each feature") do |f|
     options[:interests].push lambda {|e|
       e.features.select{|feature|
         feature.feature == 'source'
       }.collect{|feature|
         feature['note']
+      }.join(', ')
+    }
+  end
+  opts.on("--source:isolation_source", "Print /isolation_source of each feature") do |f|
+    options[:interests].push lambda {|e|
+      e.features.select{|feature|
+        feature.feature == 'source'
+      }.collect{|feature|
+        feature['isolation_source']
       }.join(', ')
     }
   end
