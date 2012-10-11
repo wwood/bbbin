@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+# A script for de-IUPAC coding DNA sequences
+
 wobbles = {
   'R'=>['A','G'],
   'Y'=>['C','T'],

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'csv'
+require 'progressbar'
 
 # Take a blast result of a group of sequences blasted against itself, and print out
 # a list of clusters, just like blastclust

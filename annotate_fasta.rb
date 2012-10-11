@@ -24,6 +24,10 @@ OptionParser.new do |opts|
   opts.on('-s', "--species SPECIES_NAME", "Name of the species/community/genome build e.g. 'RCIIv2.3.1_'. You probably want an underscore at the end so that the gene IDs are separated from the species name visually, yet still both are before the first space.") do |v|
     options[:species_name] = v
   end
+
+  opts.on('-d', "--blast-db PATH", "Path to the blast DB where the information is gathered [default: #{options[:blast_db_path]}]") do |v|
+    options[:blast_db_path] = v
+  end
 end.parse!
 
 raise Exception, "Please specify a species/community name (-s/--species)" unless options[:species_name]
