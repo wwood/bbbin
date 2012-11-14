@@ -352,6 +352,7 @@ END_OF_TOP
   progress = ProgressBar.new('inputs', plasmodbs.length)
   plasmodbs.each do |line|
     plasmodb = line.strip
+    $stderr.puts "Analysing #{plasmodb}"
     protein_sequence = falciparum_protein_sequences[plasmodb]
     if protein_sequence.nil?
       raise Exception, "Unable able to find protein sequence for PlasmoDB ID `#{plasmodb}'"
@@ -376,7 +377,13 @@ END_OF_TOP
     
     #  SignalP Prediction(2): Localisation
     headers.push 'signalp' if do_headers
-    signalp = Bio::SignalP::Wrapper.new.calculate(protein_sequence)
+    signalp = nil
+    begin
+      signalp = Bio::SignalP::Wrapper.new.calculate(protein_sequence)
+    rescue Exception => e
+      $stderr.puts "Error running signalp on #{plasmodb}, skipping"
+      next
+    end
     output_line.push signalp.signal?
     signalp_cleaved = signalp.cleave(protein_sequence)
     
