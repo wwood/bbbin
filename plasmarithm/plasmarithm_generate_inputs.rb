@@ -508,7 +508,8 @@ END_OF_TOP
       lifecycle_sample = falciparum_lifecycle_data[plasmodb].sample
       [22,23,47,49].each do |i|
         measure = lifecycle_sample[:timepoints][i-1]
-        measure = 1 if measure == 0.0 #to avoid log(0) calculations
+        measure = 1.0 if measure < 0 # very rare, but it happens e.g. for PFE0175c one is -0.023292567
+        measure = 1.0 if measure == 0.0 #to avoid log(0) calculations
         output_line.push Math.log(measure)
       end
       output_line.push lifecycle_sample[:amplitude].to_f
