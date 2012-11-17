@@ -2,7 +2,8 @@
 
 require 'optparse'
 require 'bio-logger'
-require '/home/ben/git/bioruby-hmmer3_report/lib/bio/appl/hmmer/hmmer3/tabular_report'
+#require '/home/ben/git/bioruby-hmmer3_report/lib/bio/appl/hmmer/hmmer3/tabular_report'
+require '/srv/whitlam/home/users/uqbwoodc/git/bioruby-hmmer3_report/lib/bio/appl/hmmer/hmmer3/tabular_report'
 #require 'bio-hmmer3_report'
 require 'tmpdir'
 require 'bio-hmmer_model'
@@ -74,7 +75,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       `hmmalign --allcol --trim -o best_hitVhmm.sto #{hmm_path} best_hit.faa`
       
       # Convert the stockholm output file to fasta, puts to stdout
-      `seqmagick convert best_hitVhmm.sto best_hitVhmm.fa`
+      `seqmagick.py convert best_hitVhmm.sto best_hitVhmm.fa`
       puts `cat best_hitVhmm.fa |sed 's/[a-z]//g'`
     else
       puts '>no_hit'

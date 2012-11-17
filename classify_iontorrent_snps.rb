@@ -192,7 +192,7 @@ o = OptionParser.new do |opts|
   opts.on('-d', "--deletion", "Investigate the deletions specifically") do |e|
     options[:operation] = DELETION
   end
-  opts.on("--deletion-strandedness", "Investigate the strand bias at deletion positions specifically. Requires --pileup") do |e|
+  opts.on("--deletion-strandedness", "Investigate the strand bias at deletion positions specifically. Requires --bam") do |e|
     options[:operation] = DELETION_STRANDEDNESS
   end
   # opts.on("--ace ACE_FILE", "ACE file representing the assembly") do |e|
@@ -297,7 +297,7 @@ elsif options[:operation] = DELETION_STRANDEDNESS
   #Print out the surrounding sequences around the deletions
   snps.each do |snp|
     next unless snp.deletion?
-    
+
     ref = seqs[snp.ref_name]
     surround4 = ref.seq[snp.position-2..snp.position+1]
     
