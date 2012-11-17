@@ -197,7 +197,7 @@ if __FILE__ == $0
   File.open(ORTHOLOGUES_FILE).each_line do |line|
     splits = line.strip.split("\t")
     raise unless splits.length >= 2 or splits.length > 5
-    plasmodb = splits[2]
+    plasmodb = splits[0]
     raise if falciparum_orthologues[plasmodb]
     all_orthologue_species.each_with_index do |sp, i|
       index = 2+i
@@ -206,7 +206,8 @@ if __FILE__ == $0
     end
     file_counter += 1
   end
-  $stderr.puts "Cached sets of orthologues for #{file_counter} P. falciparum sequences"
+  random_orthologue_entry = 'MAL13P1.129'
+  $stderr.puts "Cached sets of orthologues for #{file_counter} P. falciparum sequences e.g. for tgondii, #{random_orthologue_entry} => #{falciparum_orthologues[:tgon][random_orthologue_entry].inspect}"
   
   # Cache chromosome numbers for each gene
   falciparum_chromosomes = {}
@@ -306,6 +307,7 @@ if __FILE__ == $0
     num = splits[2].length > 0 ? splits[2].split(',') : nil
     dcnls5of6[plasmodb] = num
   end
+  $stderr.puts "Cached #{dcnls5of6.length} dcNLS 5/6 orthologous groups. e.g. PF07_0079 => #{dcnls5of6['PF07_0079'].inspect}"
   
   ##### Cache the length of the chromosomes
   chromosome_lengths = {} # hash of chromosome name to length
@@ -597,7 +599,7 @@ END_OF_TOP
       output_line.push false
     end
     headers.push 'dcNLS_5of6' if do_headers
-    if dcnls5of6[plasmodb] and [2].include?(!dcnls5of6[plasmodb].length)
+    if dcnls5of6[plasmodb] and [2].include?(dcnls5of6[plasmodb].length)
       output_line.push true
     else
       output_line.push false
