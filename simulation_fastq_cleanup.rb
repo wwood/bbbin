@@ -50,7 +50,11 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   if options[:directory]
     fastq_files = Dir.glob(File.join(options[:directory],'*.fastq')) 
   else
-    fastq_files = ARGV
+    if ARGV.length > 0
+      fastq_files = ARGV
+    else
+      fastq_files = :stdin #Bio::Faster#new accepts this argument
+    end
   end
   log.info "Found #{fastq_files.length} fastq files to put together"
   
