@@ -53,7 +53,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     if ARGV.length > 0
       fastq_files = ARGV
     else
-      fastq_files = :stdin #Bio::Faster#new accepts this argument
+      fastq_files = [:stdin] #Bio::Faster#new accepts this argument
     end
   end
   log.info "Found #{fastq_files.length} fastq files to put together"
