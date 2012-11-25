@@ -49,7 +49,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   ARGV.each do |fasta_file|
     if !File.exists?(fasta_file)
       log.error "Unable to find fasta file #{fasta_file}, skipping"
-      exit 0
+      # Don't exit because otherwise using it with xargs doesn't work
     end
     
     codon_counts = {}
