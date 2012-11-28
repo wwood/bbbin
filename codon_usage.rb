@@ -50,6 +50,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     if !File.exists?(fasta_file)
       log.error "Unable to find fasta file #{fasta_file}, skipping"
       # Don't exit because otherwise using it with xargs doesn't work
+      next
     end
     
     codon_counts = {}
