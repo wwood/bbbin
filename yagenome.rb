@@ -59,27 +59,32 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     #`hmmsearch --tblout hmmsearch.tblout --incT 999999 '#{hmm_path}' #{fasta_path} -o /dev/null`
     
     # Parse the output file, retrieving the best hit ID (if one exists)
+    output_empty = lambda do
+      puts '>no_hit'
+      puts '-'*hmm_length
+    end
+    
     if File.exist?('hmmsearch.tblout')
       result = Bio::HMMER::HMMER3::TabularReport.new(File.open('hmmsearch.tblout').read)
       best_hit = result.hits[0]
       if best_hit.nil?
-        raise "No best hit.."
+        output_empty.call
+      else
+        best_hit_id = best_hit.target_name
+        #log.debug "Found the best hit called #{best_hit_id}"
+        
+        # Extract the best hit from the input fasta file
+        `extract_from_fasta.pl -F '#{best_hit_id}' #{fasta_path} >best_hit.faa`
+      
+        # Run HMM align against the genome
+        `hmmalign --allcol --trim -o best_hitVhmm.sto #{hmm_path} best_hit.faa`
+        
+        # Convert the stockholm output file to fasta, puts to stdout
+        `seqmagick convert best_hitVhmm.sto best_hitVhmm.fa`
+        puts `cat best_hitVhmm.fa |sed 's/[a-z]//g'`
       end
-      best_hit_id = best_hit.target_name
-      #log.debug "Found the best hit called #{best_hit_id}"
-      
-      # Extract the best hit from the input fasta file
-      `extract_from_fasta.pl -F '#{best_hit_id}' #{fasta_path} >best_hit.faa`
-    
-      # Run HMM align against the genome
-      `hmmalign --allcol --trim -o best_hitVhmm.sto #{hmm_path} best_hit.faa`
-      
-      # Convert the stockholm output file to fasta, puts to stdout
-      `seqmagick.py convert best_hitVhmm.sto best_hitVhmm.fa`
-      puts `cat best_hitVhmm.fa |sed 's/[a-z]//g'`
     else
-      puts '>no_hit'
-      puts '-'*hmm_length
+      output_empty.call
     end
   end
 
