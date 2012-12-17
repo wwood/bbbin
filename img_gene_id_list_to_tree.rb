@@ -44,6 +44,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     opts.on("-e", "--extra-proteins FASTA_FILENAME", "A fasta file of protein sequences that aren't in IMG that are to be included in the tree [optional]") do |arg|
       options[:extra_proteins_fasta_path] =  arg
     end
+    opts.on("-a", "--copy-alignment-to ALIGNED_FASTA_FILENAME", "Output the A fasta file of protein sequences that aren't in IMG that are to be included in the tree [optional]") do |arg|
+      options[:extra_proteins_fasta_path] =  arg
+    end
 
     # logger options
     opts.separator "\n\tVerbosity:\n\n"
