@@ -6,10 +6,7 @@ require 'bio'
 require 'bio-logger'
 require 'progressbar'
 
-$:.unshift File.join(ENV['HOME'],'git','bioruby-hmmer_model','lib')
 require 'bio-hmmer_model'
-
-$:.unshift File.join(ENV['HOME'],'git','bioruby-hmmer3_report','lib')
 require 'bio-hmmer3_report'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
