@@ -9,6 +9,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   # Parse command line options into the options hash
   options = {
     :logger => 'stderr',
+    :num_processes => 10,
   }
   o = OptionParser.new do |opts|
     opts.banner = "
@@ -40,13 +41,19 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     fq1 = "#{base}_1.fq.gz"
     fq2 = "#{base}_2.fq.gz"
     
+    [fq1, fq2].each do |fq|
+      if File.exists?(fq1)
+        raise "Cowardly failing because #{fq} already exists!"
+      end
+    end
+    
     log.info "Creating #{fq1} .."
-    `zcat '#{fastq_file}' | grep -A3 ' 1:' |grep -v '^--$' |pigz -p 5 >#{fq1}`
+    `zcat '#{fastq_file}' | grep -A3 ' 1:' |grep -v '^--$' |pigz -p #{options[:num_processes]} >#{fq1}`
     fq1_size = File.size fq1
     log.info "#{fq1} size #{fq1_size}"
     
     log.info "Creating #{fq2} .."
-    `zcat '#{fastq_file}' | grep -A3 ' 2:' |grep -v '^--$' |pigz -p 5 >#{fq2}`
+    `zcat '#{fastq_file}' | grep -A3 ' 2:' |grep -v '^--$' |pigz -p #{options[:num_processes]} >#{fq2}`
     fq2_size = File.size fq2
     log.info "#{fq2} size #{fq2_size}"
   end
