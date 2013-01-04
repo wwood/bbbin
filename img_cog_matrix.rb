@@ -3,8 +3,9 @@
 require 'optparse'
 require 'bio-logger'
 require 'csv'
+require 'progressbar'
 
-$:.push File.join(File.dirname(__FILE__),'..','..','bioruby-taxonomy_definition_files','lib')
+$:.push File.join(ENV['HOME'],'git','bioruby-taxonomy_definition_files','lib')
 require 'bio-taxonomy_definition_files' #has IMG taxonomy parser file
 
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
@@ -14,7 +15,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   options = {
     :logger => 'stderr',
     :img_base_directory => '/srv/whitlam/bio/db/img/4.0/genomes/all',
-    :img_metadata_file => '/srv/whitlam/bio/db/img/4.0/img_metadata_4_0_FIXED.csv',
+    :img_metadata_file => '/srv/whitlam/bio/db/img/4.0/metadata/img_metadata_4_0_FIXED.csv',
   }
   o = OptionParser.new do |opts|
     opts.banner = "
@@ -43,9 +44,10 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   log.info "Read in #{taxonomies.length} different taxonomy entries"
   
   taxon_cogs = {}
+  progress = ProgressBar.new('cog_caching',taxonomies.length)
   
   taxonomies.each do |taxonomy|
-    cog_file = File.join options[:img_base_directory], taxonomy.taxon_id, "#{taxonomy.taxon_id}.cog.tab.txt"
+    cog_file = File.join options[:img_base_directory], taxonomy.taxon_id.to_s, "#{taxonomy.taxon_id}.cog.tab.txt"
     if File.exist?(cog_file)
       cogs = {}
       CSV.foreach(cog_file, :col_sep => "\t", :headers => true) do |row|
@@ -57,12 +59,20 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       raise "Duplicate taxon id" if taxon_cogs[taxonomy]
       taxon_cogs[taxonomy] = cogs
     else
-      log.warn "Didn't find any COG file for #{taxon.taxon_id} #{taxon.genus_species}"
+      log.warn "Didn't find any COG file for #{taxonomy.taxon_id} #{taxonomy.genus_species}"
     end
+    progress.inc
   end
+  progress.finish
   
   # Print results. Get a list of all COGs
   all_cogs = taxon_cogs.collect{|taxonomy, cog_counts| cog_counts.keys}.flatten.uniq.sort
+  puts [
+         'taxon_id',
+         'genus',
+         'species',
+         'temperature_range',
+         all_cogs].flatten.join "\t"
   taxon_cogs.each do |taxonomy, cog_counts|
     print [
       taxonomy.taxon_id,
@@ -73,10 +83,10 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     
     all_cogs.each do |cog_id|
       print "\t"
-      if taxon_cogs[cog_id].nil?
+      if cog_counts[cog_id].nil?
         print 0
       else
-        print taxon_cogs[cog_id]
+        print cog_counts[cog_id]
       end
     end
     puts
