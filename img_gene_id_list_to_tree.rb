@@ -2,14 +2,16 @@
 
 require 'optparse'
 require 'bio-logger'
-require 'tempdir'
+require 'tmpdir'
+require 'tempfile'
 
 $LOAD_PATH.unshift(File.join(ENV['HOME'],'git','bioruby-taxonomy_definition_files', 'lib'))
 require 'bio-taxonomy_definition_files' #has IMG taxonomy parser file
 
 $LOAD_PATH.unshift(File.join(ENV['HOME'],'git','bioruby-img_database', 'lib'))
 require 'bio-img_database'
-$LOAD_PATH.unshift(File.join(ENV['HOME'],'git','bioruby-img_database', 'lib'))
+
+$LOAD_PATH.unshift(File.join(ENV['HOME'],'git','bioruby-fastahack', 'lib'))
 require 'bio-fastahack'
 
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
@@ -18,6 +20,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   # Parse command line options into the options hash
   options = {
     :logger => 'stderr',
+    :num_threads => 1,
   }
   o = OptionParser.new do |opts|
     opts.banner = "
@@ -25,11 +28,10 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       
       Takes in a list of IMG identifiers, and then creates a phylogenetic tree of them with human-readable names\n\n"
       
+    opts.separator "\nRequired arguments:\n\n"
     opts.on("-l", "--img-gene-list IMG_IDS_LIST_FILE", "A list of IMG identifiers that are going into the tree [required]") do |arg|
       options[:img_genes_list] =  arg
     end
-      
-    opts.separator "\nRequired arguments:\n\n"
     opts.on("-d", "--img-database IMG_DATABASE", "sqlite3 file that contains the data [required]") do |arg|
       options[:database_file] =  arg
     end
@@ -44,8 +46,17 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     opts.on("-e", "--extra-proteins FASTA_FILENAME", "A fasta file of protein sequences that aren't in IMG that are to be included in the tree [optional]") do |arg|
       options[:extra_proteins_fasta_path] =  arg
     end
-    opts.on("-a", "--copy-alignment-to ALIGNED_FASTA_FILENAME", "Output the A fasta file of protein sequences that aren't in IMG that are to be included in the tree [optional]") do |arg|
-      options[:extra_proteins_fasta_path] =  arg
+    opts.on("--copy-unmasked-alignment-to ALIGNED_FASTA_FILENAME", "Copy the unmasked aligned fasta file somewhere [optional]") do |arg|
+      options[:unmasked_alignment_copy_file] =  arg
+    end
+    opts.on("--copy-masked-alignment-to ALIGNED_FASTA_FILENAME", "Copy the masked aligned fasta file somewhere [optional]") do |arg|
+      options[:masked_alignment_copy_file] =  arg
+    end
+    opts.on('--threads NUMBER_OF_THREADS', 'Use this many threads where possible [default #{options[:num_threads]}]') do |arg|
+      options[:num_threads] = arg.to_i
+      unless options[:num_threads]>0
+        raise "Unexpected '--threads' option given, I need an integer 1 or more: #{arg}"
+      end
     end
 
     # logger options
@@ -65,10 +76,10 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   #Take a list of genes, and extract them from the fastahack database
   img_ids = File.open(options[:img_genes_list]).read.split("\n")
   log.info "Found #{img_ids.length} different IMG sequences that will go into the tree, e.g. #{img_ids[0]}"
-  img_sequences, not_found = Bio::Fastahack.extract_sequences(img_ids, options[:img_fastahack_basename])
-  unless not_found.empty?
-    raise "Unable to find some IMG sequences in the fastahack database, failing cautiously. E.g. #{not_found[0]}"
-  end
+  
+  log.info "Extracting #{img_ids.length} IMG sequences from #{options[:img_fastahack_basename]} .."
+  img_sequences = Bio::Fastahack.extract_sequences(img_ids, options[:img_fastahack_basename])
+  log.info "#{img_sequences.length} sequences successfully extracted"
   
   # Get a list of better names for these genes from the local IMG db
   # Connect to the database
@@ -82,7 +93,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   
   better_img_names = {}
   img_sequences.keys.each do |img_id|
-    gene = Bio::IMG::Database::Gene.where(:img_id => the_id).first
+    gene = Bio::IMG::Database::Gene.where(:img_id => img_id).first
     
     desc = gene.description.match(/^\d+ (.+?) \[/)[1]
 
@@ -103,15 +114,23 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     Bio::FlatFile.foreach(options[:extra_proteins_fasta_path]) do |entry|
       non_img_sequences[entry.definition] =  entry.seq.to_s
     end
+    log.info "Read #{non_img_sequences.length} non-IMG sequences from #{options[:extra_proteins_fasta_path]}"
   end
-  log.info "Read #{non_img_sequences.length} non-IMG sequences in"
   
   # Align the sequences using mafft
   tree = nil
-  Dir.mktmpdir do |dir|
+  absolute_unmasked_alignment_copy_path = nil
+  unless options[:unmasked_alignment_copy_file].nil?
+    absolute_unmasked_alignment_copy_path = File.absolute_path options[:unmasked_alignment_copy_file]
+  end
+  absolute_masked_alignment_copy_path = nil
+  unless options[:masked_alignment_copy_file].nil?
+    absolute_masked_alignment_copy_path = File.absolute_path options[:masked_alignment_copy_file]
+  end
+  Dir.mktmpdir do |tmpdir|
     Dir.chdir(tmpdir) do
       # Write sequences to a file
-      Tempfile.open do |fasta|
+      Tempfile.open('tree') do |fasta|
         non_img_sequences.each do |ident, seq|
           fasta.puts ">#{ident}"
           fasta.puts seq
@@ -123,12 +142,25 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
         fasta.close
         
         log.info "Running mafft on #{img_sequences.length + non_img_sequences.length} sequences.."
-        `mafft #{fasta.path} >aligned.fa`
+        `mafft --thread #{options[:num_threads]} --quiet #{fasta.path} >aligned.fa`
+        
+        if options[:unmasked_alignment_copy_file]
+          log.info "copying unmasked alignment file to #{absolute_unmasked_alignment_copy_path}"
+          `cp aligned.fa #{absolute_unmasked_alignment_copy_path}`
+        end
+        
+        log.info "Masking the alignment to remove less than useful columns"
+        `alignment_trim.rb -m 0.1 aligned.fa >aligned.masked.fa`
+        
+        if options[:masked_alignment_copy_file]
+          log.info "copying masked alignment file to #{absolute_masked_alignment_copy_path}"
+          `cp aligned.fa #{absolute_masked_alignment_copy_path}`
+        end
         
         log.info "Running FastTree on these sequences"
-        `FastTree aligned.fa >aligned.fa.tree`
+        `FastTree aligned.masked.fa >aligned.masked.fa.tree`
         
-        tree = Bio::Newick.new(File.open('aligned.fa.tree').read).tree
+        tree = Bio::Newick.new(File.open('aligned.masked.fa.tree').read).tree
       end
     end
   end
@@ -142,6 +174,6 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   end
   
   # Finally, output the tree with the new, good names
-  puts tree
+  puts tree.newick
   
 end #end if running as a script
