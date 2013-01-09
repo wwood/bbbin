@@ -25,7 +25,8 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     opts.on("--logger filename",String,"Log to file [default #{options[:logger]}]") { |name| options[:logger] = name}
     opts.on("--trace options",String,"Set log level [default INFO]. e.g. '--trace debug' to set logging level to DEBUG"){|s| Bio::Log::CLI.trace(s)}
   end; o.parse!
-  if ARGV.length != 0
+  if ARGV.length > 1
+    $stderr.puts "Only 1 fasta file at a time, please"
     $stderr.puts o
     exit 1
   end
