@@ -33,7 +33,7 @@ Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level])
 class SelectedProtein
   attr_accessor :identifier
 
-  attr_accessor :sequence_count, :spectrum_count, :sequence_coverage, :length, :molwt, :pi, :descriptive_name
+  attr_accessor :sequence_count, :spectrum_count, :sequence_coverage, :length, :molwt, :pi, :validation_status, :descriptive_name
 
   attr_accessor :peptides
 
@@ -43,7 +43,7 @@ class SelectedProtein
 
   def unique_spectra
     return 0 if @peptides.nil? or @peptides.empty?
-    num = @peptides.select{|pep| pep.parent_proteins.length == 1}.collect{|pep| pep.number}.reduce(:+)
+    num = @peptides.select{|pep| pep.parent_proteins.length == 1}.collect{|pep| pep.redundancy}.reduce(:+)
     num ||= 0
     return num
   end
@@ -53,10 +53,10 @@ class SelectedProtein
     return 0 if @peptides.nil? or @peptides.empty?
     peptide_shares = []
     peptides.each do |peptide|
-      log.debug "Tallying peptide #{peptide.identifier}, which is has #{peptide.number} spectra shared among #{peptide.parent_proteins.length} proteins"
+      log.debug "Tallying peptide #{peptide.identifier}, which is has #{peptide.redundancy} spectra shared among #{peptide.parent_proteins.length} proteins"
       log.debug "These proteins have #{peptide.parent_proteins.collect{|pro| pro.unique_spectra}.inspect} unique spectra each"
       total_linked_unique_spectra = peptide.parent_proteins.collect{|pro| pro.unique_spectra}.reduce(:+)
-      peptide_shares.push unique_spectra.to_f/total_linked_unique_spectra*peptide.number
+      peptide_shares.push unique_spectra.to_f/total_linked_unique_spectra*peptide.redundancy
     end
     return peptide_shares.reduce(:+)
   end
@@ -69,7 +69,9 @@ end
 class Peptide
   attr_accessor :identifier
 
-  attr_accessor :xcorr, :deltcn, :obs_mono_mz, :cal_mono_mz, :ppm, :delta_amu, :ion_percent, :number, :sequence
+  attr_accessor :xcorr, :deltcn, :obs_mono_mz, :cal_mono_mz, :total_intensity, :sp_rank, :sp_score, :ion_proportion, :redundancy, :sequence
+
+  attr_accessor :unique
 
   attr_accessor :parent_proteins
   def initialize
@@ -91,56 +93,49 @@ ARGF.each_line do |line|
 
   if reading_header
     log.debug "reading header"
-    if splits[1] == 'Locus'
+    if splits[0] == 'Unique'
       reading_header = false
     end
     next
   end
 
   # OK, now we are reading the actual table, not the header
-  if splits[1] == 'U'
+  if splits[0] != '' and splits[11].nil?
     log.debug "New protein now being parsed"
     # start a new protein
     current_protein = SelectedProtein.new
-    ident = splits[2]
+    ident = splits[0]
     current_protein.identifier = ident
 
-    i = 3
+    i = 1
     current_protein.sequence_count = splits[i].to_i; i+=1
     current_protein.spectrum_count = splits[i].to_i; i+=1
     current_protein.sequence_coverage = splits[i].to_f; i+=1
     current_protein.length = splits[i].to_i; i+=1
     current_protein.molwt = splits[i].to_f; i+=1
     current_protein.pi = splits[i].to_f; i+=1
+    current_protein.validation_status = splits[i].to_f; i+=1
     current_protein.descriptive_name = splits[i]
 
     if proteins[ident]
-      raise "Unexpectedly found the same protein identifier twice: #{ident}"
+      raise "Unexpectedly found the same protein identifier twice: #{ident}, from line #{line.chomp}"
     end
     proteins[ident] = current_protein
 
 
 
-  elsif !splits[2].nil? and splits[2].match(/^Similarities: /)
-    # do nothing, this information is encoded elsewhere already
+
+  elsif splits[1] == 'Proteins'
+    # Done processing, except for the bits down the bottom which aren't parsed (yet)
+    break
 
 
 
-#  elsif splits[3] == 'Proteins'
-#    # Done processing, except for the bits down the bottom which aren't included
-#    finish_protein.call(current_protein)
-#    break
-
-  elsif splits[2] == 'Filename'
-    log.debug "Current line is all headers"
-    next #Current line is all headers
-
-
-  # Have to test for both columns 2 and 3 here because sometime the similarity bits go over multiple lines
-  elsif !splits[2].nil? and !splits[3].nil?
+  # Now there is a
+  else
     log.debug "New spectra now being parsed"
     # Record a spectra
-    ident = splits[2]
+    ident = splits[1]
     raise "Unexpected hits name `#{ident}', from line `#{line.chomp}'" unless ident.length > 10
 
     pep = hits[ident]
@@ -148,17 +143,17 @@ ARGF.each_line do |line|
       pep = Peptide.new
       pep.identifier = ident
 
-      i = 3
+      i = 2
       pep.xcorr = splits[i].to_f; i+= 1
       pep.deltcn = splits[i].to_f; i+= 1
       pep.obs_mono_mz = splits[i].to_f; i+= 1
       pep.cal_mono_mz = splits[i].to_f; i+= 1
-      pep.ppm = splits[i].to_f; i+= 1
-      pep.delta_amu = splits[i].to_f; i+= 1
-      pep.ion_percent = splits[i].to_f; i+= 1
-      pep.number = splits[i].to_i; i+= 1
-      pep.sequence = splits[i]; i+= 1
-      #what is the last column? I'm asking EK now
+      pep.total_intensity = splits[i].to_f; i+= 1
+      pep.sp_rank = splits[i].to_f; i+= 1
+      pep.sp_score = splits[i].to_f; i+= 1
+      pep.ion_proportion = splits[i].to_f; i+= 1
+      pep.redundancy = splits[i].to_i; i+= 1
+      pep.sequence = splits[i]
 
       hits[ident] = pep
     end
@@ -168,7 +163,7 @@ ARGF.each_line do |line|
   end
 end
 
-total_spectra = hits.collect{|i,pep| pep.number}.reduce(:+)
+total_spectra = hits.collect{|i,pep| pep.redundancy}.reduce(:+)
 log.info "Parsed in #{proteins.length} proteins and #{hits.length} peptides, and #{total_spectra} spectra"
 
 
