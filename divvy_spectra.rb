@@ -10,12 +10,17 @@ SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 options = {
   :logger => 'stderr',
   :log_level => 'info',
+  :contaminant_prefix => /^CNTM:/,
 }
 o = OptionParser.new do |opts|
   opts.banner = "
     Usage: #{SCRIPT_NAME} <arguments>
 
     Takes a tab separated file containing a (possibly modified) output from a DTAselect run, and use some algorithm to divy up the spectra that match multiple peptides.\n\n"
+
+  opts.on("--merge-proteins LIST_OF_IDENTIFIERS", "Provide a space/tab separated file where the identifiers on each row should be treated as one protein") do |file|
+    options[:merge_proteins_file] = file
+  end
 
   # logger options
   opts.separator "\nVerbosity:\n\n"
@@ -78,6 +83,24 @@ class Peptide
     @parent_proteins = []
   end
 end
+
+# Read in merges, if required
+mergers = {}
+if options[:merge_proteins_file]
+  File.open(options[:merge_proteins_file]).each_line do |line|
+    splits = line.strip.split(/\s+/)
+    primary_id = splits[0]
+    splits.each_with_index do |s, i|
+      next if i==0
+      raise "This script can only handle two-way merging at the moment, sorry" if splits.length > 2
+      raise "ID supposedly matches to multple identifiers: #{splits[1]}" if mergers[s] and mergers[s] != primary_id
+      mergers[s] = primary_id
+    end
+  end
+
+  log.info "Merging of identifiers setup for #{mergers.length} different instances, e.g. #{mergers.to_a[0][0]} => #{mergers.to_a[0][1]}"
+end
+
 
 # Hashes of identifiers to objects
 proteins = {}
@@ -163,7 +186,65 @@ ARGF.each_line do |line|
   end
 end
 
-total_spectra = hits.collect{|i,pep| pep.redundancy}.reduce(:+)
+
+# Merge proteins that are known duplicates if need be
+mergers.each do |secondary_id, primary_id|
+  log.debug "Merging proteins #{primary_id} and #{secondary_id}"
+  if proteins[primary_id] and proteins[secondary_id]
+    # Do the merge
+    log.debug "Both are defined, so doing the complicated merge"
+
+    # Invalidate some things about the primary ID because they are no longer valid
+    current_protein = proteins[primary_id]
+    current_protein.sequence_count = nil
+    current_protein.sequence_coverage = nil
+    current_protein.length = nil
+    current_protein.molwt = nil
+    current_protein.pi = nil
+    current_protein.validation_status = nil
+    # Keep the primary proteins' description, I reckon
+
+    # When there is spectra that are in the secondary but not the primary, add them to the primary's repertoire.
+    primary = proteins[primary_id]
+    secondary = proteins[secondary_id]
+    primary_peptide_names = primary.peptides.collect{|pep| pep.identifier}
+    log.debug "Before transfer of the second protein's peptides, the primary proteins has #{primary.peptides.length} different peptides"
+    log.debug "Parent protein IDs of primary peptides: #{primary.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.inspect}"
+    secondary.peptides.each do |sec_pep|
+      unless primary_peptide_names.include?(sec_pep.identifier)
+        primary.peptides.push sec_pep
+        sec_pep.parent_proteins.push primary
+      end
+    end
+    log.debug "After transfer of the second protein's peptides, the primary proteins has #{primary.peptides.length} different peptides"
+    log.debug "Parent protein IDs of primary peptides: #{primary.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.inspect}"
+    # Remove references second protein from the second peptides
+    secondary.peptides.each do |pep|
+      pep.parent_proteins.reject!{|pro| pro==secondary}
+    end
+    log.debug "Parent protein IDs of primary peptides: #{primary.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.inspect}"
+    # Remove the secondary peptide from the list of peptides
+    proteins.delete secondary_id
+
+
+  elsif proteins[secondary_id]
+    raise "You've reached a place in the code that is implemented but untested"
+    # Rename the secondary as the primary
+    sec = proteins[secondary_id]
+    proteins[primary_id] = sec
+    proteins.delete secondary_id
+    sec.identifier = primary_id
+    # The peptide objects should have the correct parent proteins because it is all references
+
+  end #The other two cases do not require any intervention,
+end
+
+
+# Total spectra shouldn't count contaminants, but shared spectra should still be divvied up with
+total_contaminating_spectra = proteins.select{|ident, protein| ident.match(options[:contaminant_prefix])}.collect{|i, pro| pro.estimated_spectral_count}.reduce(:+)
+total_contaminating_spectra ||= 0
+
+total_spectra = hits.collect{|i,pep| pep.redundancy}.reduce(:+) - total_contaminating_spectra
 log.info "Parsed in #{proteins.length} proteins and #{hits.length} peptides, and #{total_spectra} spectra"
 
 
@@ -177,6 +258,8 @@ puts [
   'Description',
 ].join "\t"
 proteins.each do |protein_id, protein|
+  next if protein_id.match(options[:contaminant_prefix]) #Don't print contaminants
+
   log.debug "Now printing protein #{protein_id}, which has #{protein.peptides.length} associated peptides"
   puts [
     protein_id,
