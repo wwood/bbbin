@@ -53,17 +53,41 @@ class SelectedProtein
     return num
   end
 
+  def non_unique_spectra
+    return 0 if @peptides.nil? or @peptides.empty?
+    num = @peptides.reject{|pep| pep.parent_proteins.length == 1}.collect{|pep| pep.redundancy}.reduce(:+)
+    num ||= 0
+    return num
+  end
+
+  # Are there any peptides that are assigned exclusively to this protein?
+  def uniquely_identified_by_any_peptides?
+    unique_spectra > 0
+  end
+
   def estimated_spectral_count
     # How many unique spectra are there for each protein that shares a peptide with the current peptide
     return 0 if @peptides.nil? or @peptides.empty?
     peptide_shares = []
-    peptides.each do |peptide|
-      log.debug "Tallying peptide #{peptide.identifier}, which is has #{peptide.redundancy} spectra shared among #{peptide.parent_proteins.length} proteins"
-      log.debug "These proteins have #{peptide.parent_proteins.collect{|pro| pro.unique_spectra}.inspect} unique spectra each"
-      total_linked_unique_spectra = peptide.parent_proteins.collect{|pro| pro.unique_spectra}.reduce(:+)
-      peptide_shares.push unique_spectra.to_f/total_linked_unique_spectra*peptide.redundancy
+    # If all peptides are non-unique and shared with some number of other proteins, then output a negative number num shared spectra divided by the number of proteins
+    if !uniquely_identified_by_any_peptides?
+      shared_parents = peptides[0].parent_proteins
+      if peptides.find{|pep| pep.parent_proteins != shared_parents}
+        log.warn "Found a protein (#{identifier}) that shares all its peptides with a non-constant set of proteins, hoping this is a rare event, estimated spectral count likely wrong"
+      end
+      num_shared_proteins = shared_parents.length
+      num_peptide_spectra = peptides.collect{|pep| pep.redundancy}.reduce(:+)
+      log.debug "Found #{num_shared_proteins} shared peptides and #{num_peptide_spectra} peptide spectra"
+      return num_peptide_spectra.to_f/num_shared_proteins
+    else
+      peptides.each do |peptide|
+        log.debug "Tallying peptide #{peptide.identifier}, which is has #{peptide.redundancy} spectra shared among #{peptide.parent_proteins.length} proteins"
+        log.debug "These proteins have #{peptide.parent_proteins.collect{|pro| pro.unique_spectra}.inspect} unique spectra each"
+        total_linked_unique_spectra = peptide.parent_proteins.collect{|pro| pro.unique_spectra}.reduce(:+)
+        peptide_shares.push unique_spectra.to_f/total_linked_unique_spectra*peptide.redundancy
+      end
+      return peptide_shares.reduce(:+)
     end
-    return peptide_shares.reduce(:+)
   end
 
   def log
@@ -81,6 +105,14 @@ class Peptide
   attr_accessor :parent_proteins
   def initialize
     @parent_proteins = []
+  end
+
+  def inspect
+    str = "Peptide: #{@parent_proteins.length} @parent_proteins: [#{@parent_proteins.collect{|pro| pro.identifier}.join(', ')}]"
+    [:identifier, :xcorr, :deltcn, :obs_mono_mz, :cal_mono_mz, :total_intensity, :sp_rank, :sp_score, :ion_proportion, :redundancy, :sequence].each do |var|
+      str += ", #{var}: #{send(var)}"
+    end
+    return str
   end
 end
 
@@ -108,8 +140,10 @@ hits = {}
 
 # Read in the tab separated file
 reading_header = true
-current_protein = nil
+current_proteins = []
+last_line_was_protein_name = false
 
+# Parse each line of the DTAselect file
 ARGF.each_line do |line|
   splits = line.chomp.split("\t")
   log.debug "Parsing line `#{line.chomp}'"
@@ -124,10 +158,19 @@ ARGF.each_line do |line|
 
   # OK, now we are reading the actual table, not the header
   if splits[0] != '' and splits[11].nil?
-    log.debug "New protein now being parsed"
-    # start a new protein
-    current_protein = SelectedProtein.new
     ident = splits[0]
+
+    if !last_line_was_protein_name
+      # Sometimes several proteins are given all in the one header line
+      # start a new protein
+      log.debug "New protein now being parsed"
+      current_proteins = []
+    end
+
+    current_protein = SelectedProtein.new
+    last_line_was_protein_name = true
+    current_proteins.push current_protein
+
     current_protein.identifier = ident
 
     i = 1
@@ -147,16 +190,16 @@ ARGF.each_line do |line|
 
 
 
-
   elsif splits[1] == 'Proteins'
     # Done processing, except for the bits down the bottom which aren't parsed (yet)
     break
 
 
 
-  # Now there is a
   else
     log.debug "New spectra now being parsed"
+    last_line_was_protein_name = false
+
     # Record a spectra
     ident = splits[1]
     raise "Unexpected hits name `#{ident}', from line `#{line.chomp}'" unless ident.length > 10
@@ -181,10 +224,15 @@ ARGF.each_line do |line|
       hits[ident] = pep
     end
 
-    pep.parent_proteins.push current_protein
-    current_protein.peptides.push pep
+    current_proteins.each do |current_protein|
+      pep.parent_proteins.push current_protein
+      current_protein.peptides.push pep
+    end
+    log.debug "Parsed this peptide #{pep.inspect}"
   end
 end
+
+log.debug "Proteins parsed: #{proteins.inspect}"
 
 
 # Merge proteins that are known duplicates if need be
@@ -245,14 +293,15 @@ total_contaminating_spectra = proteins.select{|ident, protein| ident.match(optio
 total_contaminating_spectra ||= 0
 
 total_spectra = hits.collect{|i,pep| pep.redundancy}.reduce(:+) - total_contaminating_spectra
-log.info "Parsed in #{proteins.length} proteins and #{hits.length} peptides, and #{total_spectra} spectra"
+log.info "Parsed in #{proteins.length} proteins and #{hits.length} peptides, and #{total_spectra.to_i} non-contaminating spectra"
 
-
+log.debug "Proteins parsed: #{proteins.inspect}"
 
 # OK, finished parsing the file. Now output the score for each protein
 puts [
   'ID',
   'Unique spectra',
+  'Non-unique spectra',
   'Estimated total spectra',
   'Normalised spectral count',
   'Description',
@@ -261,9 +310,14 @@ proteins.each do |protein_id, protein|
   next if protein_id.match(options[:contaminant_prefix]) #Don't print contaminants
 
   log.debug "Now printing protein #{protein_id}, which has #{protein.peptides.length} associated peptides"
+  if !protein.uniquely_identified_by_any_peptides?
+    shareds = protein.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.flatten.uniq.reject{|pro_id| pro_id==protein_id}
+    log.warn "This protein #{protein_id} shares all of its spectra with other proteins (#{shareds.join(', ')}), sharing the peptides equally (this may not be appropriate)"
+  end
   puts [
     protein_id,
     protein.unique_spectra,
+    protein.non_unique_spectra,
     protein.estimated_spectral_count,
     protein.estimated_spectral_count.to_f / total_spectra,
     protein.descriptive_name,
