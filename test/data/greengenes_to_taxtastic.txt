@@ -1,0 +1,3 @@
+187144	k__Bacteria; p__Firmicutes; c__Clostridia; o__Clostridiales; f__Lachnospiraceae; g__[Ruminococcus]; s__
+544886	k__Bacteria; p__LD1; c__; o__; f__; g__; s__
+310669	k__Bacteria; p__Firmicutes; c__Clostridia; o__Coriobacteriales; f__; g__; s__
