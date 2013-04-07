@@ -98,6 +98,8 @@ end
 class Peptide
   attr_accessor :identifier
 
+  attr_accessor :reported_unique
+
   attr_accessor :xcorr, :deltcn, :obs_mono_mz, :cal_mono_mz, :total_intensity, :sp_rank, :sp_score, :ion_proportion, :redundancy, :sequence
 
   attr_accessor :unique
@@ -208,6 +210,7 @@ ARGF.each_line do |line|
     if pep.nil?
       pep = Peptide.new
       pep.identifier = ident
+      pep.reported_unique = splits[0]
 
       i = 2
       pep.xcorr = splits[i].to_f; i+= 1
@@ -297,6 +300,18 @@ log.info "Parsed in #{proteins.length} proteins and #{hits.length} peptides, and
 
 log.debug "Proteins parsed: #{proteins.inspect}"
 
+all_peptides = hits.values.uniq
+number_shared_peptides = all_peptides.select{|pep| pep.parent_proteins.length > 1}.length
+number_non_shared_peptides = all_peptides.select{|pep| pep.parent_proteins.length == 1}.length
+total_peptides = number_shared_peptides+number_non_shared_peptides
+log.info "Found #{number_shared_peptides} (#{number_shared_peptides.to_f/total_peptides*100}%) shared peptides and #{number_non_shared_peptides} (#{number_non_shared_peptides.to_f/total_peptides*100}%) non-shared peptides"
+
+# Find non-starred peptides that occur only once in the file - maybe not possible given a correctly formatted file?
+non_starred_but_uniquely_identified_peptides = hits.values.select do |peptide|
+  peptide.reported_unique == nil and peptide.parent_proteins.length == 1
+end
+log.info "Found #{non_starred_but_uniquely_identified_peptides.length} different peptides that weren't starred or 2'd but the identifier is only found one."
+
 # OK, finished parsing the file. Now output the score for each protein
 puts [
   'ID',
@@ -305,6 +320,7 @@ puts [
   'Estimated total spectra',
   'Normalised spectral count',
   'Description',
+  'Proteins sharing spectra',
 ].join "\t"
 proteins.each do |protein_id, protein|
   next if protein_id.match(options[:contaminant_prefix]) #Don't print contaminants
@@ -321,6 +337,7 @@ proteins.each do |protein_id, protein|
     protein.estimated_spectral_count,
     protein.estimated_spectral_count.to_f / total_spectra,
     protein.descriptive_name,
+    protein.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.flatten.uniq.reject{|i| i==protein_id}.join(','),
   ].join "\t"
 end
 

@@ -67,6 +67,13 @@ CSV.foreach(options[:taxonomy_file], :col_sep => "\t") do |row|
   raise "Unexpected taxonomies format in line #{row.inspect}" unless taxonomies.length == 7
   raise "Unexpected comma in line #{row.inspect}" if tax_string.match(/,/)
   taxonomies = ['Root']+taxonomies
+  # Remove from taxonomies all that are
+  first_unclassified_index = taxonomies.index do |taxon|
+    taxon.match(/^.__$/)
+  end
+  unless first_unclassified_index.nil?
+    taxonomies = taxonomies[0...first_unclassified_index]
+  end
 
   seqinfo_output_file.puts [
     "gg_otu_#{gg_id}",
@@ -75,7 +82,6 @@ CSV.foreach(options[:taxonomy_file], :col_sep => "\t") do |row|
 
   breadcrumbs = ''
   taxonomies.each_with_index do |taxon, level|
-    break if taxon.length == 3 #go no further if no name is defined e.g. 'f__'
     new_breadcrumbs = nil
     if level == 0
       new_breadcrumbs = taxon
@@ -84,10 +90,10 @@ CSV.foreach(options[:taxonomy_file], :col_sep => "\t") do |row|
     end
 
     unless already_printed_taxids.include?(new_breadcrumbs)
-      tax_output_file.puts [
-      #puts [
+      #tax_output_file.puts [
+      puts [
         new_breadcrumbs,
-        breadcrumbs,
+        level == 0 ? 'Root' : breadcrumbs, #Root is special, its parent is itself
         level_to_rank[level],
         taxon.gsub(/^.__/,''),
       ].join(',')
