@@ -3,6 +3,7 @@
 require 'optparse'
 require 'bio-logger'
 require 'pp'
+require 'set'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
@@ -14,12 +15,15 @@ options = {
 }
 o = OptionParser.new do |opts|
   opts.banner = "
-    Usage: #{SCRIPT_NAME} <arguments>
+    Usage: #{SCRIPT_NAME} [options] <DTASelect_file>
 
     Takes a tab separated file containing a (possibly modified) output from a DTAselect run, and use some algorithm to divy up the spectra that match multiple peptides.\n\n"
 
-  opts.on("--merge-proteins LIST_OF_IDENTIFIERS", "Provide a space/tab separated file where the identifiers on each row should be treated as one protein") do |file|
+  opts.on("--merge-proteins FILE_OF_IDENTIFIERS", "Provide a space/tab separated file where the identifiers on each row should be treated as one protein") do |file|
     options[:merge_proteins_file] = file
+  end
+  opts.on("--whitelist FILE_OF_PROTEINS_TO_REPORT", "Only report proteins that are in this whitelist, after divvying with everything") do |file|
+    options[:whitelist_file] = file
   end
 
   # logger options
@@ -133,6 +137,14 @@ if options[:merge_proteins_file]
   end
 
   log.info "Merging of identifiers setup for #{mergers.length} different instances, e.g. #{mergers.to_a[0][0]} => #{mergers.to_a[0][1]}"
+end
+
+# Read in whitelist
+whitelist = Set.new
+if options[:whitelist_file]
+  whitelist = File.open(options[:whitelist_file]).read.split(/\s+/)
+  raise "whitelist empty" unless whitelist.length > 0
+  log.info "Read in #{whitelist.length} IDs into the whitelist, only those will be reported. e.g. #{whitelist[0]}"
 end
 
 
@@ -325,20 +337,22 @@ puts [
 proteins.each do |protein_id, protein|
   next if protein_id.match(options[:contaminant_prefix]) #Don't print contaminants
 
-  log.debug "Now printing protein #{protein_id}, which has #{protein.peptides.length} associated peptides"
-  if !protein.uniquely_identified_by_any_peptides?
-    shareds = protein.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.flatten.uniq.reject{|pro_id| pro_id==protein_id}
-    log.warn "This protein #{protein_id} shares all of its spectra with other proteins (#{shareds.join(', ')}), sharing the peptides equally (this may not be appropriate)"
+  if options[:whitelist_file].nil? or whitelist.include?(protein_id) # If there's a whitelist, apply it now
+    log.debug "Now printing protein #{protein_id}, which has #{protein.peptides.length} associated peptides"
+    if !protein.uniquely_identified_by_any_peptides?
+      shareds = protein.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.flatten.uniq.reject{|pro_id| pro_id==protein_id}
+      log.warn "This protein #{protein_id} shares all of its spectra with other proteins (#{shareds.join(', ')}), sharing the peptides equally (this may not be appropriate)"
+    end
+    puts [
+      protein_id,
+      protein.unique_spectra,
+      protein.non_unique_spectra,
+      protein.estimated_spectral_count,
+      protein.estimated_spectral_count.to_f / total_spectra,
+      protein.descriptive_name,
+      protein.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.flatten.uniq.reject{|i| i==protein_id}.join(','),
+    ].join "\t"
   end
-  puts [
-    protein_id,
-    protein.unique_spectra,
-    protein.non_unique_spectra,
-    protein.estimated_spectral_count,
-    protein.estimated_spectral_count.to_f / total_spectra,
-    protein.descriptive_name,
-    protein.peptides.collect{|pep| pep.parent_proteins.collect{|pro| pro.identifier}}.flatten.uniq.reject{|i| i==protein_id}.join(','),
-  ].join "\t"
 end
 
 
