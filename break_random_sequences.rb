@@ -42,10 +42,15 @@ Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level])
 fasta_file = ARGV[0]
 
 # Count the number of sequences in the fasta file that are greater than twice the minimum length
-sufficient_length = 2*options[:min_piece_length]
+sufficient_length = 2*options[:min_piece_length]+1
 num_seqs_with_sufficient_length = 0
+log.debug "Reading from fasta file #{fasta_file}"
 Bio::FlatFile.foreach(fasta_file) do |seq|
-  num_seqs_with_sufficient_length =+ 1 if seq.seq.length >= sufficient_length
+  log.debug "Considering a sequence #{seq.definition}, length #{seq.seq.length}" if log.debug?
+  if seq.seq.length >= sufficient_length
+    num_seqs_with_sufficient_length += 1
+    log.debug "Sequence accepted" if log.debug?
+  end
 end
 
 
