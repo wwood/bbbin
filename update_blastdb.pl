@@ -40,31 +40,43 @@ use Pod::Usage;
 use File::stat;
 
 use constant VERSION => 1.2;
-use constant NCBI_FTP => "biomirror.aarnet.edu.au";
-use constant BLAST_DB_DIR => "/biomirror/blast";
+use constant DEFAULT_NCBI_FTP => "biomirror.aarnet.edu.au";
+use constant DEFAULT_BLAST_DB_DIR => "/biomirror/blast";
 use constant USER => "anonymous";
 use constant PASSWORD => "anonymous";
 use constant DEBUG => 0;
 
+use constant BACKUP_NCBI_FTP => "ftp.ncbi.nlm.nih.gov";
+use constant BACKUP_BLAST_DB_DIR => "/blast/db";
+
 # Process command line options
 my $opt_verbose = 1;
 my $opt_quiet = 0;
-my $opt_force_download = 0;     
+my $opt_force_download = 0;
 my $opt_help = 0;
 my $opt_passive = 0;
 my $opt_timeout = 120;
 my $opt_showall = 0;
+my $opt_official = 0;
 my $result = GetOptions("verbose+"  =>  \$opt_verbose,
                         "quiet"     =>  \$opt_quiet,
                         "force"     =>  \$opt_force_download,
                         "passive"   =>  \$opt_passive,
                         "timeout=i" =>  \$opt_timeout,
                         "showall"   =>  \$opt_showall,
-                        "help"      =>  \$opt_help);
+                        "help"      =>  \$opt_help,
+                        "official"  =>  \$opt_official);
 $opt_verbose = 0 if $opt_quiet;
 die "Failed to parse command line options\n" unless $result;
 pod2usage({-exitval => 0, -verbose => 2}) if $opt_help;
 pod2usage({-exitval => 1, -verbose => 2}) unless (scalar @ARGV or $opt_showall);
+
+my $ftp_address = DEFAULT_NCBI_FTP;
+my $ftp_folder = DEFAULT_BLAST_DB_DIR;
+if($opt_official){
+  $ftp_address = BACKUP_NCBI_FTP;
+  $ftp_folder = BACKUP_BLAST_DB_DIR;
+}
 
 
 # Connect and download files
@@ -87,13 +99,13 @@ sub connect_to_ftp
     $ftp_opts{'Passive'} = 1 if $opt_passive;
     $ftp_opts{'Timeout'} = $opt_timeout if ($opt_timeout >= 0);
     $ftp_opts{'Debug'}   = 1 if ($opt_verbose > 1);
-    my $ftp = Net::FTP->new(NCBI_FTP, %ftp_opts)
-        or die "Failed to connect to " . NCBI_FTP . ": $!\n";
-    $ftp->login(USER, PASSWORD) 
-        or die "Failed to login to " . NCBI_FTP . ": $!\n";
-    $ftp->cwd(BLAST_DB_DIR);
+    my $ftp = Net::FTP->new($ftp_address, %ftp_opts)
+        or die "Failed to connect to " . $ftp_address . ": $!\n";
+    $ftp->login(USER, PASSWORD)
+        or die "Failed to login to " . $ftp_address . ": $!\n";
+    $ftp->cwd($ftp_folder);
     $ftp->binary();
-    print STDERR "Connected to ".NCBI_FTP."\n" if $opt_verbose;
+    print STDERR "Connected to ".$ftp_address."\n" if $opt_verbose;
     return $ftp;
 }
 
@@ -127,7 +139,7 @@ sub get_files_to_download
 
     for my $requested_db (@ARGV) {
         for my $file (@blast_db_files) {
-            next unless ($file =~ /\.tar\.gz$/);    
+            next unless ($file =~ /\.tar\.gz$/);
             if ($file =~ /^$requested_db\..*/) {
                 push @retval, $file;
             }
@@ -137,7 +149,7 @@ sub get_files_to_download
     if ($opt_verbose) {
         for my $requested_db (@ARGV) {
             unless (grep(/$requested_db/, @retval)) {
-                print STDERR "$requested_db not found, skipping.\n" 
+                print STDERR "$requested_db not found, skipping.\n"
             }
         }
     }
@@ -160,7 +172,7 @@ sub download($)
         }
 
         if ($opt_force_download or
-            not -f $file or 
+            not -f $file or
             ((stat($file))->mtime < $ftp->mdtm($file))) {
             print STDERR "Downloading $file... " if $opt_verbose;
             $ftp->get($file);
@@ -255,7 +267,7 @@ false).
 
 =item B<--verbose>
 
-Increment verbosity level (default: 1). Repeat this option multiple times to 
+Increment verbosity level (default: 1). Repeat this option multiple times to
 increase the verbosity level (maximum 2).
 
 =item B<--quiet>
