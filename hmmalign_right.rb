@@ -45,7 +45,6 @@ Tempfile.open(['hmmalign_right_out','.sto']) do |out_stockholm|
   cmd = "hmmalign --allcol --trim #{options[:hmm_file]} #{options[:fasta]} >#{out_stockholm.path}"
   log.debug "Running: #{cmd}" if log.debug?
   print `#{cmd}`
-  print `cat #{out_stockholm.path}`
 
   stock = Bio::Stockholm::Reader.parse_from_file out_stockholm.path
   stock.records.each do |identifier, record|
