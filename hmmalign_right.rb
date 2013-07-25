@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-
+require 'pp'
 require 'optparse'
 require 'bio-logger'
 require 'bio'
@@ -46,9 +46,17 @@ Tempfile.open(['hmmalign_right_out','.sto']) do |out_stockholm|
   log.debug "Running: #{cmd}" if log.debug?
   print `#{cmd}`
 
-  stock = Bio::Stockholm::Reader.parse_from_file out_stockholm.path
-  stock.records.each do |identifier, record|
-    puts ">#{identifier} #{record.description}"
-    puts record.sequence.gsub(/[\.a-z]/,'')
+  stocks = Bio::Stockholm::Reader.parse_from_file out_stockholm.path
+  x_indices = []
+  # #=GC RF            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxx....
+  i = 0
+  stocks[0].gc_features['RF'].each_char do |char|
+    x_indices.push i if char == 'x'
+    i += 1
+  end
+  stocks[0].records.each do |identifier, record|
+    puts ">#{identifier} #{record.gs_features['DE']}"
+    x_indices.each{|i| print record.sequence[i]}
+    puts
   end
 end
