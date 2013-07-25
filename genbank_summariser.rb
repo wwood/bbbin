@@ -51,6 +51,15 @@ o = OptionParser.new do |opts|
       }.join(', ')
     }
   end
+opts.on("--source:country", "Print /country of each feature") do |f|
+    options[:interests].push lambda {|e|
+      e.features.select{|feature|
+        feature.feature == 'source'
+      }.collect{|feature|
+        feature['country']
+      }.join(', ')
+    }
+  end
 
   # logger options
   opts.on("-q", "--quiet", "Run quietly, set logging to ERROR level [default INFO]") do |q|
