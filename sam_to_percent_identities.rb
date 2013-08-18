@@ -6,6 +6,7 @@ require 'bio-cigar'
 require 'bio-samtools'
 require 'bio'
 require 'set'
+require 'pp'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
@@ -26,7 +27,7 @@ o = OptionParser.new do |opts|
   opts.on("-r", "--reference-seqs PATH", "path to a fasta file of the reference sequences refered to in the samfile [required]") do |arg|
     options[:seqfile] = arg
   end
-  opts.on("--first-hit-only", "Only print the first hit of each query (sometimes sam files contain multiple lines for the same read) [default: no]") do
+  opts.on("--primary-hit-only", "Only print the primary hit of each query (sometimes sam files contain multiple lines for the same read) [default: no]") do
     options[:first_hit_only] = true
   end
   opts.on("--min-length LENGTH", "Don't print when the match length is less than this length [default: no length restriction]") do |arg|
@@ -58,14 +59,15 @@ end
 log.info "Read in #{seqs.length} sequences from the reference sequence file."
 
 count = 0
-already_seen_qnames = Set.new
+input_count = 0
 ARGF.each_line do |line|
   aln = Bio::DB::Alignment.new
   aln.sam = line
+  input_count += 1
 
+  # Skip secondary and supplementary hits if this is wanted behaviour
   if options[:first_hit_only]
-    next if already_seen_qnames.include?(aln.qname)
-    already_seen_qnames << aln.qname
+    next unless aln.flag & 0x900 == 0 #aln.primary seems to not work as I expected - always returns false?
   end
 
   ref = seqs[aln.rname]
@@ -87,4 +89,4 @@ ARGF.each_line do |line|
     log.warn e.to_s
   end
 end
-log.info "Printed information on #{count} alignments"
+log.info "Printed information on #{count} alignments out of #{input_count} fed in"
