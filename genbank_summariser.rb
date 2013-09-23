@@ -33,6 +33,16 @@ o = OptionParser.new do |opts|
       e.references.collect{|ref| ref.title}.join(', ')
     }
   end
+  opts.on("--taxonomy", "Print taxonomy") do |f|
+    options[:interests].push lambda {|e|
+      e.taxonomy
+    }
+  end
+  opts.on("--organism", "Print actual organism name") do |f|
+    options[:interests].push lambda {|e|
+      e.organism
+    }
+  end
   opts.on("--source:note", "Print /note of each feature") do |f|
     options[:interests].push lambda {|e|
       e.features.select{|feature|
