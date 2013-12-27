@@ -2,7 +2,12 @@
 
 require 'open3'
 
-output_file = File.join(ENV['HOME'],"#{`hostname`.strip}.memory_watcher.log")
+host = `hostname`.strip
+if host == 'brown'
+  $stderr.puts "Refusing to run memory_watcher on brown"
+  exit 1
+end
+output_file = File.join(ENV['HOME'],"#{host}.memory_watcher.log")
 out = File.open(output_file,'a')
 out.sync = true #disable buffering
 user = `whoami`.strip
@@ -29,7 +34,7 @@ while true
     if !memories.empty? and total_memory > 75.0
       out.puts "total memory #{total_memory}"
       out.flush
-      
+
       victim = velvets.max{|v1, v2| v1[1].to_f<=>v2[1].to_f}
       to_kill = victim[0]
       out.puts "Killing the most memory intensive process, pid #{to_kill}, which took #{victim[1]}% of memory: #{victim[2...victim.length]}"

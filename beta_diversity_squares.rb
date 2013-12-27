@@ -51,10 +51,11 @@ if options[:order_file]
   log.info "Read in #{order.length} samples for ordering / subsetting"
 end
 
+
 puts '['
-ebd_matrix.sample_names.each_with_index do |name1,i|
+order.each_with_index do |name1,i|
   print '['
-  ebd_matrix.sample_names.each_with_index do |name2,j|
+  order.each_with_index do |name2,j|
     if i==j
       print '0'
     else
