@@ -69,16 +69,16 @@ Dir.mktmpdir do |tmpdir|
     FileUtils.cp input_path_absolute, local_input_name
     log.info "Finished copying reads file."
 
-    log.info "Counting the number of lines in the file..."
-    num_input_lines = Bio::Commandeer.run "pigz -cd '#{local_input_name }' |wc -l", :log => log
-    num_input_lines = num_input_lines.strip.to_i
-    log.info "Found #{num_input_lines } lines in the input file"
+    #log.info "Counting the number of lines in the file..."
+    #num_input_lines = Bio::Commandeer.run "pigz -cd '#{local_input_name }' |wc -l", :log => log
+    #num_input_lines = num_input_lines.strip.to_i
+    #log.info "Found #{num_input_lines } lines in the input file"
 
     # Split it into chunks
     Dir.mkdir 'chunks'
-    chunk_size = options[:chunk_size]
-    num_chunks = num_input_lines / chunk_size +1
-    log.info "Splitting the reads file up into #{num_chunks} chunks.."
+    #chunk_size = options[:chunk_size]
+    #num_chunks = num_input_lines / chunk_size +1
+    log.info "Splitting the reads file up into chunks.."
     cmd = "pigz -cd #{local_input_name} |split -l #{options[:chunk_size] } --filter 'pigz > $FILE.gz' --additional-suffix .fq - chunks/chunk_"
     Bio::Commandeer.run cmd, :log => log
     log.info "Finished chunking"
