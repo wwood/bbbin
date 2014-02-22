@@ -28,7 +28,7 @@ o = OptionParser.new do |opts|
     options[:input_file] = arg
   end
   opts.on("-o", "--output FILE",String,"Output space separated kmer, fastq.gz file [required]") do |arg|
-    options[:output_file] = arg
+    options[:output_file] = File.absolute_path arg
   end
 
   opts.separator "\nOther optional parameters:\n\n"
@@ -102,16 +102,17 @@ Dir.mktmpdir do |tmpdir|
     # add all the join lines
     (2...kmer_count_cmds.length).each do |i|
       outputs = (2..(i+1)).collect{|j| "1.#{j}"}.join(',')
-      cmd += " | #{join_args} -o0,#{outputs},2.2 - #{kmer_count_cmds[i]}"
+      cmd += " | #{join_args} -o0,#{outputs},2.2 - #{kmer_count_cmds[i] }"
     end
     # add all the stuff afterwards
     # |awk "(\$`seq 2 20 |tr '\n' ':' |sed 's/.$//' |sed 's/:/+\$/g'`>3){print \$1,\$`seq 2 20 |tr '\n' ':' |sed 's/.$//' |sed 's/:/+\$/g'`}" |pigz >20110816_S1D.1.fq.kmer51.gz
-    sum = (2..(kmer_count_cmds.length+1)).collect{|j| "\$#{j}"}.join('+')
-    cmd += " | awk '(#{sum}>#{options[:threshold] }){print $1,#{sum}}' |pigz >#{options[:output_file] }"
+    sum = (2..(kmer_count_cmds.length+1)).collect{|j| "\\\$#{j}"}.join('+')
+    cmd += " | parallel --gnu --pipe --keep-order --block 100M awk \"'(#{sum}>#{options[:threshold] }){print \\$1,#{sum}}'\" |pigz >#{options[:output_file] }"
     Tempfile.open('bash_script') do |tf|
+    #File.open('bash_script','w') do |tf|
       tf.puts cmd
       tf.close
-      log.debug "Running script #{tf.path} with contents #{File.open(tf).read.inspect}"
+      log.info "Running script #{tf.path} with contents #{File.open(tf).read.inspect}"
 
       Bio::Commandeer.run "bash #{tf.path}", :log => log
     end
