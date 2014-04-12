@@ -87,22 +87,22 @@ TparvaMugugaAnnotatedProteins_PiroplasmaDB-1.1.fasta
 BLAST_RESULT_FILENAMES = {}
 %w(pberghei pvivax tgondii cmuris chominis cparvum bbovis tannulata tparva).each_with_index do |sp, i|
   pro = pros[i]
-  BLAST_RESULT_FILENAMES[sp] = "input_data/falciparum8.2versus#{pro}.blast.csv" 
+  BLAST_RESULT_FILENAMES[sp] = "input_data/falciparum8.2versus#{pro}.blast.csv"
 end
 
 
 
 if __FILE__ == $0
-  # Take a file that contains 1 PlasmoDB ID per line, and generate a matrix that 
+  # Take a file that contains 1 PlasmoDB ID per line, and generate a matrix that
   # corresponds to the inputs for use in the R package glmnet.
-  
+
   USAGE = 'plasmarithm_generate_inputs.rb <plasmodb_id_list_file>'
   unless ARGV.length == 1
     $stderr.puts USAGE
     exit 1
   end
-  
-  
+
+
   # Cache blast hits
   blast_hits = {} # Hash of target species => plasmodbid => true
   # e.g. psu|MAL13P1.200 Genbank|BBOV_III001790  41.41 99  57  1 14  111 5 103 3e-18 84.3
@@ -120,9 +120,9 @@ if __FILE__ == $0
   all_blast_target_species.each do |sp|
     $stderr.puts "Cached #{blast_hits[sp].length} straight out BLAST hits to #{sp}"
   end
-  
 
-  
+
+
   # Cache Sir2 KO percentiles
   sir2_percentiles = {} #hash of experiment name => plasmodb => percentile
   SIR2_KO_MICROARRAYS.each do |experiment_name, filename|
@@ -136,7 +136,7 @@ if __FILE__ == $0
     end
   end
   all_sir2_microarrays = sir2_percentiles.keys.sort
-  
+
   # Cache Invasion KO 2fold enrichment lists
   invasion_microarrays = {}
   INVASION_KO_MICROARRAYS.each do |experiment_name, filename|
@@ -148,7 +148,7 @@ if __FILE__ == $0
     end
   end
   all_invasion_microarrays = invasion_microarrays.keys.sort
-  
+
   # Cache the falciparum->toxo prediction
   falciparum_to_toxo_min_starts = {}
   File.open(FALCIPARUM_TO_TOXO_BLAST_CSV).each_line do |line|
@@ -158,9 +158,9 @@ if __FILE__ == $0
     start = splits[6].to_i
     if falciparum_to_toxo_min_starts[pl].nil? or falciparum_to_toxo_min_starts[pl]>start
       falciparum_to_toxo_min_starts[pl] = start
-    end 
+    end
   end
-  
+
   # First, cache the protein sequences
   falciparum = EuPathDBSpeciesData.new('Plasmodium falciparum','/home/ben/phd/data', '8.2')
   falciparum_protein_sequences = {}
@@ -170,7 +170,7 @@ if __FILE__ == $0
     falciparum_protein_sequences[gene_id] = prot.sequence
   end
   $stderr.puts "Cached #{falciparum_protein_sequences.length} protein sequences"
-  
+
   # Cache the PlasMit predictions
   falciparum_plasmit_predictions = {}
   File.open(PLASMIT_PREDICTIONS_FILE).each_line do |line|
@@ -189,7 +189,7 @@ if __FILE__ == $0
     falciparum_plasmit_predictions[gene_id] = classification
   end
   $stderr.puts "Cached #{falciparum_plasmit_predictions.length} PlasMit predictions"
-  
+
   # Cache Crypto orthologues file
   falciparum_orthologues = {} # hash of target non-falciparum species => plasmodb => output chunk
   file_counter = 0
@@ -208,7 +208,12 @@ if __FILE__ == $0
   end
   random_orthologue_entry = 'MAL13P1.129'
   $stderr.puts "Cached sets of orthologues for #{file_counter} P. falciparum sequences e.g. for tgondii, #{random_orthologue_entry} => #{falciparum_orthologues[:tgon][random_orthologue_entry].inspect}"
-  
+  random_orthologue_entry = 'PFF0605c'
+  $stderr.puts "Cached sets of orthologues for #{file_counter} P. falciparum sequences"
+  $stderr.puts "e.g. for tgondii, #{random_orthologue_entry} => #{falciparum_orthologues[:tgon][random_orthologue_entry].inspect}"
+  $stderr.puts "e.g. for tpar, #{random_orthologue_entry} => #{falciparum_orthologues[:tpar][random_orthologue_entry].inspect}"
+  $stderr.puts "e.g. for pviv, #{random_orthologue_entry} => #{falciparum_orthologues[:pviv][random_orthologue_entry].inspect}"
+
   # Cache chromosome numbers for each gene
   falciparum_chromosomes = {}
   metabolic_pathways = {} # hash of PlasmoDB ID => array of metabolic pathways
@@ -220,22 +225,22 @@ if __FILE__ == $0
     chromosome = info.get_info('Chromosome')
     raise Exception, "found PlasmoDB ID `#{plasmodb}' multiple times in the Gene information file" if falciparum_chromosomes[plasmodb]
     falciparum_chromosomes[plasmodb] = chromosome.to_i
-    
+
     # MPMP
     metabolic_pathways[plasmodb] = info.get_table('Metabolic Pathways').collect{|t| "MPMP_#{t['pathway_id']}"}
-    
+
     # Gene position (for in relation to the chromosome ends (min start of exon)
     gene_starts[plasmodb] = info.get_table('Gene Model').select{|entry|
       entry['Type']=='exon'
     }.collect{|entry|
       entry['Start']
     }.min.to_i
-    
+
     # Number of exons
     number_of_exons[plasmodb] = info.get_table('Gene Model').select{|entry|
       entry['Type']=='exon'
     }.length
-    
+
     # Interpro domains
     # interpro_domains[plasmodb] = info.get_table('InterPro Domains').collect{|entry|
       # entry['Interpro ID']
@@ -245,7 +250,7 @@ if __FILE__ == $0
   all_interpro_domains = interpro_domains.values.flatten.uniq.sort.reject{|i| i.to_s == ''}
   $stderr.puts "Cached #{falciparum_chromosomes.length} chromosome numbers for P. falciparum genes"
   $stderr.puts "Cached #{metabolic_pathways.length} proteins with MPMP"
-  
+
   # Cache Bozdech/DeRisi 2006 data
   in_header_section = true
   falciparum_lifecycle_data = {} # Hash of plasmodb => array, where the array hold info each probe corresponding to the gene
@@ -253,7 +258,7 @@ if __FILE__ == $0
     next if in_header_section and !line.match(/^Oligo/) #skip headers
     in_header_section = false
     next if line.match(/^Oligo/) #skip headers
-    
+
     splits = line.strip.split("\t")
     plasmodb = splits[1]
     info = {
@@ -271,7 +276,7 @@ if __FILE__ == $0
     end
   end
   $stderr.puts "Cached lifecycle microarray data for #{falciparum_lifecycle_data.length} genes"
-  
+
   # Cache proteomes
   proteome_entrants = {} # hash of proteome name to array of plasmodb IDs
   PROTEOMES.each do |name, filename|
@@ -282,16 +287,16 @@ if __FILE__ == $0
       proteome_entrants[name].push pl unless pl == ''
     end
   end
-  
+
   # Cache HP1 associations
   hp1_positive_genes = []
   File.open(HP1_POSITIVE_GENES_PATH).each_line do |line|
     hp1_positive_genes.push line.strip
   end
-  
+
   # Cache unconserved region genes
   unconserved_region_genes = File.open(FALCIPARUM_UNCONSERVED_REGION_PLASMODB_IDS).readlines.collect{|l| l.strip}
-  
+
   # Cache DCNLS output files
   dcnls4of5 = {}
   File.open(DCNLS_4_OF_5_PATH).readlines.each do |l|
@@ -308,7 +313,7 @@ if __FILE__ == $0
     dcnls5of6[plasmodb] = num
   end
   $stderr.puts "Cached #{dcnls5of6.length} dcNLS 5/6 orthologous groups. e.g. PF07_0079 => #{dcnls5of6['PF07_0079'].inspect}"
-  
+
   ##### Cache the length of the chromosomes
   chromosome_lengths = {} # hash of chromosome name to length
   # Copied this from the top of the GFF file manually.
@@ -336,17 +341,17 @@ END_OF_TOP
     chromosome_lengths[chromosome_number] = splits[3].to_i
     raise Exception, "Found unexpectedly low chromosome length for `#{chromosome_number}' from #{splits[1]}: #{chromosome_lengths[chromosome_number]}" if chromosome_lengths[chromosome_number] < 400
   end
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
+
+
+
+
   # For each PlasmoDB ID provided in the input file
   do_headers = true
   headers = []
@@ -359,7 +364,7 @@ END_OF_TOP
     if protein_sequence.nil?
       raise Exception, "Unable able to find protein sequence for PlasmoDB ID `#{plasmodb}'"
     end
-    
+
     # Ignore a few very whacky and likely incorrect genes
     if protein_sequence.match(/\*.+/)
       $stderr.puts "Ignoring #{plasmodb} since the sequence contained a stop codon not at the end of the protein"
@@ -370,13 +375,13 @@ END_OF_TOP
       $stderr.puts "Ignoring #{plasmodb} since it has no associated chromosome, Not nuclear encoded?"
       next
     end
-      
-    
+
+
     # This gets progressively filled with data about the current gene
     output_line = []
     headers.push 'plasmodb' if do_headers
     output_line.push plasmodb
-    
+
     #  SignalP Prediction(2): Localisation
     headers.push 'signalp' if do_headers
     signalp = nil
@@ -388,30 +393,30 @@ END_OF_TOP
     end
     output_line.push signalp.signal?
     signalp_cleaved = signalp.cleave(protein_sequence)
-    
+
     #  PlasmoAP Score(2): Localisation
     # We already know whether there is a SignalP prediction or not, so just go with that. Re-calculating takes time.
     headers.push 'plasmoap' if do_headers
     output_line.push Bio::PlasmoAP.new.calculate_score(protein_sequence, signalp.signal?, signalp_cleaved).points
-    
+
     #  ExportPred?(2): Localisation
     headers.push ['exportpredRLE', 'exportpredKLD'] if do_headers
     output_line.push Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_KLD => true).predicted_rle?
     output_line.push Bio::ExportPred::Wrapper.new.calculate(protein_sequence, :no_RLE => true).predicted_kld?
-    
+
     headers.push 'aliphatic_index' if do_headers
     output_line.push Bio::Sequence::AA.new(protein_sequence).aliphatic_index
-    
+
     headers.push 'gravy' if do_headers
     output_line.push Bio::Sequence::AA.new(protein_sequence).gravy
-    
-    #  WoLF_PSORT 
+
+    #  WoLF_PSORT
     # Encode each with the scores that they were given, accounting for dual locations
     wolfer = lambda do |lineage, all_locations, header_pre, sequence|
       all_locations.collect{|l| l.downcase}.sort.each{|l| headers.push "#{header_pre}wolf_#{lineage}_#{l}"} if do_headers
       result = Bio::PSORT::WoLF_PSORT::Wrapper.new.run(sequence, lineage)
-      
-      # Initialise 
+
+      # Initialise
       location_scores = {}
       all_locations.each {|l| location_scores[l] = 0.0}
       result.score_hash.each do |loc, score|
@@ -437,7 +442,7 @@ END_OF_TOP
 #    wolfer.call('animal',Bio::PSORT::WoLF_PSORT::ANIMAL_LOCATIONS, 'SPcleaved_', signalp_cleaved)
 #    wolfer.call('fungi',Bio::PSORT::WoLF_PSORT::FUNGI_LOCATIONS, 'SPcleaved_', signalp_cleaved)
 #    wolfer.call('plant',Bio::PSORT::WoLF_PSORT::PLANT_LOCATIONS, 'SPcleaved_', signalp_cleaved)
-    
+
     #  PlasMit
     headers.push 'plasmit' if do_headers
     if falciparum_plasmit_predictions[plasmodb].nil?
@@ -446,16 +451,16 @@ END_OF_TOP
     else
       output_line.push falciparum_plasmit_predictions[plasmodb]
     end
-    
-    
+
+
     #  Number Genes in Official OrthoMC Group for various species
-    all_orthologue_species.each do |sp|      
+    all_orthologue_species.each do |sp|
       if do_headers
         headers.push "#{sp}_orthologues" if do_headers
       end
       output_line.push !falciparum_orthologues[sp][plasmodb].nil?
     end
-    
+
     #  Chromosome(14): Localisation
     ## Encode as 14 dummy variables. Not doing this any more because we don't believe they are predictive and are just noise.
     #    if do_headers
@@ -464,7 +469,7 @@ END_OF_TOP
     #     (1..14).each do |chr|
     #      output_line.push falciparum_chromosomes[plasmodb].to_s == chr.to_s
     #    end
-    
+
     # Distance from chromosome ends
     min_distance = gene_starts[plasmodb]
     raise "No chromosome found for #{plasmodb}" if falciparum_chromosomes[plasmodb].nil?
@@ -476,7 +481,7 @@ END_OF_TOP
       headers.push "within#{kb}_kb_of_chromosome_end" if do_headers
       output_line.push min_distance < cutoff
     end
-    
+
     # number of exons
     headers.push 'num_exons' if do_headers
     exons = number_of_exons[plasmodb]
@@ -487,11 +492,11 @@ END_OF_TOP
     end
     headers.push '2exons' if do_headers
     output_line.push number_of_exons[plasmodb]==2
-    
+
     # isoelectric point
     headers.push 'isoelectric_point' if do_headers
     output_line.push Bio::Sequence::AA.new(protein_sequence).isoelectric_point
-    
+
     #  Bozdech/DeRisi 2006 Microarray data
     interests = [:timepoint22,
        :timepoint23,
@@ -538,8 +543,8 @@ END_OF_TOP
       output_line.push 2.3731476877 #average ampltude
       output_line.push 12 #approx half-way between 48 and max distance to 48
     end
-    
-    
+
+
     # proteomes
     proteome_entrants.sort{|a,b| a[0]<=> b[0]}.each do |arr|
       name = arr[0]
@@ -547,7 +552,7 @@ END_OF_TOP
       headers.push name if do_headers
       output_line.push plasmodb_ids.include?(plasmodb)
     end
-    
+
     # number of acidic / basic residue in the first 25 amino acids
     acidics = 0
     protein_sequence[0..24].each_char do |aa|
@@ -555,14 +560,14 @@ END_OF_TOP
     end
     headers.push 'acidics_in_first25' if do_headers
     output_line.push acidics
-    
+
     basics = 0
     protein_sequence[0..24].each_char do |aa|
       basics += 1 if %w(R K H).include?(aa)
     end
     headers.push 'basics_in_first25' if do_headers
     output_line.push basics
-    
+
     # Number of acidics/basics after the SP has been removed
     acidics = 0
     signalp_cleaved[0..24].each_char do |aa|
@@ -570,28 +575,28 @@ END_OF_TOP
     end
     headers.push 'acidics_in_first25_afterSPcleavage' if do_headers
     output_line.push acidics
-    
+
     basics = 0
     signalp_cleaved[0..24].each_char do |aa|
       basics += 1 if %w(R K H).include?(aa)
     end
     headers.push 'basics_in_first25_afterSPcleavage' if do_headers
     output_line.push basics
-    
+
     # number of transmembrane domains, after the Signal peptide has been removed
     tmhmm = Bio::TMHMM::TmHmmWrapper.new
     result = tmhmm.calculate(signalp.cleave(protein_sequence))
     headers.push 'TMDs' if do_headers
     output_line.push result.transmembrane_domains.length > 0
-    
+
     # Contained in HP1 associated genomic regions?
     headers.push 'hp1' if do_headers
     output_line.push hp1_positive_genes.include?(plasmodb)
-    
+
     # In un-aligned regions of the genome (sub-telomeric)?
     headers.push 'unconserved_genomic_region' if do_headers
     output_line.push unconserved_region_genes.include?(plasmodb)
-    
+
     # dcnls
     headers.push 'dcNLS_4of5' if do_headers
     if dcnls4of5[plasmodb] and [2,3,4].include?(dcnls4of5[plasmodb].length)
@@ -605,15 +610,15 @@ END_OF_TOP
     else
       output_line.push false
     end
-    
+
     # conserved 5' end when blasted against toxo orthologue?
     headers.push 'falciparum_toxo_blast_start' if do_headers
     if falciparum_to_toxo_min_starts[plasmodb]
       output_line.push falciparum_to_toxo_min_starts[plasmodb]
     else
-      output_line.push 500 
+      output_line.push 500
     end
-    
+
     # conserved between 20 and 100 amino acids after the start?
     headers.push 'falciparum_toxo_blast_start_20_to_100' if do_headers
     if falciparum_to_toxo_min_starts[plasmodb]
@@ -622,7 +627,7 @@ END_OF_TOP
     else
       output_line.push false
     end
-    
+
     # Sir2 arrays
     all_sir2_microarrays.each do |experiment_name|
       headers.push experiment_name if do_headers
@@ -632,47 +637,47 @@ END_OF_TOP
         output_line.push 50 #hopefully not very prevalent
       end
     end
-    
+
     # Invasion arrays
     all_invasion_microarrays.each do |experiment_name|
       headers.push experiment_name if do_headers
       output_line.push !(invasion_microarrays[experiment_name][plasmodb].nil?)
     end
-    
+
     # blast hits
     all_blast_target_species.each do |sp|
       headers.push "blast_#{sp}" if do_headers
       output_line.push blast_hits[sp].key?(plasmodb)
     end
-    
+
     # Protein length
     headers.push 'protein_length' if do_headers
     output_line.push protein_sequence.length
-    
+
     # Protein length after N/K removal
     headers.push 'protein_length_NK_removed' if do_headers
     output_line.push protein_sequence.gsub(/[NK]/,'').length
-    
+
     # Metabolic pathways
-    all_metabolic_pathways.each do |mpmp| 
+    all_metabolic_pathways.each do |mpmp|
       headers.push mpmp if do_headers
-      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp)) 
+      output_line.push (metabolic_pathways[plasmodb] and metabolic_pathways[plasmodb].include?(mpmp))
     end
-    
+
     # InterPro domains
     all_interpro_domains.each do |ipr|
       headers.push "InterPro_#{ipr}" if do_headers
       output_line.push interpro_domains[plasmodb].include?(ipr)
     end
-    
-    
-    
-    
+
+
+
+
     ##################################################################
     # Output headers
     puts headers.join(',') if do_headers
     do_headers = false
-    
+
     # Convert
     output_line.flatten!
     output2 = []
@@ -691,7 +696,7 @@ END_OF_TOP
       end
     end
     puts output2.join(",")
-    
+
     # progress
     progress.inc
   end

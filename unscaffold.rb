@@ -6,7 +6,7 @@ require 'bio'
 
 if __FILE__ == $0 #needs to be removed if this script is distributed as part of a rubygem
   SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
-  
+
   # Parse command line options into the options hash
   options = {
     :logger => 'stderr',
@@ -14,21 +14,21 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   o = OptionParser.new do |opts|
     opts.banner = "
       Usage: #{SCRIPT_NAME} fasta_file
-      
+
       Take a fasta file which has Ns in it (like after a scaffolded assembly), and split
       wherever there is Ns. Print out a fasta file of the splits, encoding the positions of the Ns into the name
-      
+
       e.g. if the input is
       >scaffold1
       AANNTGT
-      
+
       Then the output would be
       >scaffold1_1_2
       AA
       >scaffold1_5_8
       TGT
         \n\n"
-    
+
     # logger options
     opts.on("-q", "--quiet", "Run quietly, set logging to ERROR level [default INFO]") {Bio::Log::CLI.trace('error')}
     opts.on("--logger filename",String,"Log to file [default #{options[:logger]}]") { |name| options[:logger] = name}
@@ -41,15 +41,18 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   end
   # Setup logging. bio-logger defaults to STDERR not STDOUT, I disagree
   Bio::Log::CLI.logger(options[:logger]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME)
-  
-  
+
+
   Bio::FlatFile.foreach(ARGF) do |scaffold|
     raise if scaffold.seq[0] == 'N' #not implemented
-    
+
+    # Remove Ns at the end
+    scaffold.seq.gsub!(/N+$/,'')
+
     not_N_starts = [0]
     not_N_stops = []
     state = 'not_N'
-    
+
     # find positions of Ns
     # working in zero-based indices here
     position = 0
@@ -64,9 +67,11 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       position += 1
     end
     not_N_stops.push position-1 #finish it off
-    
-    raise "error check fail. I don't expect to end on an N, for instance" if not_N_starts.length != not_N_stops.length or state != 'not_N'
-    
+
+    if not_N_starts.length != not_N_stops.length or state != 'not_N'
+      raise "error check fail. I don't expect to end on an N, for instance"
+    end
+
     # print out the fragments
     scaffold_basename = scaffold.entry_id
     last_stop = 1
@@ -78,28 +83,27 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     end
   end
 end #end if running as a script
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
