@@ -202,7 +202,9 @@ if __FILE__ == $0
     all_orthologue_species.each_with_index do |sp, i|
       index = 2+i
       falciparum_orthologues[sp] ||= {}
-      falciparum_orthologues[sp][plasmodb] = splits[index]
+      entry = splits[index]
+      entry = nil if entry == ''
+      falciparum_orthologues[sp][plasmodb] = entry
     end
     file_counter += 1
   end
