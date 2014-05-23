@@ -22,6 +22,9 @@ Merge & collapse OTU tables\n\n"
   opts.on("--list-otu-tables ARG",Array, "Comma-separated list of OTU tables that are just lists of taxonomies without abundance, tab delimited") do |arg|
     options[:list_otu_tables] = arg
   end
+  opts.on("--count-list-otu-tables ARG",Array, "tab-separated list of OTU tables that are lists of count followed by taxonomy (taxonomy tab-separated too)") do |arg|
+    options[:count_list_otu_tables] = arg
+  end
   opts.on("--app-otu-tables ARG",Array, "Comma-separated list of APP style OTU tables with taxonomy and abundance, tab delimited") do |arg|
     options[:app_otu_tables] = arg
   end
@@ -46,24 +49,53 @@ end
 
 # Read in list OTU tables
 samples = []
-doing_eg = true
-options[:list_otu_tables].each do |otu_table|
-  log.info "Reading #{otu_table}"
-  sample = Sample.new
-  sample.name = File.basename otu_table
-  sample.otu_abundances = {}
-  Hopcsv.foreach(otu_table,"\t") do |row|
-    key = row[0...options[:summary_level]]
-    if doing_eg
-      log.debug "Example lineage: #{key}"
-      doing_eg = false
+unless options[:list_otu_tables].nil?
+  doing_eg = true
+  options[:list_otu_tables].each do |otu_table|
+    log.info "Reading #{otu_table}"
+    sample = Sample.new
+    sample.name = File.basename otu_table
+    sample.otu_abundances = {}
+    Hopcsv.foreach(otu_table,"\t") do |row|
+      key = row[0...options[:summary_level]]
+      if doing_eg
+        log.debug "Example lineage: #{key}"
+        doing_eg = false
+      end
+      sample.otu_abundances[key] ||= 0
+      sample.otu_abundances[key] += 1
     end
-    sample.otu_abundances[key] ||= 0
-    sample.otu_abundances[key] += 1
-  end
-  log.info "Read in #{sample.otu_abundances.length} lineages from #{otu_table}"
+    log.info "Read in #{sample.otu_abundances.length} lineages from #{otu_table}"
 
-  samples.push sample
+    samples.push sample
+  end
+end
+
+# Read in count list OTU tables
+unless options[:count_list_otu_tables].nil?
+  doing_eg = true
+  options[:count_list_otu_tables].each do |otu_table|
+    log.info "Reading #{otu_table}"
+    sample = Sample.new
+    sample.name = File.basename otu_table
+    sample.otu_abundances = {}
+    Hopcsv.foreach(otu_table,"\t") do |row|
+      raise "Unexpected row definition `#{row.inspect}'" unless row.length >= 2
+      count = row[0].to_i
+      key = row[1..options[:summary_level]]
+      if doing_eg
+        log.debug "Example lineage: #{key}"
+        log.debug "Example count: #{count}"
+        doing_eg = false
+      end
+      sample.otu_abundances[key] ||= 0
+      sample.otu_abundances[key] += count
+    end
+    log.info "Read in #{sample.otu_abundances.length} lineages from #{otu_table}"
+
+    samples.push sample
+  end
+
 end
 
 # Read in APP tables

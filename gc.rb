@@ -34,7 +34,7 @@ Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level])
 #TODO what are you looking at me for? This is your script. Do something.
 Bio::FlatFile.foreach(ARGF) do |seq|
   puts [
-    seq.definition,
+    seq.definition.split(/\s/)[0],
     seq.naseq.gc_content.to_f,
   ].join("\t")
 end
