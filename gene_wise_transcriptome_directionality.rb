@@ -4,6 +4,8 @@ require 'optparse'
 require 'bio-logger'
 require 'bio'
 require 'bio-commandeer'
+require 'pry'
+require 'set'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
@@ -18,8 +20,11 @@ o = OptionParser.new do |opts|
 
     Description of what this program does...\n\n"
 
-  opts.on("-e", "--eg ARG", "description [default: #{options[:eg]}]") do |arg|
-    options[:example] = arg
+  opts.on("--bam FILE", "path to mapping file [required]") do |arg|
+    options[:bam] = arg
+  end
+  opts.on("--gff FILE", "path to GFF3 file [required]") do |arg|
+    options[:gff] = arg
   end
 
   # logger options
@@ -28,26 +33,27 @@ o = OptionParser.new do |opts|
   opts.on("--logger filename",String,"Log to file [default #{options[:logger]}]") { |name| options[:logger] = name}
   opts.on("--trace options",String,"Set log level [default INFO]. e.g. '--trace debug' to set logging level to DEBUG"){|s| options[:log_level] = s}
 end; o.parse!
-if ARGV.length != 0
+if ARGV.length != 0 or options[:bam].nil? or options[:gff].nil?
   $stderr.puts o
   exit 1
 end
 # Setup logging
 Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME)
 
-gff_file = ARGV[0]
-bam_file = ARGV[1]
+gff_file = options[:gff]
+bam_file = options[:bam]
 
 
 parsed_records = []
-Bio::FlatFile.open(Bio::GFF::GFF3, ARGV[0]).entries[0].records.each do |record|
-  sams = Bio::Commandeer.run "samtools view #{bam_file.inspect} #{record.seqname}#{record.start}-#{record.end}"
+
+Bio::FlatFile.open(Bio::GFF::GFF3, gff_file).entries[0].records.each do |record|
+  sams = Bio::Commandeer.run "samtools view -X #{bam_file.inspect} #{record.seqname}:#{record.start}-#{record.end}"
 flags_hash = {}
-sams.each do |sam|
+sams.each_line do |sam|
   r = sam.split("\t")
   flags = r[1]
-  sams[flags] ||= 0
-  sams[flags] += 1
+  flags_hash[flags] ||= 0
+  flags_hash[flags] += 1
 end
 
 parsed_records.push [
@@ -70,18 +76,18 @@ flags = all_flags.to_a.sort
 
 # headers
 puts [
-  flags,
   'contig',
   'type',
   'start',
   'end',
-  'strand'
+  'strand',
+  flags,
   ].flatten.join("\t")
 
 parsed_records.each do |r|
   print r[1..-1].join("\t")
   print "\t"
-  all_flags.each do |f|
+  flags.each do |f|
     print "\t"
     if r[0].key?(f)
       print r[0][f]
