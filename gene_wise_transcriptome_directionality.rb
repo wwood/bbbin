@@ -49,11 +49,16 @@ parsed_records = []
 Bio::FlatFile.open(Bio::GFF::GFF3, gff_file).entries[0].records.each do |record|
   sams = Bio::Commandeer.run "samtools view -X #{bam_file.inspect} #{record.seqname}:#{record.start}-#{record.end}"
 flags_hash = {}
+seen_reads = Set.new
 sams.each_line do |sam|
   r = sam.split("\t")
+  read = r[0]
   flags = r[1]
+  next if seen_reads.include?(read) and %w(pPR1	pPR2	pPr1	pPr2).include?(flags) #don't count reads twice unless there is some strangeness with the mapping
+
   flags_hash[flags] ||= 0
   flags_hash[flags] += 1
+  seen_reads << read if %w(pPR1	pPR2	pPr1	pPr2).include?(flags)
 end
 
 parsed_records.push [
