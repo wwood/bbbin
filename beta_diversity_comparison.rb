@@ -20,10 +20,10 @@ o = OptionParser.new do |opts|
   opts.on("--ebd DISS_FILE", "Express Beta Diversity .diss file [required]") do |arg|
     options[:diss] = arg
   end
-  opts.on("--sample-ids1 IDs", Array, "First comma-separated list of sample IDs for comparison [required]" do |arg|
+  opts.on("--sample-ids1 IDs", Array, "First comma-separated list of sample IDs for comparison [required]") do |arg|
     options[:sample_ids1] = arg
   end
-  opts.on("--sample-ids2 IDs", Array, "Second comma-separated list of sample IDs for comparison [required]" do |arg|
+  opts.on("--sample-ids2 IDs", Array, "Second comma-separated list of sample IDs for comparison [required]") do |arg|
     options[:sample_ids2] = arg
   end
 
@@ -42,17 +42,18 @@ Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level])
 
 
 log.info "Reading in EBD distance file `#{options[:diss]}' .."
-ebd = EBD::DistanceMatrix.parse_from_file options[:diss]
+ebd = Bio::EBD::DistanceMatrix.parse_from_file options[:diss]
 log.info "Read in distances between #{ebd.sample_names.length} samples"
 
 options[:sample_ids1].each do |s1|
   raise "Sample #{s1} not found in EBD file" unless ebd.sample_names.include?(s1)
   options[:sample_ids2].each do |s2|
+    next if s1==s2
     raise "Sample #{s2} not found in EBD file" unless ebd.sample_names.include?(s2)
     puts [
       s1,
       s2,
-      ebd.distance s1, s2
+      ebd.distance(s1, s2)
     ].join("\t")
   end
 end
