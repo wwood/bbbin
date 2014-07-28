@@ -26,6 +26,10 @@ o = OptionParser.new do |opts|
   opts.on("--gff FILE", "path to GFF3 file [required]") do |arg|
     options[:gff] = arg
   end
+  opts.separator "\nOptions:\n\n"
+  opts.on("--max-genes NUM", Integer, "only parse this many genes [default: not used]") do |arg|
+    options[:max_genes] = arg
+  end
 
   # logger options
   opts.separator "\nVerbosity:\n\n"
@@ -47,28 +51,27 @@ bam_file = options[:bam]
 parsed_records = []
 
 Bio::FlatFile.open(Bio::GFF::GFF3, gff_file).entries[0].records.each do |record|
-  sams = Bio::Commandeer.run "samtools view -X #{bam_file.inspect} #{record.seqname}:#{record.start}-#{record.end}"
-flags_hash = {}
-seen_reads = Set.new
-sams.each_line do |sam|
-  r = sam.split("\t")
-  read = r[0]
-  flags = r[1]
-  next if seen_reads.include?(read) and %w(pPR1	pPR2	pPr1	pPr2).include?(flags) #don't count reads twice unless there is some strangeness with the mapping
+  sams = Bio::Commandeer.run "samtools view -X -f 66 -F3336 #{bam_file.inspect} #{record.seqname}:#{record.start}-#{record.end}"
+  flags_hash = {}
+  seen_reads = Set.new
+  sams.each_line do |sam|
+    r = sam.split("\t")
+    read = r[0]
+    flags = r[1]
 
-  flags_hash[flags] ||= 0
-  flags_hash[flags] += 1
-  seen_reads << read if %w(pPR1	pPR2	pPr1	pPr2).include?(flags)
-end
+    flags_hash[flags] ||= 0
+    flags_hash[flags] += 1
+  end
 
-parsed_records.push [
-  flags_hash,
-  record.seqname,
-  record.feature,
-  record.start,
-  record.end,
-record.strand,
+  parsed_records.push [
+    flags_hash,
+    record.seqname,
+    record.feature,
+    record.start,
+    record.end,
+    record.strand,
   ]
+  break if options[:max_genes] and parsed_records.length > options[:max_genes]
 end
 
 all_flags = Set.new
@@ -91,7 +94,6 @@ puts [
 
 parsed_records.each do |r|
   print r[1..-1].join("\t")
-  print "\t"
   flags.each do |f|
     print "\t"
     if r[0].key?(f)
