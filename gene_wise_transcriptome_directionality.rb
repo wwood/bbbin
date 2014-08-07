@@ -30,6 +30,12 @@ o = OptionParser.new do |opts|
   opts.on("--max-genes NUM", Integer, "only parse this many genes [default: not used]") do |arg|
     options[:max_genes] = arg
   end
+  opts.on("--require-start", "if set, require mapped reads to start within the gene boundary (not just overlap with the gene) in order for them to count towards the gene's total [default: don't require]") do
+    options[:require_start] = true
+  end
+  opts.on("--single", "assume reads mapped were single ended [default: assume paired-end]]") do
+    options[:single_ended] = true
+  end
 
   # logger options
   opts.separator "\nVerbosity:\n\n"
@@ -49,18 +55,23 @@ bam_file = options[:bam]
 
 
 parsed_records = []
-
+view_params = '-f 66 -F3336'
+view_params = '-F 3841' if options[:single_ended]
 Bio::FlatFile.open(Bio::GFF::GFF3, gff_file).entries[0].records.each do |record|
-  sams = Bio::Commandeer.run "samtools view -X -f 66 -F3336 #{bam_file.inspect} #{record.seqname}:#{record.start}-#{record.end}"
+  sams = Bio::Commandeer.run "samtools view -X #{view_params} #{bam_file.inspect} #{record.seqname}:#{record.start}-#{record.end}"
   flags_hash = {}
   seen_reads = Set.new
+  gene_start = record.start
   sams.each_line do |sam|
     r = sam.split("\t")
     read = r[0]
     flags = r[1]
+    start = r[3].to_i
 
-    flags_hash[flags] ||= 0
-    flags_hash[flags] += 1
+    if !options[:require_start] or start >= gene_start
+      flags_hash[flags] ||= 0
+      flags_hash[flags] += 1
+    end
   end
 
   parsed_records.push [
