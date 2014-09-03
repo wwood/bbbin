@@ -53,12 +53,36 @@ Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level])
 gff_file = options[:gff]
 bam_file = options[:bam]
 
+headers = [
+  'contig',
+  'type',
+  'start',
+  'end',
+  'strand',
+]
+fwd_flag = 'pPr1'
+rev_flag = 'pPR1'
+if options[:single_ended]
+  fwd_flag = ''
+  rev_flag = 'r'
+  headers.push 'num_forward'
+  headers.push 'num_reverse'
+else
+  headers.push 'num forward read 1'
+  headers.push 'num reverse read 1'
+end
+all_flags = [fwd_flag, rev_flag]
+headers.push 'FPKG'
+headers.push 'annotation'
+puts headers.flatten.join("\t")
 
-parsed_records = []
+num_genes_printed = 0
 view_params = '-f 66 -F3336'
 view_params = '-F 3841' if options[:single_ended]
+
 Bio::FlatFile.open(Bio::GFF::GFF3, gff_file).entries[0].records.each do |record|
-  sams = Bio::Commandeer.run "samtools view -X #{view_params} #{bam_file.inspect} #{record.seqname}:#{record.start}-#{record.end}"
+  position = "#{record.seqname}:#{record.start}-#{record.end}"
+  sams = Bio::Commandeer.run "samtools view -X #{view_params} #{bam_file.inspect} #{position.inspect}"
   flags_hash = {}
   seen_reads = Set.new
   gene_start = record.start
@@ -74,44 +98,28 @@ Bio::FlatFile.open(Bio::GFF::GFF3, gff_file).entries[0].records.each do |record|
     end
   end
 
-  parsed_records.push [
-    flags_hash,
+  products = record.attributes.select{|a| a[0] == 'product'}
+  product = 'unannotated'
+  if products.length == 1
+    product = products[0][1]
+  end
+
+  num_fwd = flags_hash[fwd_flag]; num_fwd ||= 0
+  num_rev = flags_hash[rev_flag]; num_rev ||= 0
+  fpkg = (num_fwd+num_rev).to_f/(record.end-record.start)*1000
+
+  puts [
     record.seqname,
     record.feature,
     record.start,
     record.end,
     record.strand,
-  ]
-  break if options[:max_genes] and parsed_records.length > options[:max_genes]
-end
+    num_fwd,
+    num_rev,
+    fpkg,
+    product,
+  ].join("\t")
 
-all_flags = Set.new
-parsed_records.each do |r|
-  r[0].keys.each do |f|
-    all_flags << f
-  end
-end
-flags = all_flags.to_a.sort
-
-# headers
-puts [
-  'contig',
-  'type',
-  'start',
-  'end',
-  'strand',
-  flags,
-  ].flatten.join("\t")
-
-parsed_records.each do |r|
-  print r[1..-1].join("\t")
-  flags.each do |f|
-    print "\t"
-    if r[0].key?(f)
-      print r[0][f]
-    else
-      print '0'
-    end
-  end
-  puts
+  num_genes_printed += 1
+  break if options[:max_genes] and num_genes_printed > options[:max_genes]
 end
