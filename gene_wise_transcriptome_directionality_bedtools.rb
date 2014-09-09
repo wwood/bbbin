@@ -11,6 +11,7 @@ SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
 # Parse command line options into the options hash
 options = {
+  :ignore_directions => false,
   :logger => 'stderr',
   :log_level => 'info',
 }
@@ -25,6 +26,10 @@ o = OptionParser.new do |opts|
   end
   opts.on("--gff FILE", "path to GFF3 file [required]") do |arg|
     options[:gff] = arg
+  end
+  opts.separator "\nOptional parameters:\n\n"
+  opts.on("--ignore-directions", "ignore directionality, give overall coverage [default: false i.e. differentiate between directions]") do |arg|
+    options[:ignore_directions] = true
   end
 
   # logger options
@@ -79,30 +84,42 @@ get_covs = lambda do |cov_lines|
 end
 
 
-
-cov_lines_fwd = Bio::Commandeer.run "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -d -s", :log => log
+cmd1 = "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -d"
+cmd1 += ' -s' unless options[:ignore_directions]
+cov_lines_fwd = Bio::Commandeer.run cmd1, :log => log
 #cov_lines_fwd = Bio::Commandeer.run "samtools view -b #{bam_file.inspect} 'gi|169887498|gb|CP000948.1|:1-2000' |bedtools coverage -abam - -b #{gff_file.inspect} -d -s", :log => log
-log.info "Parsing forward aligned reads"
+if options[:ignore_directions]
+  log.info "Parsing coverage profiles"
+else
+  log.info "Parsing forward aligned reads"
+end
 covs_fwd = get_covs.call(cov_lines_fwd)
 
-cov_lines_rev = Bio::Commandeer.run "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -d -S", :log => log
-#cov_lines_rev = Bio::Commandeer.run "samtools view -b #{bam_file.inspect} 'gi|169887498|gb|CP000948.1|:1-2000' |bedtools coverage -abam - -b #{gff_file.inspect} -d -S", :log => log
-log.info "Parsing reverse aligned reads"
-covs_rev = get_covs.call(cov_lines_rev)
+unless options[:ignore_directions]
+  cov_lines_rev = Bio::Commandeer.run "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -d -S", :log => log
+  #cov_lines_rev = Bio::Commandeer.run "samtools view -b #{bam_file.inspect} 'gi|169887498|gb|CP000948.1|:1-2000' |bedtools coverage -abam - -b #{gff_file.inspect} -d -S", :log => log
+  log.info "Parsing reverse aligned reads"
+  covs_rev = get_covs.call(cov_lines_rev)
+end
 
-puts [
+headers = [
   'contig',
   'type',
   'start',
   'end',
   'strand',
-  'forward_average_coverage',
-  'reverse_average_coverage',
-  'annotation',
-].join("\t")
+]
+if options[:ignore_directions]
+  headers.push 'average_coverage'
+else
+  headers.push 'forward_average_coverage'
+  headers.push 'reverse_average_coverage'
+end
+headers.push 'annotation'
+puts headers.join("\t")
 
 covs_fwd.each do |feature, cov_fwd|
-  cov_rev = covs_rev[feature]
+  cov_rev = covs_rev[feature] unless options[:ignore_directions]
   record = Bio::GFF::GFF3::Record.new(feature.join("\t"))
 
   products = record.attributes.select{|a| a[0] == 'product'}
@@ -111,14 +128,15 @@ covs_fwd.each do |feature, cov_fwd|
     product = products[0][1]
   end
 
-  puts [
+  to_print = [
     record.seqname,
     record.feature,
     record.start,
     record.end,
     record.strand,
     cov_fwd,
-    cov_rev,
-    product,
-  ].join("\t")
+  ]
+  to_print.push cov_rev unless options[:ignore_directions]
+  to_print.push product
+  puts to_print.join("\t")
 end
