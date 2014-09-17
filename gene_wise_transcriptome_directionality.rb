@@ -81,6 +81,8 @@ view_params = '-f 66 -F3336'
 view_params = '-F 3841' if options[:single_ended]
 
 Bio::FlatFile.open(Bio::GFF::GFF3, gff_file).entries[0].records.each do |record|
+  next if record.start.nil? #Ignore comment lines etc.
+
   position = "#{record.seqname}:#{record.start}-#{record.end}"
   sams = Bio::Commandeer.run "samtools view -X #{view_params} #{bam_file.inspect} #{position.inspect}"
   flags_hash = {}

@@ -4,7 +4,7 @@ require 'optparse'
 require 'bio-logger'
 require 'bio'
 require 'bio-commandeer'
-require 'pry'
+#require 'pry'
 require 'set'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
@@ -43,22 +43,25 @@ if ARGV.length != 0 or options[:bam].nil? or options[:gff].nil?
   exit 1
 end
 # Setup logging
-Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME)
+Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME); log.outputters[0].formatter = Log4r::PatternFormatter.new(:pattern => "%5l %c %d: %m", :date_pattern => '%d/%m %T')
 
 gff_file = options[:gff]
 bam_file = options[:bam]
 
 
-calculate_cov = lambda do |covs|
-  covs.reduce(:+).to_f/covs.length
+calculate_cov = lambda do |covs, num_covs|
+  covs.reduce(:+).to_f/num_covs
 end
 
 get_covs = lambda do |cov_lines|
   feature_to_covs = {}
   previous_feature = nil
   covs = []
+  num_covs = 0
   cov_lines.each_line do |line|
     splits = line.split("\t")
+    break if splits[0] == 'all'
+
     #gi|169887498|gb|CP000948.1|
     #Prodigal_v2.6.1
     #CDS
@@ -68,23 +71,28 @@ get_covs = lambda do |cov_lines|
     #-
     #0
     #ID=1_972;partial=00;start_type=ATG;rbs_motif=AGGA;rbs_spacer=5-10bp;gc_cont=0.568;conf=100.00;score=157.25;cscore=141.04;sscore=16.20;rscore=10.98;uscore=-0.89;tscore=3.93;
-    #1047994
-    #111
+    #70 #coverage
+    #2 #num reads with coverage 70
+    #96 #coverage
+    #0.0208333
     feat = splits[0..8]
     if feat != previous_feature
-      feature_to_covs[previous_feature] = calculate_cov.call(covs) unless previous_feature.nil?
+      feature_to_covs[previous_feature] = calculate_cov.call(covs, num_covs) unless previous_feature.nil?
       covs = []
+      num_covs = 0
     end
-    covs.push splits[10].to_i
+    num = splits[10].to_i
+    covs.push num*splits[9].to_i
+    num_covs += num
     previous_feature = feat
   end
-  feature_to_covs[previous_feature] = calculate_cov.call(covs)
+  feature_to_covs[previous_feature] = calculate_cov.call(covs, num_covs)
 
   feature_to_covs
 end
 
 
-cmd1 = "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -d"
+cmd1 = "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -hist"
 cmd1 += ' -s' unless options[:ignore_directions]
 cov_lines_fwd = Bio::Commandeer.run cmd1, :log => log
 #cov_lines_fwd = Bio::Commandeer.run "samtools view -b #{bam_file.inspect} 'gi|169887498|gb|CP000948.1|:1-2000' |bedtools coverage -abam - -b #{gff_file.inspect} -d -s", :log => log
@@ -96,7 +104,7 @@ end
 covs_fwd = get_covs.call(cov_lines_fwd)
 
 unless options[:ignore_directions]
-  cov_lines_rev = Bio::Commandeer.run "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -d -S", :log => log
+  cov_lines_rev = Bio::Commandeer.run "bedtools coverage -abam #{bam_file.inspect} -b #{gff_file.inspect} -hist -S", :log => log
   #cov_lines_rev = Bio::Commandeer.run "samtools view -b #{bam_file.inspect} 'gi|169887498|gb|CP000948.1|:1-2000' |bedtools coverage -abam - -b #{gff_file.inspect} -d -S", :log => log
   log.info "Parsing reverse aligned reads"
   covs_rev = get_covs.call(cov_lines_rev)
