@@ -78,7 +78,7 @@ end
 
 
 if options[:genbank]
-  process_genbank.call(File.open(options[:genbank]).read, 'abc')
+  process_genbank.call(File.open(options[:genbank]).read, 'abc', 'def')
 
 else
   CSV.foreach(ARGV[0],:col_sep => "\t") do |row|
