@@ -5,7 +5,7 @@ require 'bio-logger'
 require 'bio'
 require 'tempfile'
 require 'bio-stockholm'
-
+require 'pry'
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
 # Parse command line options into the options hash
@@ -42,21 +42,13 @@ Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level])
 
 
 Tempfile.open(['hmmalign_right_out','.sto']) do |out_stockholm|
-  cmd = "hmmalign --allcol --trim #{options[:hmm_file]} #{options[:fasta]} >#{out_stockholm.path}"
+  cmd = "hmmalign --trim #{options[:hmm_file]} #{options[:fasta]} >#{out_stockholm.path}"
   log.debug "Running: #{cmd}" if log.debug?
   print `#{cmd}`
 
   stocks = Bio::Stockholm::Reader.parse_from_file out_stockholm.path
-  x_indices = []
-  # #=GC RF            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..xxxxxxxxxxx....
-  i = 0
-  stocks[0].gc_features['RF'].each_char do |char|
-    x_indices.push i if char == 'x'
-    i += 1
-  end
   stocks[0].records.each do |identifier, record|
-    puts ">#{identifier} #{record.gs_features['DE']}"
-    x_indices.each{|i| print record.sequence[i]}
-    puts
+    puts ">#{identifier}"
+    puts record.sequence.gsub(/[\.a-z]/,'')
   end
 end

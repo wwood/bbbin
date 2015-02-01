@@ -52,7 +52,11 @@ Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level])
 
 Tempfile.open(['fwd_tmp','.fq.gz']) do |fwd_tmp|
   Tempfile.open(['rev_tmp','.fq.gz']) do |rev_tmp|
-    Bio::Commandeer.run "SeqPrep -f #{options[:fwd]} -r #{options[:rev]} -1 #{fwd_tmp.path} -2 #{rev_tmp.path} -A #{options[:fwd_adapter]} -B #{options[:rev_adapter]} -s #{options[:output_basename]}.seqprep_merged.fastq.gz", :log => true
-    Bio::Commandeer.run "nesoni clip --quality 20 --homopolymers yes --length 30 #{options[:output_basename]} pairs: #{fwd_tmp.path} #{rev_tmp.path}", :log => true
+    stdout, stderr, status = Bio::Commandeer.run "SeqPrep -f #{options[:fwd]} -r #{options[:rev]} -1 #{fwd_tmp.path} -2 #{rev_tmp.path} -A #{options[:fwd_adapter]} -B #{options[:rev_adapter]} -s #{options[:output_basename]}.seqprep_merged.fastq.gz", :log => true
+    puts stdout
+    puts stderr
+    stdout, stderr, status = Bio::Commandeer.run "nesoni clip --quality 20 --homopolymers yes --length 30 #{options[:output_basename]} pairs: #{fwd_tmp.path} #{rev_tmp.path}", :log => true
+    puts stdout
+    puts stderr
   end
 end
