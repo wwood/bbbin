@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-
+require "pry"
 require 'optparse'
 require 'bio-logger'
 
@@ -14,7 +14,7 @@ o = OptionParser.new do |opts|
   opts.banner = "
     Usage: #{SCRIPT_NAME} <arguments>
 
-Takes a multi-hmm file, and creates individual ones. Right now there is a bit of a hack so that the name is KOs from FOAM type HMM files.\n\n"
+Takes a multi-hmm file, and creates individual ones. Right now the name of the file is based on the ACC line.\n\n"
 
   # logger options
   opts.separator "\nVerbosity:\n\n"
@@ -22,7 +22,7 @@ Takes a multi-hmm file, and creates individual ones. Right now there is a bit of
   opts.on("--logger filename",String,"Log to file [default #{options[:logger]}]") { |name| options[:logger] = name}
   opts.on("--trace options",String,"Set log level [default INFO]. e.g. '--trace debug' to set logging level to DEBUG"){|s| options[:log_level] = s}
 end; o.parse!
-if ARGV.length != 0
+if ARGV.length != 0 and ARGV.length != 1
   $stderr.puts o
   exit 1
 end
@@ -68,7 +68,7 @@ ARGF.each_line do |line|
     previous_lines << line
     if line[0..2]=='ACC'
       state = :after_acc
-      if matches = line.match(/ACC\s+KO:(K\d+) /)
+      if matches = line.match(/ACC\s+(.+)/)
         output_file = File.open "#{matches[1] }.hmm", 'w'
         output_file.print previous_lines.join
         num_found += 1
@@ -82,6 +82,7 @@ ARGF.each_line do |line|
       output_file.close
       previous_lines = []
       output_file = nil
+      state = :before_acc
     end
   end
 end
