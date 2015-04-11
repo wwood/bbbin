@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if $(mv `ls -A` $1/)
+then
+ echo "moveback: successfully moved all files back"
+else
+ echo "moveback: ERROR: unable to move all files back"
+ exit 1
+fi
+

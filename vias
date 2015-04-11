@@ -1,0 +1,13 @@
+#!/bin/bash
+
+mkdir -p /tmp/uqbwoodc/vias
+TMPFILE='/tmp/uqbwoodc/vias/see' #`mktemp /tmp/uqbwoodc/vias/$1.XXXXXX`
+echo $TMPFILE
+if [ $? -ne 0 ]; then
+        echo "vias: $0: Can't create temp file, exiting..."
+        exit 1
+fi
+cat /dev/stdin >$TMPFILE
+mv -v $TMPFILE $1
+echo "vias: finished moving file back"
+
