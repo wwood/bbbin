@@ -8,14 +8,15 @@ __maintainer__ = "Ben Woodcroft"
 __email__ = "b.woodcroft near uq.edu.au"
 __status__ = "Development"
 
-import argparse
-import sys
-import os
 from Bio.Seq import Seq
+import IPython
+import argparse
 import itertools
 import logging
+import os
 import re
-import IPython
+import sys
+
 
 # Stolen from https://github.com/lh3/readfq/blob/master/readfq.py
 def readfq(fp): # this is a generator function
@@ -62,7 +63,6 @@ def find_best_window(protein_alignment, stretch_length):
             else:
                 aln.append(True)
         binary_alignment.append(aln)
-    print binary_alignment
     
     # Find the number of aligned bases at each position
     current_best_position = 0
@@ -119,11 +119,11 @@ def nucleotide_alignment(protein_sequence, nucleotides, start_position, stretch_
             codons.append(None)
         else:
             if len(nucleotides) < 3: raise Exception("Insufficient nucleotide length found")
-            codons.append(nucleotides[:2])
-            nucleotides = nucleotides[:2]
+            codons.append(nucleotides[:3])
+            if len(nucleotides)>2: nucleotides = nucleotides[3:]
     if len(nucleotides) > 0: raise Exception("Insufficient protein length found")
     
-    return ''.join(itertools.chain(codons[start_position:(start_position+stretch_length-1)]))
+    return ''.join(itertools.chain(codons[start_position:(start_position+stretch_length)]))
     
 class MetagenomeOtuFinder:
     def __init__(self):

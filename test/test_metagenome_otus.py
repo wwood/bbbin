@@ -43,8 +43,8 @@ class Tests(unittest.TestCase):
     def test_hello_world(self):
         aligned_sequences = []
         aligned_sequences.append(metagenome_otus.Sequence('1_1_1_1','KKK--'))
-        aligned_sequences.append(metagenome_otus.Sequence('1_1_1_2','--KFK'))
-        aligned_sequences.append(metagenome_otus.Sequence('1_1_1_3','--KK-'))
+        aligned_sequences.append(metagenome_otus.Sequence('2_1_1_2','--KFK'))
+        aligned_sequences.append(metagenome_otus.Sequence('3_1_1_3','--KK-'))
         nucs = {}
         nucs['1'] ='AAAAAAAAA'
         nucs['2'] ='AAATTTAAA'
@@ -53,7 +53,7 @@ class Tests(unittest.TestCase):
                                                                       nucs,
                                                                       2
                                                                       )
-        assert_equal(['AAATTT','AAAAAA'], seqs)
+        self.assertEqual(['AAATTT','AAAAAA'], seqs)
         
 if __name__ == "__main__":
     unittest.main()
