@@ -55,5 +55,25 @@ class Tests(unittest.TestCase):
                                                                       )
         self.assertEqual(['AAATTT','AAAAAA'], seqs)
         
+    def test_gap_in_middle(self):
+        aligned_sequences = []
+        aligned_sequences.append(metagenome_otus.Sequence('1_1_1_1','KKK--'))
+        aligned_sequences.append(metagenome_otus.Sequence('2_1_1_2','--KFK'))
+        aligned_sequences.append(metagenome_otus.Sequence('3_1_1_3','--K-K'))
+        nucs = {}
+        nucs['1'] ='AAAAAAAAA'
+        nucs['2'] ='AAATTTAAA'
+        nucs['3'] ='AAAAAA'
+        seqs = metagenome_otus.MetagenomeOtuFinder().find_windowed_sequences(aligned_sequences,
+                                                                      nucs,
+                                                                      3
+                                                                      )
+        self.assertEqual(['AAATTTAAA','AAA---AAA'], seqs)
+        
+class TestSequence(unittest.TestCase):
+    def test_orfm_nucleotides_revcom(self):
+        s = metagenome_otus.Sequence('seq_2_5_1', 'LE')
+        self.assertEqual('GGCATC', s.orfm_nucleotides('CGATGCC'))
+        
 if __name__ == "__main__":
     unittest.main()

@@ -101,7 +101,7 @@ class Sequence:
         logging.debug("Returning orfm nucleotides %s" % translated_seq)
         if int(m.groups(0)[1]) > 3:
             # revcomp type frame
-            return(str(Seq(self.seq).reverse_complement()))
+            return(str(Seq(translated_seq).reverse_complement()))
         else:
             return(translated_seq)
         
@@ -116,7 +116,7 @@ def nucleotide_alignment(protein_sequence, nucleotides, start_position, stretch_
     # else add None
     for aa in protein_sequence.seq:
         if aa=='-':
-            codons.append(None)
+            codons.append('---')
         else:
             if len(nucleotides) < 3: raise Exception("Insufficient nucleotide length found")
             codons.append(nucleotides[:3])
@@ -155,13 +155,17 @@ if __name__ == '__main__':
     
     parser.add_argument('--alignment', metavar='aligned_fasta', help="Protein sequences hmmaligned and converted to fasta format with seqmagick", required=True)
     parser.add_argument('--reads', metavar='raw_reads', help='Unaligned nucleotide sequences that were translated into the protein sequences', required=True)
-    parser.add_argument('--window_size', metavar='bp', help='Number of base pairs to use in continuous window', default=20)
+    parser.add_argument('--window_size', metavar='bp', help='Number of base pairs to use in continuous window', default=20, type=int)
+    parser.add_argument('--debug', help='output debug information', action="store_true")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.DEBUG)
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
     
     # Read in the fasta Alignment
     protein_alignment = []
-    for name, seq, _ in readfq(args.alignment):
+    for name, seq, _ in readfq(open(args.alignment)):
         protein_alignment.append(Sequence(name, seq))
     logging.info("Read in %i aligned protein sequences e.g. %s %s" % (len(protein_alignment),
                                                           protein_alignment[0].name,
@@ -170,7 +174,7 @@ if __name__ == '__main__':
     
     # Read in the original nucleotide sequences
     nucleotide_sequences = {}
-    for name, seq, _ in readfq(args.reads):
+    for name, seq, _ in readfq(open(args.reads)):
         eg_name = name
         nucleotide_sequences[name] = seq
     logging.info("Read in %i nucleotide sequences e.g. %s %s" % (len(nucleotide_sequences),
@@ -178,9 +182,10 @@ if __name__ == '__main__':
                                                           nucleotide_sequences[eg_name]
                                                           ))
     
-    aligned_sequences = find_windowed_sequences(protein_alignment,
+    aligned_sequences = MetagenomeOtuFinder().find_windowed_sequences(protein_alignment,
                                                 nucleotide_sequences,
                                                 args.window_size)
+    logging.info("Printing %i aligned sequences" % len(aligned_sequences))
     print '\n'.join(aligned_sequences)
     
 
