@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-__author__ = "Joel Boyd, Ben Woodcroft"
-__copyright__ = "Copyright 2014"
-__credits__ = ["Joel Boyd", "Ben Woodcroft"]
+__author__ = "Ben Woodcroft"
+__copyright__ = "Copyright 2015"
+__credits__ = ["Ben Woodcroft"]
 __license__ = "GPL3"
-__maintainer__ = "Joel Boyd, Ben Woodcroft"
-__email__ = "joel.boyd near uq.net.au, b.woodcroft near uq.edu.au"
+__maintainer__ = "Ben Woodcroft"
+__email__ = "b.woodcroft near uq.edu.au"
 __status__ = "Development"
 
 import argparse
@@ -13,6 +13,9 @@ import sys
 import os
 from Bio.Seq import Seq
 import itertools
+import logging
+import re
+import IPython
 
 # Stolen from https://github.com/lh3/readfq/blob/master/readfq.py
 def readfq(fp): # this is a generator function
@@ -59,16 +62,18 @@ def find_best_window(protein_alignment, stretch_length):
             else:
                 aln.append(True)
         binary_alignment.append(aln)
+    print binary_alignment
     
     # Find the number of aligned bases at each position
     current_best_position = 0
     current_max_num_aligned_bases = 0
-    for i in range(0, len(coverages)-stretch_length):
+    for i in range(0, len(binary_alignment[0])-stretch_length+1):
         num_bases_covered_here = 0
         end_index = i+stretch_length-1 
         for s in binary_alignment:
             if not s[i] or not s[end_index]: continue #ignore reads that don't cover the entirety
             num_bases_covered_here += sum(s[i:end_index])
+        logging.debug("Found %i aligned bases at position %i" % (num_bases_covered_here, i))
         if num_bases_covered_here > current_max_num_aligned_bases:
             current_best_position = i
             current_max_num_aligned_bases = num_bases_covered_here
@@ -90,10 +95,11 @@ class Sequence:
         return re.sub('_\d+_\d+_\d+$', '', self.name)
     
     def orfm_nucleotides(self, original_nucleotide_sequence):
-        m = re.match('_(\d+)_(\d+)_\d+$', '', self.name)
-        start = int(m[1])-1
-        translated_seq = self.seq[start:(start+3*self.unaligned_length()-1)]
-        if int(m[2]) > 3:
+        m = re.search('_(\d+)_(\d+)_\d+$', self.name)
+        start = int(m.groups(0)[0])-1
+        translated_seq = original_nucleotide_sequence[start:(start+3*self.unaligned_length())]
+        logging.debug("Returning orfm nucleotides %s" % translated_seq)
+        if int(m.groups(0)[1]) > 3:
             # revcomp type frame
             return(str(Seq(self.seq).reverse_complement()))
         else:
@@ -108,24 +114,48 @@ def nucleotide_alignment(protein_sequence, nucleotides, start_position, stretch_
     # If non-dash character, take 3 nucleotides off the nucleotide sequence and
     # add that as the codon
     # else add None
-    for aa in protein_sequence:
+    for aa in protein_sequence.seq:
         if aa=='-':
             codons.append(None)
         else:
             if len(nucleotides) < 3: raise Exception("Insufficient nucleotide length found")
             codons.append(nucleotides[:2])
-            nucleotides = nucleotids[:2]
+            nucleotides = nucleotides[:2]
     if len(nucleotides) > 0: raise Exception("Insufficient protein length found")
     
     return ''.join(itertools.chain(codons[start_position:(start_position+stretch_length-1)]))
     
+class MetagenomeOtuFinder:
+    def __init__(self):
+        pass
     
+    def find_windowed_sequences(self,
+                                aligned_sequences,
+                                nucleotide_sequences,
+                                stretch_length
+                                ):
+        # Find the stretch of the protein that has the most number of aligned bases in a 20 position stretch,
+        # excluding sequences that do not aligned to the first and last bases
+        best_position = find_best_window(aligned_sequences, stretch_length)
+        logging.info("Found best section of the alignment starting from %i" % (best_position+1))
+        
+        # For each read aligned to that region i.e. has the first and last bases,
+        # print out the corresponding nucleotide sequence
+        windowed_sequences = []
+        for s in aligned_sequences:
+            if s.seq[best_position] != '-' and s.seq[best_position+stretch_length-1] != '-':
+                nuc = nucleotide_sequences[s.un_orfm_name()]
+                windowed_sequences.append(
+                                          nucleotide_alignment(s, s.orfm_nucleotides(nuc), best_position, stretch_length)
+                                          )
+        return windowed_sequences
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=False)
     
     parser.add_argument('--alignment', metavar='aligned_fasta', help="Protein sequences hmmaligned and converted to fasta format with seqmagick", required=True)
     parser.add_argument('--reads', metavar='raw_reads', help='Unaligned nucleotide sequences that were translated into the protein sequences', required=True)
+    parser.add_argument('--window_size', metavar='bp', help='Number of base pairs to use in continuous window', default=20)
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG)
     
@@ -148,18 +178,12 @@ if __name__ == '__main__':
                                                           nucleotide_sequences[eg_name]
                                                           ))
     
-    # Find the stretch of the protein that has the most number of aligned bases in a 20 position stretch,
-    # excluding sequences that do not aligned to the first and last bases
-    stretch_length = 20
-    best_position = find_best_window(protein_alignment, stretch_length)
-    logging.info("Found best section of the alignment starting from %i" % best_position+1)
+    aligned_sequences = find_windowed_sequences(protein_alignment,
+                                                nucleotide_sequences,
+                                                args.window_size)
+    print '\n'.join(aligned_sequences)
     
-    # For each read aligned to that region i.e. has the first and last bases,
-    # print out the corresponding nucleotide sequence
-    for s in protein_alignment:
-        if s[best_position] != '-' and s[best_position+stretch_length-1] != '-':
-            nuc = nucleotide_sequneces[s.un_orfm_name]
-            print nucleotide_alignment(s, s.orfm_nucleotides(nuc), best_position, stretch_length)
+
     
     
     

@@ -22,7 +22,7 @@ Takes a multi-hmm FOAM file, and outputs a list of KEGG KO (e.g. KO:K10759) to H
   opts.on("--logger filename",String,"Log to file [default #{options[:logger]}]") { |name| options[:logger] = name}
   opts.on("--trace options",String,"Set log level [default INFO]. e.g. '--trace debug' to set logging level to DEBUG"){|s| options[:log_level] = s}
 end; o.parse!
-if ARGV.length != 0
+if ARGV.length > 1
   $stderr.puts o
   exit 1
 end
@@ -45,16 +45,18 @@ last_name = nil
 num_pairs = 0
 ARGF.each_line do |line|
   if line[0..2] == 'ACC'
-    last_name = line.split(/ +/)[1]
+    last_name = line.split(/ +/)[1].strip
   elsif line[0..3] == 'DESC'
     line.strip.split(/ +/).each_with_index do |e, i|
       next if i==0
       if e.match(/^KO:/)
-        puts [
-          last_name,
-          e
-          ].join("\t")
-        num_pairs += 1
+        e.split(',').each do |e2|
+          puts [
+            last_name,
+            e2
+            ].join("\t")
+          num_pairs += 1
+        end
       end
     end
   end
