@@ -92,9 +92,10 @@ class MetagenomeOtuFinder:
         # excluding sequences that do not aligned to the first and last bases
         if best_position:
             start_position = self._upper_case_position_to_alignment_position(best_position, ignored_columns)
+            logging.info("Using pre-defined best section of the alignment starting from %i" % (start_position+1))
         else:
             start_position = self._find_best_window(aligned_sequences, stretch_length, ignored_columns)
-        logging.info("Found best section of the alignment starting from %i" % (start_position+1))
+            logging.info("Found best section of the alignment starting from %i" % (start_position+1))
         
         chosen_positions = self._best_position_to_chosen_positions(start_position, stretch_length, ignored_columns)
         logging.debug("Found chosen positions %s", chosen_positions)
@@ -203,7 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('--alignment', metavar='aligned_fasta', help="Protein sequences hmmaligned and converted to fasta format with seqmagick", required=True)
     parser.add_argument('--reads', metavar='raw_reads', help='Unaligned nucleotide sequences that were translated into the protein sequences', required=True)
     parser.add_argument('--window_size', metavar='bp', help='Number of base pairs to use in continuous window', default=20, type=int)
-    parser.add_argument('--start_position', metavar='bp', help='Start the window at the position in the alignment (1-based index) [default: pick one automatically]')
+    parser.add_argument('--start_position', metavar='bp', help='Start the window at the position in the alignment (1-based index) [default: pick one automatically]', type=int)
     parser.add_argument('--debug', help='output debug information', action="store_true")
     args = parser.parse_args()
     if args.debug:
@@ -235,7 +236,8 @@ if __name__ == '__main__':
         best_position = None
     aligned_sequences = MetagenomeOtuFinder().find_windowed_sequences(protein_alignment,
                                                 nucleotide_sequences,
-                                                args.window_size)
+                                                args.window_size,
+                                                args.start_position)
     logging.info("Printing %i aligned sequences" % len(aligned_sequences))
     print '\n'.join(aligned_sequences)
     
