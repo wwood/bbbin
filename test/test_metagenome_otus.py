@@ -70,6 +70,58 @@ class Tests(unittest.TestCase):
                                                                       )
         self.assertEqual(['AAATTTAAA','AAA---AAA'], seqs)
         
+    def test_specified_best_position(self):
+        aligned_sequences = []
+        aligned_sequences.append(metagenome_otus.Sequence('1_1_1_1','KKK--'))
+        aligned_sequences.append(metagenome_otus.Sequence('2_1_1_2','--KFK'))
+        aligned_sequences.append(metagenome_otus.Sequence('3_1_1_3','--K-K'))
+        nucs = {}
+        nucs['1'] ='AAAAAAAAA'
+        nucs['2'] ='AAATTTAAA'
+        nucs['3'] ='AAAAAA'
+        seqs = metagenome_otus.MetagenomeOtuFinder().find_windowed_sequences(aligned_sequences,
+                                                                      nucs,
+                                                                      2,
+                                                                      1
+                                                                      )
+        self.assertEqual(['AAAAAA'], seqs)
+        
+    def test_lower_case_insert(self):
+        aligned_sequences = []
+        aligned_sequences.append(metagenome_otus.Sequence('1_1_1_1','KKK---'))
+        aligned_sequences.append(metagenome_otus.Sequence('2_1_1_2','--KFhK'))
+        aligned_sequences.append(metagenome_otus.Sequence('3_1_1_3','--K--K'))
+        nucs = {}
+        nucs['1'] ='AAAAAAAAA'
+        nucs['2'] ='AAATTTCACAAA'
+        nucs['3'] ='AAAAAA'
+        seqs = metagenome_otus.MetagenomeOtuFinder().find_windowed_sequences(aligned_sequences,
+                                                                      nucs,
+                                                                      3
+                                                                      )
+        self.assertEqual(['AAATTTAAA','AAA---AAA'], seqs)
+        
+    def test_lower_case_before_start_insert(self):
+        aligned_sequences = []
+        aligned_sequences.append(metagenome_otus.Sequence('1_1_1_1','KhKK---'))
+        aligned_sequences.append(metagenome_otus.Sequence('2_1_1_2','-h-KFhK'))
+        aligned_sequences.append(metagenome_otus.Sequence('3_1_1_3','---K--K'))
+        nucs = {}
+        nucs['1'] ='AAACACAAAAAA'
+        nucs['2'] ='CACAAATTTCACAAA'
+        nucs['3'] ='AAAAAA'
+        seqs = metagenome_otus.MetagenomeOtuFinder().find_windowed_sequences(aligned_sequences,
+                                                                      nucs,
+                                                                      3
+                                                                      )
+        self.assertEqual(['AAATTTAAA','AAA---AAA'], seqs)
+        seqs = metagenome_otus.MetagenomeOtuFinder().find_windowed_sequences(aligned_sequences,
+                                                                      nucs,
+                                                                      3,
+                                                                      2
+                                                                      )
+        self.assertEqual(['AAATTTAAA','AAA---AAA'], seqs)
+        
 class TestSequence(unittest.TestCase):
     def test_orfm_nucleotides_revcom(self):
         s = metagenome_otus.Sequence('seq_2_5_1', 'LE')
