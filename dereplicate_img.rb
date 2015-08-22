@@ -3,6 +3,7 @@
 require 'optparse'
 require 'bio-logger'
 require 'csv'
+require 'set'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
@@ -22,6 +23,9 @@ o = OptionParser.new do |opts|
   end
   opts.on("--type-strains TSV", "type strain list, tab separated ID then taxonomy [required]") do |arg|
     options[:type_strains] = arg
+  end
+  opts.on("--available-ids TXT", "list of genomes that actually have data [required]") do |arg|
+    options[:available_ids] = arg
   end
 
   # logger options
@@ -54,17 +58,32 @@ CSV.foreach(options[:taxonomy], :col_sep => "\t") do |row|
   taxonomy_hash[row[1]].push row[0]
 end
 log.info "Read in #{taxonomy_hash.length} different species in total"
+available_ids = Set.new(File.open(options[:available_ids]).readlines.collect{|l| l.strip})
+log.info "Read in #{available_ids.length} available genome IDs"
 
 # for each tax
 taxonomy_hash.each do |tax, img_ids|
   # accept if it is s__
   if tax.match(/s__$/)
-    img_ids.each do |img|
-      puts [img, tax].join("\t")
+    if available_ids.include?(img)
+      img_ids.each do |img|
+        puts [img, tax].join("\t")
+      end
     end
-  elsif type_strain_hash.key?(tax)# choose a random type strain if there is one
-    puts [type_strain_hash[tax].sample, tax].join("\t")
-  else# else choose a random one from the list
-    puts [img_ids.sample, tax].join("\t")
+  else
+    to_print = nil
+    if type_strain_hash.key?(tax)# choose a random type strain if there is one
+      ok_type_strains = type_strain_hash[tax].select{|img| available_ids.include?(img)}
+      unless ok_type_strains.empty?
+        to_print = ok_type_strains.sample
+      end
+    end
+    if to_print.nil?
+      ok_ids = img_ids.select{|img| available_ids.include?(img)}
+      to_print = ok_ids.sample
+    end
+    unless to_print.nil?
+      puts [to_print, tax].join("\t")
+    end
   end
 end
