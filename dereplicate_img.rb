@@ -2,6 +2,7 @@
 
 require 'optparse'
 require 'bio-logger'
+require 'csv'
 
 SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
@@ -16,10 +17,10 @@ o = OptionParser.new do |opts|
 
     Description of what this program does...\n\n"
 
-  opts.on("--taxonomy", "IMG taxonomy, tab separated ID then taxonomy [required]") do |arg|
+  opts.on("--taxonomy TSV", "IMG taxonomy, tab separated ID then taxonomy [required]") do |arg|
     options[:taxonomy] = arg
   end
-  opts.on("--type-strains", "type strain list, tab separated ID then taxonomy [required]") do |arg|
+  opts.on("--type-strains TSV", "type strain list, tab separated ID then taxonomy [required]") do |arg|
     options[:type_strains] = arg
   end
 
@@ -42,7 +43,7 @@ type_strain_hash = {}
 CSV.foreach(options[:type_strains], :col_sep => "\t") do |row|
   raise unless row.length == 2
   type_strain_hash[row[1]] ||= []
-  type_strain_hash[row[1]].push row[2]
+  type_strain_hash[row[1]].push row[0]
 end
 log.info "Read in #{type_strain_hash.length} different species of type strains"
 # read taxonomy, hash by taxonomy
@@ -50,14 +51,14 @@ taxonomy_hash = {}
 CSV.foreach(options[:taxonomy], :col_sep => "\t") do |row|
   raise unless row.length == 2
   taxonomy_hash[row[1]] ||= []
-  taxonomy_hash[row[1]].push row[2]
+  taxonomy_hash[row[1]].push row[0]
 end
 log.info "Read in #{taxonomy_hash.length} different species in total"
 
 # for each tax
 taxonomy_hash.each do |tax, img_ids|
   # accept if it is s__
-  if img_ids.match(/s__$/)
+  if tax.match(/s__$/)
     img_ids.each do |img|
       puts [img, tax].join("\t")
     end
