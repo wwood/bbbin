@@ -8,6 +8,7 @@ SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 
 # Parse command line options into the options hash
 options = {
+  :whole_fasta => false,
   :logger => 'stderr',
   :log_level => 'info',
 }
@@ -16,6 +17,11 @@ o = OptionParser.new do |opts|
     Usage: #{SCRIPT_NAME} <fasta_file>
 
 Calculate the GC content of each contig in the fasta file\n\n"
+
+
+  opts.on("-w", "--whole", "Return the GC of the entire input file [default: report per-sequence]") {
+    options[:whole_fasta] = true
+    }
 
   # logger options
   opts.separator "\nVerbosity:\n\n"
@@ -31,10 +37,18 @@ end
 Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME); log.outputters[0].formatter = Log4r::PatternFormatter.new(:pattern => "%5l %c %d: %m", :date_pattern => '%d/%m %T')
 
 
-#TODO what are you looking at me for? This is your script. Do something.
+total_seq = ''
 Bio::FlatFile.foreach(ARGF) do |seq|
-  puts [
-    seq.definition.split(/\s/)[0],
-    seq.naseq.gc_content.to_f,
-  ].join("\t")
+  if options[:whole_fasta]
+    total_seq += seq.naseq.to_s
+  else
+    puts [
+      seq.definition.split(/\s/)[0],
+      seq.naseq.gc_content.to_f,
+    ].join("\t")
+  end
+end
+
+if options[:whole_fasta]
+  puts Bio::Sequence::NA.new(total_seq).gc_content.to_f
 end
