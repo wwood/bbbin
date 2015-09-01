@@ -65,8 +65,8 @@ log.info "Read in #{available_ids.length} available genome IDs"
 taxonomy_hash.each do |tax, img_ids|
   # accept if it is s__
   if tax.match(/s__$/)
-    if available_ids.include?(img)
-      img_ids.each do |img|
+    img_ids.each do |img|
+      if available_ids.include?(img)
         puts [img, tax].join("\t")
       end
     end
