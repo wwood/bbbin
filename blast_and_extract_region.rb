@@ -52,7 +52,12 @@ else
   #Pfer_Contig00027_12027_6_213	Pfer_Contig00027	100.00	241	0	0	1	241	12749	12027	2e-156	  480
   start = splits[8].to_i
   stop = splits[9].to_i
-  name = splits[0]
+  if start > stop
+    s = stop
+    stop = start
+    start = s
+  end
+  name = splits[1]
 
   names_to_sequences = {}
   Bio::FlatFile.open(File.open(options[:nucleotide_file])).entries.each do |s|
@@ -66,6 +71,6 @@ else
   raise if seq.nil?
   stop = seq.length if stop > seq.length
 
-  puts ">#{name}"
+  puts ">#{name}_#{start}:#{stop}"
   puts seq[(start-1)..stop]
 end
