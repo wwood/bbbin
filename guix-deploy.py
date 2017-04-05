@@ -131,7 +131,7 @@ if __name__ == '__main__':
         # Build the packages. Do this separately so if the build fails none of
         # the packages get installed into the profile directory.
         logging.info("Building packages before installing into the profile")
-        cmd = "%s build %s" % (guix_exe, args.guix_package_name)
+        cmd = "%s build %s" % (guix_exe, guix_package_name)
         logging.info("Running cmd: %s" % cmd)
         subprocess.check_call(cmd, shell=True)
 
