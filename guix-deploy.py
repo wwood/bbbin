@@ -158,4 +158,13 @@ if __name__ == '__main__':
         logging.info("Running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
 
+        # It is not entirely clear why this is necessary, why the permissions
+        # get changed. But no time to figure it out.
+        cmd = "ssh %s chmod +x '/RDS/Q0227/profiles/base/*/*/bin/.*'" % euramoo
+        logging.info("Running %s" % cmd)
+        subprocess.check_call(cmd, shell=True)
+        cmd = "ssh %s chmod +x '/RDS/Q0227/profiles/base/*/*/bin/*'" % euramoo
+        logging.info("Running %s" % cmd)
+        subprocess.check_call(cmd, shell=True)
+
     logging.info("Finished, it seems")
