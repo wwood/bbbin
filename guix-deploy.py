@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     os.chdir(guix_git)
     logging.info("Running make on the guix directory ..")
-    subprocess.check_call("guix environment guix -- make", shell=True)
+    #subprocess.check_call("guix environment guix -- make", shell=True)
 
 
     if not args.rsync_only:
@@ -160,10 +160,7 @@ if __name__ == '__main__':
 
         # It is not entirely clear why this is necessary, why the permissions
         # get changed. But no time to figure it out.
-        cmd = "ssh %s chmod +x '/RDS/Q0227/profiles/base/*/*/bin/.*'" % euramoo
-        logging.info("Running %s" % cmd)
-        subprocess.check_call(cmd, shell=True)
-        cmd = "ssh %s chmod +x '/RDS/Q0227/profiles/base/*/*/bin/*'" % euramoo
+        cmd = "ssh %s chmod +x '/RDS/Q0227/store/*/bin/* /RDS/Q0227/store/*/bin/.*'" % euramoo
         logging.info("Running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
 

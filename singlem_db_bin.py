@@ -1,0 +1,182 @@
+#!/usr/bin/env python
+
+__author__ = "Ben Woodcroft"
+__copyright__ = "Copyright 2017"
+__credits__ = ["Ben Woodcroft"]
+__license__ = "GPL3+"
+__maintainer__ = "Ben Woodcroft"
+__email__ = "b.woodcroft near uq.edu.au"
+__status__ = "Development"
+
+import argparse
+import logging
+import os
+import sys
+import csv
+import tempfile
+import extern
+
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+
+import singlem.pipe as pipe
+from singlem.querier import Querier
+from singlem.sequence_classes import SeqReader
+from singlem.archive_otu_table import ArchiveOtuTable
+
+def read_checkm_stats(io, min_completeness, max_contamination):
+    # e.g.
+    # Bin Id	Marker lineage	# genomes	# markers	# marker sets	0	1	2	3	4	5+	Completeness	Contamination	Strain heterogeneity
+    # bin.1	p__Euryarchaeota (UID49)	95	228	153	123	105	0	0	0	0	44.76	0.00	0.00
+    next_is_header = True
+    ok_bins = set()
+    completeness_index = 11
+    contamination_index = 12
+    for line in csv.reader(io, delimiter="\t"):
+        comp = line[completeness_index]
+        cont = line[contamination_index]
+        if next_is_header:
+            if comp != 'Completeness' or cont != 'Contamination':
+                raise Exception("Unexpected checkm csv format detected. "
+                                "This file needs to be generated with CheckM's '--tab_table' flag")
+            next_is_header = False
+        else:
+            completeness = float(comp)
+            contamination = float(cont)
+            if completeness > 100 or completeness < 0 or contamination < 0:
+                raise Exception("Unexpected entry detected in CheckM line %s" % line)
+            if completeness > min_completeness and contamination < max_contamination:
+                logging.debug("Bin %s did pass quality thresholds" % line[0])
+                ok_bins.add(line[0])
+            else:
+                logging.debug("Bin %s did not pass quality thresholds" % line[0])
+    return ok_bins
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--debug', help='output debug information', action="store_true")
+    #parser.add_argument('--version', help='output version information and quit',  action='version', version=singlem.__version__)
+    parser.add_argument('--quiet', help='only output errors', action="store_true")
+
+    parser.add_argument('--contigs', required=True)
+    parser.add_argument('--checkm_csv', required=True)
+    parser.add_argument('--bin_files', nargs='+', required=True)
+    parser.add_argument('--db', required=True)
+
+    parser.add_argument('--threads', type=int)
+
+    parser.add_argument('--singlem_on_contigs_archive_otu_table')
+
+    args = parser.parse_args()
+
+    if args.debug:
+        loglevel = logging.DEBUG
+    elif args.quiet:
+        loglevel = logging.ERROR
+    else:
+        loglevel = logging.INFO
+    logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+
+    # Read checkm CSV file
+    with open(args.checkm_csv) as f:
+        quality_bins = read_checkm_stats(f, 80, 5)
+    logging.info("Found %i bin(s) of sufficient quality according to CheckM statistics" % len(quality_bins))
+
+    # Read in contig lengths - no interested in contigs < 2.5kb a la metabat
+    contig_to_seq = {}
+    with open(args.contigs) as io:
+        for contig_name, seq, huh in SeqReader().readfq(io):
+            if contig_name in contig_to_seq:
+                raise Exception("Duplicate contig name in FASTA file detected: %s" % contig_name)
+            contig_to_seq[contig_name] = seq
+    logging.info("Read in contig lengths for %i contigs" % len(contig_to_seq))
+
+    # Read bin files, recording which contigs made it into each bin
+    bin_names = set()
+    contig_to_bin = {}
+    for bin_file in args.bin_files:
+        bin_name = os.path.basename(bin_file)
+        if bin_name in bin_names:
+            raise Exception("Duplicate bin names detected: %s" % bin_name)
+        for contig_name, _, _ in SeqReader().readfq(bin_file):
+            contig_to_bin[contig_name] = bin_name
+    logging.info("Read in binning information for %i contigs" % len(contig_to_bin))
+
+    # Run SingleM on contigs
+
+    if args.singlem_on_contigs_archive_otu_table:
+        with open(args.singlem_on_contigs_archive_otu_table) as a:
+            otus = list(ArchiveOtuTable.read(a))
+    else:
+        with tempfile.NamedTemporaryFile(prefix="singlem-binning") as tf:
+            # TODO: Run this internally rather than through extern. Need to have better default
+            # options in Pipe.run
+            logging.info("Running singlem pipe on the contigs..")
+            json_file = 'singlem_on_contigs.json'#tf.name,
+            extern.run("singlem pipe --sequences '%s' --archive_otu_table '%s' --threads %i "
+                       "--output_extras --no_assign_taxonomy" %(
+                           args.contigs, json_file, args.threads))
+            with open(json_file) as a:
+                otus = list(ArchiveOtuTable.read(a))
+    logging.info("Finished running singlem pipe, found %i OTUs amongst the different genes" % len(otus))
+
+    # If there is any more genomes
+    # Which 2.5kb contigs have OTUs that are not binned?
+    unbinned_contigs = set()
+    unbinned_otus = []
+    num_otus_binned = 0
+    num_unbinned_otus_in_short_contigs = 0
+    num_unbinned_otus_in_long_contigs = 0
+    length_cutoff = 2500
+    for otu in otus:
+        contig_names_field = otu.fields.index('read_names') # There should be a better way to do this.
+        any_unbinned = False
+        for contig_name in otu.data[contig_names_field]:
+            if contig_name not in contig_to_seq:
+                raise Exception("Unexpected contig found in SingleM file: %s" % contig_name)
+            if contig_name in contig_to_bin:
+                num_otus_binned += 1
+            elif len(contig_to_seq[contig_name]) >= length_cutoff:
+                num_unbinned_otus_in_long_contigs += 1
+                unbinned_contigs.add(contig_name)
+                if any_unbinned == False:
+                    unbinned_otus.append(otu)
+                    any_unbinned = True
+                num_unbinned_otus_in_long_contigs += 1
+            elif len(contig_to_seq[contig_name]) < length_cutoff:
+                pass
+            else: raise Exception("Programming error")
+    logging.info("Found %i OTUs in good bins, %i insufficiently binned OTUs in "
+                 "contigs >= %ibp, and %i insufficiently binned OTUs in shorter contigs" % (
+                     num_otus_binned, num_unbinned_otus_in_long_contigs,
+                     length_cutoff, num_unbinned_otus_in_short_contigs))
+    if len(unbinned_otus) == 0:
+        logging.info("All OTUs detected in sufficiently long contigs are already in "
+                     "quality bins. Congratulations. SingleM cannot really help you any further.")
+    else:
+        # Make a FASTA file of OTU sequences of contigs that aren't well enough binned
+        with tempfile.NamedTemporaryFile(prefix='singlem-binning', suffix=".fna") as tf:
+            for otu in unbinned_otus:
+                tf.write(">%s" % otu.sequence+"\n")
+                tf.write(otu.sequence+"\n")
+            tf.flush()
+
+            # Run SingleM query against the SRA DB
+            with tempfile.NamedTemporaryFile(prefix='singlem-binning',suffix='.csv') as qf:
+                logging.info("Running singlem query ..")
+                Querier().query(
+                    db = args.db,
+                    query_sequence=None,
+                    max_target_seqs=1000,
+                    max_divergence=0,
+                    output_style='sparse',
+                    query_otu_table=None,
+                    query_fasta=tf.name,
+                    num_threads=1)
+
+                # Pick the sample which covers the most unbinned sequences (using exact matching of OTU sequences)
+                sample_to_num_otus_detected = {}
+                #import IPython; IPython.embed()
+
