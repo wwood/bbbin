@@ -17,6 +17,8 @@ import tempfile
 import extern
 import re
 
+from orator import DatabaseManager, Model
+
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
 import singlem.pipe as pipe
@@ -63,10 +65,11 @@ if __name__ == '__main__':
     parser.add_argument('--contigs', required=True)
     parser.add_argument('--checkm_csv', required=True)
     parser.add_argument('--bin_files', nargs='+', required=True)
-    parser.add_argument('--db', required=True)
+    parser.add_argument('--sqlite_db', required=True)
 
     parser.add_argument('--threads', type=int)
     parser.add_argument('--bin_file_extension', default="fna")
+    parser.add_argument('--samples_to_ignore', nargs='+', default=[])
 
     parser.add_argument('--singlem_on_contigs_archive_otu_table')
 
@@ -80,6 +83,15 @@ if __name__ == '__main__':
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
+    # Check sqlite connection
+    db = DatabaseManager({
+        'sqlite3': {
+            'driver': 'sqlite',
+            'database': args.sqlite_db
+        }})
+    Model.set_connection_resolver(db)
+
+    samples_to_ignore = set(args.samples_to_ignore)
 
     # Read checkm CSV file
     with open(args.checkm_csv) as f:
@@ -113,7 +125,7 @@ if __name__ == '__main__':
                 for contig_name, _, _ in SeqReader().readfq(f):
                     contig_to_bin[contig_name] = bin_name
         else:
-            logging.debug("Bin %s not of sufficient quality, so ignoring contained contigs" % bin_name)    
+            logging.debug("Bin %s not of sufficient quality, so ignoring contained contigs" % bin_name)
     logging.info("Read in binning information for %i contigs" % len(contig_to_bin))
 
     # Run SingleM on contigs
@@ -168,59 +180,38 @@ if __name__ == '__main__':
         logging.info("All OTUs detected in sufficiently long contigs are already in "
                      "quality bins. Congratulations. SingleM cannot really help you any further.")
     else:
-        # Make a FASTA file of OTU sequences of contigs that aren't well enough binned
-        with tempfile.NamedTemporaryFile(prefix='singlem-binning', suffix=".fna") as tf:
-            for otu in unbinned_otus:
-                tf.write(">%s" % otu.sequence+"\n")
-                tf.write(otu.sequence+"\n")
-            tf.flush()
+        query_results = []
+        for otu in unbinned_otus:
+            unbinned_seqs.add(otu.sequence)
+        logging.info("Before picking samples, found %i OTU sequences" % len(unbinned_seqs))
+        num_picked = 0
 
-            # Run SingleM query against the SRA DB
-            with tempfile.NamedTemporaryFile(prefix='singlem-binning',suffix='.csv') as qf:
-                logging.info("Running singlem query ..")
-                query_results = Querier().query(
-                    db = args.db,
-                    query_sequence=None,
-                    max_target_seqs=1000,
-                    max_divergence=0,
-                    output_style=None,
-                    query_otu_table=None,
-                    query_fasta=tf.name,
-                    num_threads=1)
+        sample_to_seqs_detected = {}
+        for otu in unbinned_otus:
+            seq = otu.sequence
+            for entry in db.table('otus').where('sequence',seq).get():
+                sample = entry['sample'] #FIXME: Use sample_name
+                sample_name = sample.replace('_1','').replace('_2','') #FIXME
+                if sample_name not in samples_to_ignore:
+                    try:
+                        sample_to_seqs_detected[sample_name].add(seq)
+                    except:
+                        sample_to_seqs_detected[sample_name] = set([seq])
 
-                # Pick the sample which covers the most unbinned sequences (using exact matching of OTU sequences)
-                unbinned_seqs = set()
-                for otu in unbinned_otus:
-                    unbinned_seqs.add(otu.sequence)
-                logging.info("Before picking samples, found %i OTU sequences" % len(unbinned_seqs))
-                num_picked = 0
-
-                while len(unbinned_seqs) > 0 and num_picked < 5: #FIXME: hardcoded 5
-                    sample_to_seqs_detected = {}
-                    for res in query_results:
-                        if res.subject.sequence in unbinned_seqs:
-                            # TODO: fix hardcoding of _1 and _2
-                            sample_name = res.subject.sample_name.replace('_1','').replace('_2','')
-                            logging.debug("Using sample name %s" % sample_name)
-                            try:
-                                sample_to_seqs_detected[sample_name].add(res.subject.sequence)
-                            except KeyError:
-                                sample_to_seqs_detected[sample_name] = set([res.subject.sequence])
-
-                    max_sample = None
-                    max_len = 0
-                    for sample, seqs in sample_to_seqs_detected.items():
-                        if len(seqs) > max_len:
-                            logging.debug("%s has %i unbinned seqs" % (sample, len(seqs)))
-                            max_sample = sample
-                            max_len = len(seqs)
-                    if max_sample:
-                        num_picked += 1
-                        print max_sample
-                        for seq in sample_to_seqs_detected[sample_name]:
-                            unbinned_seqs.remove(seq)
-                    else:
-                        logging.info("Found no more samples containing unbinned reads not already accounted for")
-                        break
+        max_sample = None
+        max_len = 0
+        for sample, seqs in sample_to_seqs_detected.items():
+            if len(seqs) > max_len:
+                logging.debug("%s has %i unbinned seqs" % (sample, len(seqs)))
+                max_sample = sample
+                max_len = len(seqs)
+        if max_sample:
+            num_picked += 1
+            print max_sample
+            for seq in sample_to_seqs_detected[sample_name]:
+                unbinned_seqs.remove(seq)
+        else:
+            logging.info("Found no more samples containing unbinned reads not already accounted for")
+            break
 
 
