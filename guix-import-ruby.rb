@@ -2,11 +2,11 @@
 
 require 'bio-commandeer'
 
-out = Bio::Commandeer.run "guix import gem #{ARGV[0]}"
+out = Bio::Commandeer.run "~/git/guix/pre-inst-env guix import gem #{ARGV[0]}"
        
-puts ['(define-public ruby-',
+puts ["\n\n(define-public ruby-",
       ARGV[0],
       "\n",
-      out.strip.gsub("expat","license:expat"),
+      out.strip,
       ')',
      "\n\n"].join
