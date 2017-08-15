@@ -72,6 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--bin_file_extension', default="fna")
     parser.add_argument('--samples_to_ignore', nargs='+', default=[])
     parser.add_argument('--samples_to_pick', type=int, default=5)
+    parser.add_argument('--samples_per_otu', type=int, default=1)
 
     parser.add_argument('--singlem_on_contigs_archive_otu_table')
 
@@ -179,9 +180,12 @@ if __name__ == '__main__':
         for otu in unbinned_otus:
             unbinned_seqs.add(otu.sequence)
         logging.info("Before picking samples, found %i OTU sequences" % len(unbinned_seqs))
-        num_picked = 0
+        picked_samples = set()
+        num_samples_per_otu = {}
+        for seq in unbinned_seqs:
+            num_samples_per_otu[seq] = 0
 
-        while num_picked < num_samples_to_pick:
+        while len(picked_samples) < num_samples_to_pick:
             sample_to_seqs_detected = {}
             queries = [QueryInputSequence(sequence,sequence) for sequence in unbinned_seqs]
 
@@ -205,15 +209,20 @@ if __name__ == '__main__':
             max_sample = None
             max_len = 0
             for sample, seqs in sample_to_seqs_detected.items():
-                if len(seqs) > max_len:
+                if sample not in picked_samples and (
+                        len(seqs) > max_len or (
+                            # Choose lowest lexical for reproducibility.
+                            len(seqs) == max_len and sample < max_sample)):
                     logging.debug("%s has %i unbinned seqs" % (sample, len(seqs)))
                     max_sample = sample
                     max_len = len(seqs)
             if max_sample:
-                num_picked += 1
+                picked_samples.add(max_sample)
                 print max_sample
                 for seq in sample_to_seqs_detected[max_sample]:
-                    unbinned_seqs.remove(seq)
+                    num_samples_per_otu[seq] += 1
+                    if num_samples_per_otu[seq] >= args.samples_per_otu:
+                        unbinned_seqs.remove(seq)
             else:
                 logging.info("Found no more samples containing unbinned reads not already accounted for")
                 break
