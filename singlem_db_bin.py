@@ -22,7 +22,8 @@ from orator import DatabaseManager, Model
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
 import singlem.pipe as pipe
-from singlem.querier import Querier
+from singlem.querier import Querier, QueryInputSequence
+from singlem.sequence_database import SequenceDatabase
 from singlem.sequence_classes import SeqReader
 from singlem.archive_otu_table import ArchiveOtuTable
 
@@ -65,11 +66,12 @@ if __name__ == '__main__':
     parser.add_argument('--contigs', required=True)
     parser.add_argument('--checkm_csv', required=True)
     parser.add_argument('--bin_files', nargs='+', required=True)
-    parser.add_argument('--sqlite_db', required=True)
+    parser.add_argument('--db', required=True)
 
-    parser.add_argument('--threads', type=int)
+    parser.add_argument('--threads', type=int, default=1)
     parser.add_argument('--bin_file_extension', default="fna")
     parser.add_argument('--samples_to_ignore', nargs='+', default=[])
+    parser.add_argument('--samples_to_pick', type=int, default=5)
 
     parser.add_argument('--singlem_on_contigs_archive_otu_table')
 
@@ -83,15 +85,8 @@ if __name__ == '__main__':
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    # Check sqlite connection
-    db = DatabaseManager({
-        'sqlite3': {
-            'driver': 'sqlite',
-            'database': args.sqlite_db
-        }})
-    Model.set_connection_resolver(db)
-
     samples_to_ignore = set(args.samples_to_ignore)
+    num_samples_to_pick = args.samples_to_pick
 
     # Read checkm CSV file
     with open(args.checkm_csv) as f:
@@ -168,7 +163,6 @@ if __name__ == '__main__':
                 if any_unbinned == False:
                     unbinned_otus.append(otu)
                     any_unbinned = True
-                num_unbinned_otus_in_long_contigs += 1
             elif contig_to_length[contig_name] < length_cutoff:
                 num_unbinned_otus_in_short_contigs += 1
             else: raise Exception("Programming error")
@@ -181,37 +175,47 @@ if __name__ == '__main__':
                      "quality bins. Congratulations. SingleM cannot really help you any further.")
     else:
         query_results = []
+        unbinned_seqs = set()
         for otu in unbinned_otus:
             unbinned_seqs.add(otu.sequence)
         logging.info("Before picking samples, found %i OTU sequences" % len(unbinned_seqs))
         num_picked = 0
 
-        sample_to_seqs_detected = {}
-        for otu in unbinned_otus:
-            seq = otu.sequence
-            for entry in db.table('otus').where('sequence',seq).get():
-                sample = entry['sample'] #FIXME: Use sample_name
+        while num_picked < num_samples_to_pick:
+            sample_to_seqs_detected = {}
+            queries = [QueryInputSequence(sequence,sequence) for sequence in unbinned_seqs]
+
+            db = SequenceDatabase.acquire(args.db)
+            max_divergence = 0
+            max_target_seqs = 1000 # Not actually used since SQLite is used, not BLAST
+            num_threads = 1
+            query_result = Querier().query_with_queries(
+                queries, db, max_target_seqs, max_divergence, num_threads)
+
+            for result in query_result:
+                sample = result.subject.sample_name
                 sample_name = sample.replace('_1','').replace('_2','') #FIXME
                 if sample_name not in samples_to_ignore:
+                    seq = result.query.sequence
                     try:
                         sample_to_seqs_detected[sample_name].add(seq)
                     except:
                         sample_to_seqs_detected[sample_name] = set([seq])
 
-        max_sample = None
-        max_len = 0
-        for sample, seqs in sample_to_seqs_detected.items():
-            if len(seqs) > max_len:
-                logging.debug("%s has %i unbinned seqs" % (sample, len(seqs)))
-                max_sample = sample
-                max_len = len(seqs)
-        if max_sample:
-            num_picked += 1
-            print max_sample
-            for seq in sample_to_seqs_detected[sample_name]:
-                unbinned_seqs.remove(seq)
-        else:
-            logging.info("Found no more samples containing unbinned reads not already accounted for")
-            break
+            max_sample = None
+            max_len = 0
+            for sample, seqs in sample_to_seqs_detected.items():
+                if len(seqs) > max_len:
+                    logging.debug("%s has %i unbinned seqs" % (sample, len(seqs)))
+                    max_sample = sample
+                    max_len = len(seqs)
+            if max_sample:
+                num_picked += 1
+                print max_sample
+                for seq in sample_to_seqs_detected[max_sample]:
+                    unbinned_seqs.remove(seq)
+            else:
+                logging.info("Found no more samples containing unbinned reads not already accounted for")
+                break
 
 
