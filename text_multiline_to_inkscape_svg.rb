@@ -16,7 +16,9 @@ end; o.parse!
 
 #TODO what are you looking at me for? This is your script. Do something.
 y = 0
+puts '<svg>'
 ARGF.each do |line|
   puts "<text y=\"#{y}\">#{line.chomp}</text>"
   y += 10
 end
+puts '</svg>'

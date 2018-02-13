@@ -17,8 +17,6 @@ import tempfile
 import extern
 import re
 
-from orator import DatabaseManager, Model
-
 sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
 
 import singlem.pipe as pipe
