@@ -15,8 +15,10 @@ Takes lines of text on stdin, and prints out them in a form suitable for pasting
 end; o.parse!
 
 #TODO what are you looking at me for? This is your script. Do something.
+puts "<svg>"
 y = 0
 ARGF.each do |line|
   puts "<text y=\"#{y}\">#{line.chomp}</text>"
   y += 10
 end
+puts "</svg>"
