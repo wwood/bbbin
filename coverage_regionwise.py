@@ -21,9 +21,6 @@ if __name__ == '__main__':
     parent_parser = argparse.ArgumentParser()
     parent_parser.add_argument('--debug', help='output debug information',
                                action="store_true")
-    parent_parser.add_argument('--version',
-                               help='output version information and quit',
-                               action='version', version=singlem.__version__)
     parent_parser.add_argument('--quiet', help='only output errors',
                                action="store_true")
 
@@ -53,18 +50,18 @@ if __name__ == '__main__':
         if splits[0] == '@SQ':
             if len(splits) != 3:
                 raise Exception("Unexpected sequence header %s" % line)
-            ref = re.sub('^SN:', '', ref)
+            ref = re.sub('^SN:', '', splits[1])
             if ref in contig_to_length:
                 raise Exception("Contig names cannot be duplicated, found one %s" % ref)
             contig_to_length[ref] = int(re.sub('^LN:','',splits[2]))
 
-    cmd = "samtools view -f2 -F0x8 -f0x40 -F0x100 -F0x200 -F0x400 -F0x800 '%s'" % args.bam_file
+    cmd = "samtools view -f2 -F3852 '%s'" % args.bam_file
     out = extern.run(cmd) #TODO: stream the stdout
 
     def finish_a_contig(contig_lengths, refname, last_position, interval, last_count):
         length = contig_lengths[refname]
         while last_position+interval <= length:
-            print "\t".join([refname, last_position, last_position+interval-1, last_count])
+            print "\t".join([refname, str(last_position), str(last_position+interval-1), str(last_count)])
             last_count = 0
             last_position += interval
 
@@ -72,12 +69,14 @@ if __name__ == '__main__':
     last_position = None
     current_total_pairs = 0
     interval = args.interval
-    for line in foo.splitlines():
+    for line in out.splitlines():
         splits = line.split("\t") #TODO: use csv for faster
+        logging.debug("Interrogating line %s" % str(splits))
         if len(splits) <= 11: raise Exception("unexpected number of fields in sam line %s" % line)
-        ref = splits[1]
-        start = int(splits[2])
-        tlen = int(splits[9])
+        ref = splits[2]
+        start = int(splits[3])
+        tlen = int(splits[8])
+        if tlen < 0: continue
 
         # if this is a new contig
         if last_ref != ref:
@@ -93,26 +92,28 @@ if __name__ == '__main__':
             raise Exception("BAM file not sorted?")
         # if read pair is completely contained within the current interval, increment the count
         if last_position+interval > start:
-            if last_position+interval > start+tlen:
+            if last_position+interval >= start+tlen:
+                logging.debug("Taking it")
                 current_total_pairs += 1
             else:
+                logging.debug("skipping it")
                 # else if start is in the current interval, ignore this pair
                 pass
         else:
+            logging.debug("Going to next -------------------------------------------------")
             # else the start is in the next interval, if not further
             # print the last known interval
-            print "\t".join([last_ref, last_position, last_position+interval-1, current_total_pairs])
             # print the empty intervals in between
-            while last_position+interval < start:
-                print "\t".join([last_ref, last_position, last_position+interval-1, 0])
+            while last_position+interval <= start:
+                print "\t".join([last_ref, str(last_position), str(last_position+interval-1), str(current_total_pairs)])
+                current_total_pairs = 0
                 last_position += interval
+            current_total_pairs = 0
             # initialise the current interval
             if last_position+interval > start+tlen:
                 # read pair completely contained
                 current_total_pairs = 1
-            else:
-                # read pair overlaps the next boundary
-                current_total_pairs = 0
 
     # print the last contig
-    finish_a_contig(contig_to_length, last_ref, last_position, interval, current_total_pairs)
+    if last_ref is not None:
+        finish_a_contig(contig_to_length, last_ref, last_position, interval, current_total_pairs)
