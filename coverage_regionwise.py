@@ -13,6 +13,7 @@ import logging
 import sys
 import os
 import re
+import subprocess
 
 import extern
 
@@ -55,9 +56,6 @@ if __name__ == '__main__':
                 raise Exception("Contig names cannot be duplicated, found one %s" % ref)
             contig_to_length[ref] = int(re.sub('^LN:','',splits[2]))
 
-    cmd = "samtools view -f2 -F3852 '%s'" % args.bam_file
-    out = extern.run(cmd) #TODO: stream the stdout
-
     def finish_a_contig(contig_lengths, refname, last_position, interval, last_count):
         length = contig_lengths[refname]
         while last_position+interval <= length:
@@ -69,6 +67,9 @@ if __name__ == '__main__':
     last_position = None
     current_total_pairs = 0
     interval = args.interval
+    cmd = "samtools view -f2 -F3852 '%s'" % args.bam_file
+    (out, err) = subprocess.Popen(['bash','-c',cmd], stdout=subprocess.PIPE).communicate() #TODO worry about stderr
+
     for line in out.splitlines():
         splits = line.split("\t") #TODO: use csv for faster
         logging.debug("Interrogating line %s" % str(splits))
