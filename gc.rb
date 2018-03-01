@@ -21,7 +21,10 @@ Calculate the GC content of each contig in the fasta file\n\n"
 
   opts.on("-w", "--whole", "Return the GC of the entire input file [default: report per-sequence]") {
     options[:whole_fasta] = true
-    }
+  }
+  opts.on('--interval NUM', Integer, "Return GC of each interval in a sequence e.g. every 1000 bp") do |d|
+    options[:interval] = d
+  end
 
   # logger options
   opts.separator "\nVerbosity:\n\n"
@@ -36,11 +39,24 @@ end
 # Setup logging
 Bio::Log::CLI.logger(options[:logger]); Bio::Log::CLI.trace(options[:log_level]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME); log.outputters[0].formatter = Log4r::PatternFormatter.new(:pattern => "%5l %c %d: %m", :date_pattern => '%d/%m %T')
 
+raise "cant be whoel seq and interval" if options[:whole_fasta] and options[:interval]
 
 total_seq = ''
 Bio::FlatFile.foreach(ARGF) do |seq|
   if options[:whole_fasta]
     total_seq += seq.naseq.to_s
+  elsif options[:interval]
+    current = 0
+    interval = options[:interval]
+    while current + interval <= seq.naseq.length
+      puts [
+        seq.definition.split(/\s/)[0],
+        current+1,
+        current+interval,
+        seq.naseq.subseq(current+1, current+interval).gc_content.to_f
+      ].join("\t")
+      current += interval
+    end
   else
     puts [
       seq.definition.split(/\s/)[0],
