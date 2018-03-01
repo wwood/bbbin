@@ -68,11 +68,11 @@ if __name__ == '__main__':
     current_total_pairs = 0
     interval = args.interval
     cmd = "samtools view -f2 -F3852 '%s'" % args.bam_file
-    (out, err) = subprocess.Popen(['bash','-c',cmd], stdout=subprocess.PIPE).communicate() #TODO worry about stderr
+    proc = subprocess.Popen(['bash','-c',cmd], stdout=subprocess.PIPE) #TODO worry about stderr
 
-    for line in out.splitlines():
+    for line in proc.stdout:
         splits = line.split("\t") #TODO: use csv for faster
-        logging.debug("Interrogating line %s" % str(splits))
+        #logging.debug("Interrogating line %s" % str(splits))
         if len(splits) <= 11: raise Exception("unexpected number of fields in sam line %s" % line)
         ref = splits[2]
         start = int(splits[3])

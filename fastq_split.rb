@@ -13,6 +13,7 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     :fwd_read_grep => ' 1:',
     :rev_read_grep => ' 2:',
     :file_type => 'fastq',
+    :awk => false,
   }
   o = OptionParser.new do |opts|
     opts.banner = "
@@ -35,6 +36,9 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
     opts.on('--threads NUM',Integer,'file is fasta, not fastq [default: #{options[:num_processes]}]') do |i|
       options[:num_processes] = i
     end
+    opts.on('--awk','split file up with awk, not grep [default: #{options[:awk]}]') do
+      options[:awk] = true
+    end
 
     # logger options
     opts.separator "\nVerbosity:\n\n"
@@ -48,7 +52,6 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
   end
   # Setup logging. bio-logger defaults to STDERR not STDOUT, I disagree
   Bio::Log::CLI.logger(options[:logger]); log = Bio::Log::LoggerPlus.new(LOG_NAME); Bio::Log::CLI.configure(LOG_NAME)
-
 
   ARGV.each do |fastq_file|
     raise "not fastq file found: #{fastq_file}" unless File.exists?(fastq_file)
@@ -66,17 +69,29 @@ if __FILE__ == $0 #needs to be removed if this script is distributed as part of 
       end
     end
 
-    num_following_lines = {'fastq' => '3', 'fasta' => '1'}[options[:file_type]]
-    log.debug("Using #{num_following_lines} lines following")
+    if options[:awk]
+      log.info "Creating #{fq1} .."
+      `zcat '#{fastq_file}' | awk 'NR%8<5 && NR%8>0' |pigz -p #{options[:num_processes]} >#{fq1}`
+      fq1_size = File.size fq1
+      log.info "#{fq1} size #{fq1_size}"
 
-    log.info "Creating #{fq1} .."
-    `zcat '#{fastq_file}' | grep -A#{num_following_lines} '#{options[:fwd_read_grep]}' |grep -v '^--$' |pigz -p #{options[:num_processes]} >#{fq1}`
-    fq1_size = File.size fq1
-    log.info "#{fq1} size #{fq1_size}"
+      log.info "Creating #{fq2} .."
+      `zcat '#{fastq_file}' | awk 'NR%8>4 || NR%8==0' |pigz -p #{options[:num_processes]} >#{fq2}`
+      fq2_size = File.size fq2
+      log.info "#{fq2} size #{fq2_size}"
+    else
+      num_following_lines = {'fastq' => '3', 'fasta' => '1'}[options[:file_type]]
+      log.debug("Using #{num_following_lines} lines following")
 
-    log.info "Creating #{fq2} .."
-    `zcat '#{fastq_file}' | grep -A#{num_following_lines} '#{options[:rev_read_grep]}' |grep -v '^--$' |pigz -p #{options[:num_processes]} >#{fq2}`
-    fq2_size = File.size fq2
-    log.info "#{fq2} size #{fq2_size}"
+      log.info "Creating #{fq1} .."
+      `zcat '#{fastq_file}' | grep -A#{num_following_lines} '#{options[:fwd_read_grep]}' |grep -v '^--$' |pigz -p #{options[:num_processes]} >#{fq1}`
+      fq1_size = File.size fq1
+      log.info "#{fq1} size #{fq1_size}"
+
+      log.info "Creating #{fq2} .."
+      `zcat '#{fastq_file}' | grep -A#{num_following_lines} '#{options[:rev_read_grep]}' |grep -v '^--$' |pigz -p #{options[:num_processes]} >#{fq2}`
+      fq2_size = File.size fq2
+      log.info "#{fq2} size #{fq2_size}"
+    end
   end
 end #end if running as a script
