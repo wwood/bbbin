@@ -1,0 +1,17 @@
+[package]
+name = "bbbin"
+version = "0.1.0-pre"
+authors = ["Ben Woodcroft <donttrustben@gmail.com>"]
+
+[dependencies]
+bio = "0.17.0"
+log = "*"
+clap = "2.*"
+env_logger = "*"
+
+[dev-dependencies]
+tempfile = "^2.2.0"
+
+[[bin]]
+name = "bbbin-rs"
+path = "src/main.rs"
