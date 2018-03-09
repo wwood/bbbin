@@ -6,7 +6,7 @@ use std::str;
 pub fn gc(
     fastas: &Vec<&str>, interval: usize, print_stream: &mut std::io::Write,){
 
-    writeln!(print_stream, "sequence\tstart\tstop\tat_bases\tatgc_bases")
+    writeln!(print_stream, "sequence\tstart\tstop\tgc_bases\tatgc_bases")
         .expect("Failed to output result line");
 
     for fasta in fastas {
@@ -37,7 +37,7 @@ pub fn gc(
                             }
                     };
                     writeln!(print_stream, "{}\t{}\t{}\t{}\t{}",
-                             id, offset+1, offset+interval, at, total)
+                             id, offset+1, offset+interval, total-at, total)
                         .expect("Failed to output result line");
                     offset += interval;
                 }
@@ -68,7 +68,8 @@ mod tests {
         let mut stream = Cursor::new(Vec::new());
         gc(&vec![file.path().to_str().unwrap()], 5, &mut stream);
         assert_eq!(
-            "sequence\tstart\tstop\tat_bases\tatgc_bases\ns1\t1\t5\t3\t5\ns1\t6\t10\t5\t5\ns3\t1\t5\t3\t5\ns3\t6\t10\t4\t4\n",
+            "sequence\tstart\tstop\tgc_bases\tatgc_bases
+s1\t1\t5\t2\t5\ns1\t6\t10\t0\t5\ns3\t1\t5\t2\t5\ns3\t6\t10\t0\t4\n",
             str::from_utf8(stream.get_ref()).unwrap())
     }
 }
