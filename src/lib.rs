@@ -33,7 +33,8 @@ pub fn gc(
                                 total += 1;
                             }
                     };
-                    writeln!(print_stream, "{}\t{}\t{}", id, at, total)
+                    writeln!(print_stream, "{}\t{}\t{}\t{}\t{}",
+                             id, offset+1, offset+interval, at, total)
                         .expect("Failed to output result line");
                     offset += interval;
                 }
@@ -64,7 +65,7 @@ mod tests {
         let mut stream = Cursor::new(Vec::new());
         gc(&vec![file.path().to_str().unwrap()], 5, &mut stream);
         assert_eq!(
-            "s1\t3\t5\ns1\t5\t5\ns3\t3\t5\ns3\t4\t4\n",
+            "s1\t1\t5\t3\t5\ns1\t6\t10\t5\t5\ns3\t1\t5\t3\t5\ns3\t6\t10\t4\t4\n",
             str::from_utf8(stream.get_ref()).unwrap())
     }
 }
