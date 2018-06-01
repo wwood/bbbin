@@ -92,7 +92,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     # Constant paths
-    euramoo = "uqbwoodc@euramoo.qriscloud.org.au"
+    euramoo = "uqbwoodc@ssh1.qriscloud.org.au"
     base_path = '/RDS/Q0227/profiles/base/'
     guix_git = '/home/ben/git/guix-euramoo'
     # There is also direct references to /RDS/Q0227 here and in the guix git configure.
