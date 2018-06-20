@@ -24,9 +24,9 @@ fn main() {
             set_log_level(m);
 
             let reader = fastq::Reader::new(io::stdin());
-            let mut num_gc: u32 = 0;
-            let mut num_at: u32 = 0;
-            let mut num_other: u32 = 0;
+            let mut num_gc: u64 = 0;
+            let mut num_at: u64 = 0;
+            let mut num_other: u64 = 0;
 
             for record in reader.records() {
                 for c in record.unwrap().seq() {
@@ -49,7 +49,7 @@ fn main() {
                 panic!("No A, T, G or Cs found!")
             }
             println!("{} {} {} {}",
-                     num_gc, num_at, num_other, num_gc as f32 / (num_at+num_gc) as f32);
+                     num_gc, num_at, num_other, num_gc as f64 / (num_at+num_gc) as f64);
         },
         _ => {
             app.print_help().unwrap();
