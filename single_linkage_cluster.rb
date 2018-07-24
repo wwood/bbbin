@@ -50,7 +50,9 @@ clusters.each do |seq, number|
   reversed[number].push seq
 end
 # Print the reversed cluster
-reversed.each do |key, value|
-  puts value.join(' ')
+reversed.each do |key, hits|
+  hits.each do |h|
+    puts [key,h].join("\t")
+  end
 end
 
