@@ -94,9 +94,9 @@ if __name__ == '__main__':
     # Constant paths
     euramoo = "uqbwoodc@ssh1.qriscloud.org.au"
     awoonga = "uqbwoodc@awoonga.qriscloud.org.au"
-    base_path = '/RDS/Q0227/profiles/base/'
+    base_path = '/groups/sw-Guix/profiles/base/'
     guix_git = '/home/ben/git/guix-euramoo'
-    # There is also direct references to /RDS/Q0227 here and in the guix git configure.
+    # There is also direct references to /groups/sw-Guix here and in the guix git configure.
 
     os.chdir(guix_git)
     logging.info("Running make on the guix directory ..")
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     if not args.no_rsync:
         for folder in ['var','profiles','store']:
             # use rsync '-az' i.e. '-rlptgoD' except don't preserve owner, group, or specials or devices.
-            cmd = "rsync -rlptz --delete --exclude=.links --exclude=var/guix/userpool --exclude=var/guix/db/big-lock --exclude=var/guix/db/reserved --exclude=var/guix/gc.lock --exclude=var/guix/daemon-socket/socket /RDS/Q0227/%s %s:/data/Q0227/" % (folder, euramoo)
+            cmd = "rsync -rlptz --delete --exclude=.links --exclude=var/guix/userpool --exclude=var/guix/db/big-lock --exclude=var/guix/db/reserved --exclude=var/guix/gc.lock --exclude=var/guix/daemon-socket/socket /groups/sw-Guix/%s %s:/groups/sw-Guix/" % (folder, euramoo)
             logging.info("Running %s" % cmd)
             try:
                 subprocess.check_call(cmd, shell=True)
@@ -155,14 +155,14 @@ if __name__ == '__main__':
                 else:
                     raise e
 
-        cmd = "ssh %s setfacl --recursive -m m::rwx /data/Q0227/store" % euramoo
+        cmd = "ssh %s setfacl --recursive -m m::rwx /groups/sw-Guix/store" % euramoo
         logging.info("Running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
 
         # It is not entirely clear why this is necessary, why the permissions
         # get changed. But no time to figure it out. Run on awoonga because the
         # links actually resolve, so dead link errors are not thrown.
-        cmd = "ssh %s chmod +x '/RDS/Q0227/store/*/bin/* /RDS/Q0227/store/*/bin/.*'" % awoonga
+        cmd = "ssh %s chmod +x '/groups/sw-Guix/store/*/bin/* /groups/sw-Guix/store/*/bin/.*'" % awoonga
         logging.info("Running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
 
