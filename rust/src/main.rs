@@ -10,15 +10,36 @@ extern crate env_logger;
 use env_logger::LogBuilder;
 
 use std::io;
+use std::io::BufReader;
+use std::io::prelude::*;
 
 extern crate bio;
-use bio::io::fastq;
+use bio::io::{fasta,fastq};
 
 fn main() {
     let mut app = build_cli();
     let matches = app.clone().get_matches();
 
     match matches.subcommand_name() {
+        Some("gff_to_fasta") => {
+            let m = matches.subcommand_matches("gff_to_fasta").unwrap();
+            set_log_level(m);
+
+            let reader = BufReader::new(io::stdin());
+            let mut is_passed_header = false;
+            for line_res in reader.lines() {
+                let line = line_res.expect("Line read fail");
+                if is_passed_header {
+                    println!("{}",line);
+                } else if line == "##FASTA" {
+                    is_passed_header = true;
+                }
+            }
+            if !is_passed_header {
+                error!("Could not fing '##FASTA' line in input GFF3, so failed");
+                std::process::exit(1);
+            }
+        },
         Some("gc") => {
             let m = matches.subcommand_matches("gc").unwrap();
             set_log_level(m);
@@ -50,6 +71,55 @@ fn main() {
             }
             println!("{} {} {} {}",
                      num_gc, num_at, num_other, num_gc as f64 / (num_at+num_gc) as f64);
+        },
+        Some("fasta_to_fastq") => {
+            let m = matches.subcommand_matches("fasta_to_fastq").unwrap();
+            set_log_level(m);
+
+            let reader = fasta::Reader::new(io::stdin());
+            for record_res in reader.records() {
+                let record = record_res.expect("Failed to parse FASTA entry");
+                println!("@{}",record.id());
+                println!("{}",std::str::from_utf8(record.seq()).unwrap());
+                println!("+");
+                for _ in record.seq().iter().enumerate() {
+                    print!("A");
+                }
+                println!();
+            }
+        },
+        Some("add_genome_name_to_contig") => {
+            let m = matches.subcommand_matches("add_genome_name_to_contig").unwrap();
+            set_log_level(m);
+            
+            let genome_fasta_files = m.values_of("genome-fasta-files").unwrap();
+            info!("Read in {} genome fasta file paths", genome_fasta_files.len());
+            let output_dir = m.value_of("output-directory").unwrap();
+
+            for genome in genome_fasta_files {
+                let reader = fasta::Reader::new(
+                    std::fs::File::open(genome)
+                    .expect(&format!("Failed to open genome fasta file {}", genome)));
+                let genome_name = std::path::Path::new(&genome).file_stem()
+                    .expect("Failed to parse genome name")
+                    .to_str()
+                    .expect("Character conversion issue");
+                let outpath = format!("{}/{}.renamed_contigs.fna", output_dir, genome_name);
+                debug!("Writing output fasta file {} ..", &outpath);
+                let mut writer = fasta::Writer::to_file(&outpath)
+                    .expect(&format!("Failed to create output file {}", &outpath));
+                let mut count: usize = 0;
+                for record_res in reader.records() {
+                    let record = record_res.expect("Failed to parse FASTA entry");
+                    writer.write(
+                        &format!("{}~{}", genome_name, record.id()),
+                        record.desc(),
+                        record.seq()
+                    ).expect("Failed to write FASTA entry");
+                    count += 1;
+                }
+                debug!("Wrote {} sequences", count);
+            }
         },
         _ => {
             app.print_help().unwrap();
@@ -84,4 +154,25 @@ fn build_cli() -> App<'static, 'static> {
         .subcommand(
             SubCommand::with_name("gc")
                 .about("Calculate G+C content of FASTQ sequences piped in"))
+        .subcommand(
+            SubCommand::with_name("fasta_to_fastq")
+                .about("Make a FASTQ from a FASTA file, setting all quality values to 'A'"))
+        .subcommand(
+            SubCommand::with_name("gff_to_fasta")
+                .about("Extract the master FASTA record from the bottom of the gff3"))
+        .subcommand(
+            SubCommand::with_name("add_genome_name_to_contig")
+                .about("Rename the contigs in a genome-wise fasta file")
+                .arg(Arg::with_name("genome-fasta-files")
+                    .long("genome-fasta-files")
+                    .required(true)
+                    .takes_value(true)
+                    .multiple(true)
+                    .help("List of genome fasta files to rename"))
+                .arg(Arg::with_name("output-directory")
+                    .long("output-directory")
+                    .required(true)
+                    .takes_value(true)
+                    .help("Folder to write new genome fasta files to"))
+        )
 }

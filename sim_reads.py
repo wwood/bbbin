@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 __prog_name__ = 'sim_reads.py'
 __prog_desc__ = 'simulate reads across a fasta file.'
@@ -7,7 +7,7 @@ __author__ = 'David Wood'
 __copyright__ = 'Copyright 2018'
 __credits__ = ['Donovan Parks, David Wood, Ben Woodcroft']
 __license__ = 'GPL3'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __maintainer__ = 'David Wood'
 __email__ = 'davidlawood@gmail.com'
 __status__ = 'Development'
@@ -64,7 +64,7 @@ class ReadSimulator(object):
         fragment_len = 2*read_len + insert_size
         pair_count = 0
         for seq_id, seq, _ in SequenceIO().each(input_io):
-            for i in xrange(0, len(seq) - fragment_len, read_step_size):
+            for i in range(0, len(seq) - fragment_len, read_step_size):
                 pair_count += 1
                 fout1.write('>%d\n' % pair_count)
                 fout1.write('%s\n' % seq[i:i+read_len])
@@ -74,7 +74,7 @@ class ReadSimulator(object):
 
 
 if __name__ == '__main__':
-    print __prog_name__ + ' v' + __version__ + ': ' + __prog_desc__
+    print(__prog_name__ + ' v' + __version__ + ': ' + __prog_desc__)
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-i', help='file to simulate reads across', required=True)
