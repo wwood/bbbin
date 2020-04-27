@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+
+import subprocess, sys, os
+
+if len(sys.argv) != 2 or sys.argv[1] == '-h' or sys.argv[1] == '--help':
+    print("Usage: conda_newest <PACKAGE_NAME>",file=sys.stderr)
+    sys.exit(1)
+
+package = sys.argv[1]
+base_dir = os.path.join(os.environ['HOME'],'e')
+
+## Code below copied from the extern python package. Copy the code here so there are no dependencies.
+
+def run(command, stdin=None):
+    '''
+    Run a subprocess.check_output() with the given command with
+    'bash -c command'
+    returning the stdout. If the command fails (i.e. has a non-zero exitstatus),
+    raise a ExternCalledProcessError that includes the $stderr as part of
+    the error message
+
+    Parameters
+    ----------
+    command: str
+        command to run
+    stdin: str or None
+        stdin to be provided to the process, to subprocess.communicate.
+
+    Returns
+    -------
+    Standard output of the run command
+
+    Exceptions
+    ----------
+    extern.ExternCalledProcessError including stdout and stderr of the run
+    command should it return with non-zero exit status.
+    '''
+    #logging.debug("Running extern cmd: %s" % command)
+
+    process = subprocess.run(
+        ["bash",'-o','pipefail',"-c", command],
+        input=stdin.encode() if isinstance(stdin, str) else stdin,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout = process.stdout.decode('UTF-8')
+    if process.returncode != 0:
+        raise ExternCalledProcessError(process, command)
+    return stdout
+
+class ExternCalledProcessError(subprocess.CalledProcessError):
+    def __init__(self, completed_process, command):
+        self.command = command
+        self.returncode = completed_process.returncode
+        self.stderr = completed_process.stderr
+        self.stdout = completed_process.stdout
+        self.completed_process = completed_process
+
+    def __str__(self):
+        return "Command %s returned non-zero exit status %i.\n"\
+            "STDERR was: %sSTDOUT was: %s" % (self.command,
+                                                self.returncode,
+                                                self.stderr,
+                                                self.stdout)
+
+
+
+newest_package = run("bash -o pipefail -c 'conda search {} |grep {} |sed \"s=  *=\\t=g\" |cut -f2 |sort -rn |head -1'".format(package,package))
+#import IPython; IPython.embed()
+if newest_package == "":
+    print("Failed to find newest package for {}, does it exist?".format(package), file=sys.stderr)
+    sys.exit(2)
+newest_package = newest_package.strip()
+print("Found newest version {}".format(newest_package), file=sys.stderr)
+
+install_path = os.path.join(base_dir,"{}-{}".format(package,newest_package))
+if os.path.exists(install_path):
+    print("Package install folder {} already exists, cowardly refusing to overwrite.".format(install_path), file=sys.stderr)
+
+print("Creating conda environment: {}".format(install_path), file=sys.stderr)
+run("conda create -y -p {} {}={}".format(install_path, package, newest_package))
+
+print("Successfully created conda environment. Activate with: conda activate {}".format(install_path), file=sys.stderr)

@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 
 # This file reads in a fasta sequence, and then pipes it out, with each of the sequences in it reverse complemented.

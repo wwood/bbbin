@@ -17,7 +17,7 @@ if ($#ARGV == 1){
 }
 
 foreach(1..$num_total){
-    print ">random_sequence_length_$num"."_$_\n";
+    print ">random_sequence_length_$num\_$_\n";
     foreach (1..$num){
         $i = int rand 4;
         print $bases[$i];
