@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+# Script to more easily submit jobs to the QUT HPC queuing system
+
+# Must be python3.4-compatible since that is what is on the lyra base
+
+__author__ = "Ben Woodcroft"
+__copyright__ = "Copyright 2020"
+__credits__ = ["Ben Woodcroft"]
+__license__ = "GPL3"
+__maintainer__ = "Ben Woodcroft"
+__email__ = "benjwoodcroft near gmail.com"
+__status__ = "Development"
+
+import argparse
+import logging
+import sys
+import os
+import tempfile
+import subprocess
+
+## Code below copied from the extern python package. Copy the code here so there are no dependencies.
+
+def run(command, stdin=None):
+    '''
+    Run a subprocess.check_output() with the given command with
+    'bash -c command'
+    returning the stdout. If the command fails (i.e. has a non-zero exitstatus),
+    raise a ExternCalledProcessError that includes the $stderr as part of
+    the error message
+
+    Parameters
+    ----------
+    command: str
+        command to run
+    stdin: str or None
+        stdin to be provided to the process, to subprocess.communicate.
+
+    Returns
+    -------
+    Standard output of the run command
+
+    Exceptions
+    ----------
+    extern.ExternCalledProcessError including stdout and stderr of the run
+    command should it return with non-zero exit status.
+    '''
+    #logging.debug("Running extern cmd: %s" % command)
+
+    process = subprocess.run(
+        ["bash",'-o','pipefail',"-c", command],
+        input=stdin.encode() if isinstance(stdin, str) else stdin,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout = process.stdout.decode('UTF-8')
+    if process.returncode != 0:
+        raise ExternCalledProcessError(process, command)
+    return stdout
+
+class ExternCalledProcessError(subprocess.CalledProcessError):
+    def __init__(self, completed_process, command):
+        self.command = command
+        self.returncode = completed_process.returncode
+        self.stderr = completed_process.stderr
+        self.stdout = completed_process.stdout
+        self.completed_process = completed_process
+
+    def __str__(self):
+        return "Command %s returned non-zero exit status %i.\n"\
+            "STDERR was: %sSTDOUT was: %s" % (self.command,
+                                                self.returncode,
+                                                self.stderr,
+                                                self.stdout)
+
+
+
+
+if __name__ == '__main__':
+    # For now don't parse args, until I work out how to grab args after a '--'
+#     parent_parser = argparse.ArgumentParser(add_help=False)
+#     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
+#     #parent_parser.add_argument('--version', help='output version information and quit',  action='version', version=repeatm.__version__)
+#     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
+
+#     #parser.add_argument("-c", "--conda_environment", "--conda-environment", help="Load this conda environment")
+
+#     parser = argparse.ArgumentParser(parents=[parent_parser])
+#     subparsers = parser.add_subparsers(title="Sub-commands", dest='subparser_name')
+
+#     cluster_description = 'Cluster bins and assembled contigs'
+#     cluster_parser = subparsers.add_parser('cluster')
+#     cluster_parser.add_argument(
+#         '--bin_directories', nargs='+', metavar='DIR [DIR ..]',
+#         help="Directories containing FASTA files of bins", required=True)
+
+#     args = parser.parse_args()
+
+#     # Setup logging
+#     if args.debug:
+#         loglevel = logging.DEBUG
+#     elif args.quiet:
+#         loglevel = logging.ERROR
+#     else:
+#         loglevel = logging.INFO
+#     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+
+    cmd = sys.argv[1:]
+
+    with tempfile.NamedTemporaryFile(prefix='mqsub_script',suffix='.sh',mode='w') as tf:
+        print('#!/bin/bash -l',file=tf)
+        print('#PBS -N mqsub',file=tf)
+        print('#PBS -l ncpus=1',file=tf)
+        print('#PBS -l mem=4gb',file=tf)
+        print('#PBS -l walltime=1:00:00',file=tf)
+
+        print(' '.join(sys.argv[1:]),file=tf)
+        tf.flush()
+
+        import IPython; IPython.embed()
