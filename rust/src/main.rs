@@ -40,6 +40,16 @@ fn main() {
                 std::process::exit(1);
             }
         },
+        Some("describe") => {
+            let m = matches.subcommand_matches("describe").unwrap();
+            set_log_level(m);
+
+            let reader = fasta::Reader::new(io::stdin());
+            for record in reader.records() {
+                let res = record.unwrap();
+                println!("{}\t{}",res.id(),res.seq().len())
+            }
+        },
         Some("gc") => {
             let m = matches.subcommand_matches("gc").unwrap();
             set_log_level(m);
@@ -151,9 +161,12 @@ fn build_cli() -> App<'static, 'static> {
         .about("Utilities for bioinformtics")
         .args_from_usage("-v, --verbose       'Print extra debug logging information'
              -q, --quiet         'Unless there is an error, do not print logging information'")
+             .subcommand(
+                 SubCommand::with_name("gc")
+                     .about("Calculate G+C content of FASTQ sequences piped in"))
         .subcommand(
-            SubCommand::with_name("gc")
-                .about("Calculate G+C content of FASTQ sequences piped in"))
+            SubCommand::with_name("describe")
+                .about("Calculate length of each FASTA sequence"))
         .subcommand(
             SubCommand::with_name("fasta_to_fastq")
                 .about("Make a FASTQ from a FASTA file, setting all quality values to 'A'"))
