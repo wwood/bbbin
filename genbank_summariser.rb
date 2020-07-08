@@ -10,7 +10,7 @@ SCRIPT_NAME = File.basename(__FILE__); LOG_NAME = SCRIPT_NAME.gsub('.rb','')
 options = {
   :logger => 'stderr',
   :interests => [],
-  :features => [],
+  :cds_override => false,
 }
 o = OptionParser.new do |opts|
   opts.banner = "
@@ -29,7 +29,7 @@ o = OptionParser.new do |opts|
     }
   end
   opts.on("--title", "Print title of associated article") do |f|
-    options[:interests].push lambda {|e|
+    options[:interests].push lambda {|e|    
       e.references.collect{|ref| ref.title}.join(', ')
     }
   end
@@ -61,7 +61,7 @@ o = OptionParser.new do |opts|
       }.join(', ')
     }
   end
-opts.on("--source:country", "Print /country of each feature") do |f|
+  opts.on("--source:country", "Print /country of each feature") do |f|
     options[:interests].push lambda {|e|
       e.features.select{|feature|
         feature.feature == 'source'
@@ -69,6 +69,13 @@ opts.on("--source:country", "Print /country of each feature") do |f|
         feature['country']
       }.join(', ')
     }
+  end
+  opts.on("--cds:translation:fasta", "Print amino acid sequence of each CDS feature in FASTA format") do |f|
+    if options[:interests].empty?
+      options[:cds_override] = true
+    else
+      raise "Cannot specify --cds:translation:fasta with anything else"
+    end
   end
 
   # logger options
@@ -90,15 +97,34 @@ log = Bio::Log::LoggerPlus.new(LOG_NAME)
 Bio::Log::CLI.configure(LOG_NAME)
 
 # Logic for the script
-Bio::FlatFile.foreach(ARGF) do |gb|
-  first = true
-  options[:interests].each do |interest|
-    if first
-      first = false
+if options[:cds_override]
+  Bio::FlatFile.foreach(ARGF) do |gb|
+    first = true
+    accession = gb.accession
+    gb.features.select{|feature|
+        feature.feature == 'CDS'
+  }.each{|feature|
+    if !feature['protein_id'].nil?
+      protein_id = feature['protein_id'][0]
     else
-      print "\t"
+      protein_id = 'unknown_protein_id'
     end
-    print interest.call(gb)
+    puts ">#{accession}:#{protein_id}:#{feature.position}"
+    puts feature['translation']
+  }
   end
-  puts
+  
+else
+  Bio::FlatFile.foreach(ARGF) do |gb|
+    first = true
+    options[:interests].each do |interest|
+      if first
+        first = false
+      else
+        print "\t"
+      end
+      print interest.call(gb)
+    end
+    puts
+  end
 end
