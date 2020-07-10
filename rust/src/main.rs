@@ -60,9 +60,11 @@ fn main() {
 
                 eprintln!("Pairing sequence {} with {}", r1.id(), r2.id());
                 print!(
-                    ">{} {}\n{}{}\n",
+                    ">{} {} {} {}\n{}{}\n",
                     r1.id(),
                     r2.id(),
+                    r1.desc().unwrap_or(""),
+                    r2.desc().unwrap_or(""),
                     std::str::from_utf8(r1.seq()).unwrap(),
                     std::str::from_utf8(r2.seq()).unwrap()
                 );
