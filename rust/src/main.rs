@@ -25,48 +25,54 @@ fn main() {
             let m = matches.subcommand_matches("concatenate").unwrap();
             set_log_level(m);
 
-            let reader1 = fasta::Reader::new(
-                std::fs::File::open(
-                    m.value_of("ALIGNMENT1")
-                        .expect("Failed to open first FASTA file"),
-                )
-                .expect("Failed to open first FASTA file"),
-            );
-            let reader2 = fasta::Reader::new(
-                std::fs::File::open(
-                    m.value_of("ALIGNMENT2")
-                        .expect("Failed to open first FASTA file"),
-                )
-                .expect("Failed to open first FASTA file"),
-            );
-            let mut num_residues = vec![0usize; 2];
+            let mut alignment_files = vec![];
+            for v in m.values_of("alignment-files").unwrap() {
+                alignment_files.push(v)
+            }
 
-            let mut first = true;
-            for (record1, record2) in reader1.records().zip(reader2.records()) {
+            let first_reader = fasta::Reader::new(
+                std::fs::File::open(alignment_files[0])
+                    .expect(&format!("Failed to open alignment file {}", alignment_files[0]))
+            );
+            let other_readers = alignment_files[1..].iter().map(|f| 
+                fasta::Reader::new(
+                    std::fs::File::open(f)
+                        .expect(&format!("Failed to open alignment file {}", f))
+                    )
+                )
+                .collect::<Vec<_>>();
+            info!("Opened {} FASTA readers", other_readers.len()+1);
+
+            let first_record_iter = first_reader.records();
+            let mut other_record_iters = vec![];
+            for reader in other_readers {
+                other_record_iters.push(reader.records())
+            }
+
+            for record1 in first_record_iter {
                 let r1 = record1.unwrap();
-                let r2 = record2.unwrap();
+                let num_residues = r1.seq().len();
+                let mut ids = vec![r1.id().to_string()];
+                let mut descriptions = vec![r1.desc().unwrap_or("").to_string()];
+                let mut seqs = vec![std::str::from_utf8(r1.seq()).unwrap().to_string()];
 
-                let len1 = r1.seq().len();
-                let len2 = r2.seq().len();
+                for (i, ref mut current_record_iter) in other_record_iters.iter_mut().enumerate() {
+                    let current_record_res = current_record_iter.next().expect(&format!("Unexpected number of records in {}", alignment_files[i+1]));
+                    let current_record = current_record_res.unwrap();
+                    assert!(current_record.seq().len() == num_residues);
 
-                if first {
-                    first = false;
-                    num_residues[0] = len1;
-                    num_residues[1] = len2;
-                } else {
-                    assert!(num_residues[0] == len1);
-                    assert!(num_residues[1] == len2);
+                    ids.push(current_record.id().to_string());
+                    descriptions.push(current_record.desc().unwrap_or("").to_string());
+                    seqs.push(std::str::from_utf8(current_record.seq()).unwrap().to_string());
                 }
 
-                eprintln!("Pairing sequence {} with {}", r1.id(), r2.id());
+                eprintln!("Pairing sequences {}", ids.join(", "));
+
                 print!(
-                    ">{} {} {} {}\n{}{}\n",
-                    r1.id(),
-                    r2.id(),
-                    r1.desc().unwrap_or(""),
-                    r2.desc().unwrap_or(""),
-                    std::str::from_utf8(r1.seq()).unwrap(),
-                    std::str::from_utf8(r2.seq()).unwrap()
+                    ">{} {}\n{}\n",
+                    ids.join(" "),
+                    descriptions.join(" "),
+                    seqs.join(""),
                 );
             }
         }
@@ -239,14 +245,12 @@ fn build_cli() -> App<'static, 'static> {
         .subcommand(
             SubCommand::with_name("concatenate")
                 .about("Concatenate fasta files by pasting sequences together, for concatenated gene phylogeny")
-                .arg(Arg::with_name("ALIGNMENT1")
-                .help("Sets the 1st input file to use")
-                .required(true)
-                .index(1))
-                .arg(Arg::with_name("ALIGNMENT2")
-                .help("Sets the 2nd input file to use")
-                .required(true)
-                .index(2)))
+                .arg(Arg::with_name("alignment-files")
+                    .help("Files to concatenate")
+                    .long("alignment-files")
+                    .required(true)
+                    .takes_value(true)
+                    .multiple(true)))
         .subcommand(
             SubCommand::with_name("add_genome_name_to_contig")
                 .about("Rename the contigs in a genome-wise fasta file")
