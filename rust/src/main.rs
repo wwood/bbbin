@@ -49,21 +49,37 @@ fn main() {
                 other_record_iters.push(reader.records())
             }
 
+            let mut first = true;
+            let mut sequence_lengths = vec![];
             for record1 in first_record_iter {
                 let r1 = record1.unwrap();
-                let num_residues = r1.seq().len();
                 let mut ids = vec![r1.id().to_string()];
                 let mut descriptions = vec![r1.desc().unwrap_or("").to_string()];
                 let mut seqs = vec![std::str::from_utf8(r1.seq()).unwrap().to_string()];
 
+                if first {
+                    sequence_lengths.push(r1.seq().len());
+                } else {
+                    assert!(r1.seq().len() == sequence_lengths[0]);
+                }
+
                 for (i, ref mut current_record_iter) in other_record_iters.iter_mut().enumerate() {
                     let current_record_res = current_record_iter.next().expect(&format!("Unexpected number of records in {}", alignment_files[i+1]));
                     let current_record = current_record_res.unwrap();
-                    assert!(current_record.seq().len() == num_residues);
+
+                    if first {
+                        sequence_lengths.push(current_record.seq().len());
+                    } else {
+                        assert!(current_record.seq().len() == sequence_lengths[i+1]);
+                    }
 
                     ids.push(current_record.id().to_string());
                     descriptions.push(current_record.desc().unwrap_or("").to_string());
                     seqs.push(std::str::from_utf8(current_record.seq()).unwrap().to_string());
+                }
+
+                if first {
+                    first = false;
                 }
 
                 eprintln!("Pairing sequences {}", ids.join(", "));
