@@ -75,7 +75,7 @@ class ExternCalledProcessError(subprocess.CalledProcessError):
 
 
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
     # For now don't parse args, until I work out how to grab args after a '--'
 #     parent_parser = argparse.ArgumentParser(add_help=False)
 #     parent_parser.add_argument('--debug', help='output debug information', action="store_true")
@@ -104,16 +104,33 @@ if __name__ == '__main__':
 #         loglevel = logging.INFO
 #     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    cmd = sys.argv[1:]
+if sys.argv[1] != '--':
+   logging.error("No '--' found in command line")
+   sys.exit(1)
 
-    with tempfile.NamedTemporaryFile(prefix='mqsub_script',suffix='.sh',mode='w') as tf:
-        print('#!/bin/bash -l',file=tf)
-        print('#PBS -N mqsub',file=tf)
-        print('#PBS -l ncpus=1',file=tf)
-        print('#PBS -l mem=4gb',file=tf)
-        print('#PBS -l walltime=1:00:00',file=tf)
+cmd = sys.argv[2:]
 
-        print(' '.join(sys.argv[1:]),file=tf)
-        tf.flush()
+with tempfile.NamedTemporaryFile(prefix='mqsub_script',suffix='.sh',mode='w') as tf:
+    print('#!/bin/bash -l',file=tf)
+    print('#PBS -N mqsub',file=tf)
+    print('#PBS -l ncpus=1',file=tf)
+    print('#PBS -l mem=4gb',file=tf)
+    print('#PBS -l walltime=0:01:00',file=tf)
+    print('#PBS -m abe',file=tf)
+    print('#PBS -M woodcrob@qut.edu.au',file=tf)
 
-        import IPython; IPython.embed()
+    # cd to current directory
+    print("cd '{}'".format(os.getcwd()), file=tf)
+
+    # activate the conda environment from which this script was started
+    current_conda_env = os.environ['CONDA_PREFIX']
+    if current_conda_env:
+        print('. /pkg/suse12/software/miniconda3/4.5.12/etc/profile.d/conda.sh',file=tf)
+        print('conda activate',file=tf)
+        print("source activate '{}'".format(current_conda_env),file=tf)
+    
+    print(' '.join(cmd),file=tf)
+    tf.flush()
+
+    qsub_stdout = run("qsub {}".format(tf.name))
+    print("qsub stdout: {}".format(qsub_stdout), file=sys.stderr)
