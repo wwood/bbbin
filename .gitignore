@@ -4,3 +4,4 @@ hub
 /target/
 **/*.rs.bk
 Cargo.lock
+rust/target
