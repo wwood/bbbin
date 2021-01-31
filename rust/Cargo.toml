@@ -6,6 +6,6 @@ authors = ["Ben Woodcroft <donttrustben@gmail.com>"]
 [dependencies]
 bio = "0.32.*"
 clap = "2.*"
-log = "0.3.*"
-env_logger = "0.4.*"
+log = "0.4.*"
+env_logger = "0.8.*"
 

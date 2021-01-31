@@ -5,9 +5,9 @@ use clap::*;
 
 #[macro_use]
 extern crate log;
-use log::LogLevelFilter;
+use log::LevelFilter;
 extern crate env_logger;
-use env_logger::LogBuilder;
+use env_logger::Builder;
 
 use std::io;
 use std::io::prelude::*;
@@ -70,7 +70,12 @@ fn main() {
                     if first {
                         sequence_lengths.push(current_record.seq().len());
                     } else {
-                        assert!(current_record.seq().len() == sequence_lengths[i+1]);
+                        debug!("Sequence lengths: {:?}", sequence_lengths);
+                        assert!(
+                            current_record.seq().len() == sequence_lengths[i+1], 
+                            "Unexpected length in {} in alignment #{}: {}, expected {}",
+                            current_record.id(), i+2, current_record.seq().len(), sequence_lengths[i+1]
+                        );
                     }
 
                     ids.push(current_record.id().to_string());
@@ -82,7 +87,7 @@ fn main() {
                     first = false;
                 }
 
-                eprintln!("Pairing sequences {}", ids.join(", "));
+                info!("Pairing sequences {}", ids.join(", "));
 
                 print!(
                     ">{} {}\n{}\n",
@@ -224,19 +229,21 @@ fn main() {
 }
 
 fn set_log_level(matches: &clap::ArgMatches) {
-    let mut log_level = LogLevelFilter::Info;
+    let mut log_level = LevelFilter::Info;
     if matches.is_present("verbose") {
-        log_level = LogLevelFilter::Debug;
+        log_level = LevelFilter::Debug;
     }
     if matches.is_present("quiet") {
-        log_level = LogLevelFilter::Error;
+        log_level = LevelFilter::Error;
     }
-    let mut builder = LogBuilder::new();
+    let mut builder = Builder::new();
     builder.filter(None, log_level);
     if env::var("RUST_LOG").is_ok() {
-        builder.parse(&env::var("RUST_LOG").unwrap());
+        builder.parse_filters(&env::var("RUST_LOG").unwrap());
     }
-    builder.init().unwrap();
+    if builder.try_init().is_err() {
+        panic!("Failed to set log level - has it been specified multiple times?")
+    }
 }
 
 fn build_cli() -> App<'static, 'static> {
