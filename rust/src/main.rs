@@ -18,6 +18,9 @@ use std::io::BufReader;
 extern crate bio;
 use bio::io::{fasta, fastq};
 
+extern crate rand;
+use rand::{seq::IteratorRandom, thread_rng};
+
 fn main() {
     let mut app = build_cli();
     let matches = app.clone().get_matches();
@@ -304,6 +307,94 @@ fn main() {
                 debug!("Wrote {} sequences", count);
             }
         }
+        Some("msa-sample") => {
+            let m = matches.subcommand_matches("msa-sample").unwrap();
+            set_log_level(m);
+
+            // Read sequences in
+            let mut original_order = vec![];
+            let mut id_to_seq = HashMap::new();
+            let mut sequence_length = None;
+            let reader = fasta::Reader::new(
+                std::fs::File::open(m.value_of("fasta").unwrap()).expect(&format!(
+                    "Failed to open alignment file {}",
+                    m.value_of("fasta").unwrap()
+                )),
+            );
+            for record in reader.records() {
+                let r = record.unwrap();
+                let id = r.id().to_string().clone();
+                let seq = std::str::from_utf8(r.seq()).unwrap().to_string();
+
+                assert!(
+                    !id_to_seq.contains_key(&id),
+                    "Found duplicate sequence ID {} in alignment",
+                    id,
+                );
+                original_order.push(id.clone());
+                id_to_seq.insert(id.clone(), seq.clone());
+                match sequence_length {
+                    Some(l) => {
+                        assert!(seq.len() == l, "Found unexpected length in sequence {}", id);
+                    }
+                    None => {
+                        sequence_length = Some(seq.len());
+                    }
+                }
+            }
+
+            // Determine which columns are usable
+            let mut useable_columns = vec![];
+            let num_seqs = id_to_seq.len();
+            let num_seqs_threshold = (num_seqs as f32)
+                * m.value_of("min-perc-taxa")
+                    .unwrap()
+                    .parse::<f32>()
+                    .expect("Failed to parse float for min-perc-taxa")
+                / 100.;
+            info!("Requiring {} positions to be filled", num_seqs_threshold);
+            for i in 0..sequence_length.unwrap() {
+                let mut num_not_gap = 0;
+                for seq in id_to_seq.values() {
+                    let ch = seq.chars().nth(i).unwrap();
+                    debug!("Found char {}", ch);
+                    if ch != '-' && ch != '*' {
+                        num_not_gap += 1;
+                    }
+                }
+                if num_not_gap as f32 >= num_seqs_threshold {
+                    useable_columns.push(i)
+                }
+            }
+            info!("Found {} columns passing thresholds", useable_columns.len());
+
+            // Sample useable column IDs
+            let num_to_choose = m
+                .value_of("num-columns")
+                .unwrap()
+                .parse::<usize>()
+                .expect("faild to parse num-columns");
+            let mut rng = thread_rng();
+            if useable_columns.len() > num_to_choose {
+                useable_columns = useable_columns
+                    .iter()
+                    .choose_multiple(&mut rng, num_to_choose)
+                    .into_iter()
+                    .map(|r| *r)
+                    .collect();
+            }
+
+            // Print sampled columns
+            info!("Printing {} columns", useable_columns.len());
+            for id in original_order {
+                let seq = id_to_seq.get(&id).unwrap();
+                println!(">{}", id);
+                for i in &useable_columns {
+                    print!("{}", seq.chars().nth(*i).unwrap());
+                }
+                println!()
+            }
+        }
         _ => {
             app.print_help().unwrap();
             println!();
@@ -375,5 +466,24 @@ fn build_cli() -> App<'static, 'static> {
                     .required(true)
                     .takes_value(true)
                     .help("Folder to write new genome fasta files to"))
+        )
+        .subcommand(
+            SubCommand::with_name("msa-sample")
+                .about("Sample columns from a multiple sequence alignment")
+                .arg(Arg::with_name("fasta")
+                    .long("fasta")
+                    .required(true)
+                    .takes_value(true)
+                    .help("Fasta file to sample (a multiple sequence alignment)"))
+                .arg(Arg::with_name("num-columns")
+                    .long("num-columns")
+                    .required(true)
+                    .takes_value(true)
+                    .help("Number of columns to choose (without replacement)"))
+                .arg(Arg::with_name("min-perc-taxa")
+                    .long("min-perc-taxa")
+                    .takes_value(true)
+                    .default_value("50")
+                    .help("Minimum percentage of taxa required to retain column (inclusive bound) (default: 50)"))
         );
 }
