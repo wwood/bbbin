@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env;
 
 extern crate clap;
@@ -43,7 +43,7 @@ fn main() {
                 for alignment_file in alignment_files {
                     let reader = fasta::Reader::new(
                         std::fs::File::open(alignment_file)
-                            .expect(&format!("Failed to open alignment file {}", alignment_file))
+                            .expect(&format!("Failed to open alignment file {}", alignment_file)),
                     );
 
                     let marker = alignment_file;
@@ -53,11 +53,22 @@ fn main() {
                         let id = r.id().to_string().clone();
                         let seq = std::str::from_utf8(r.seq()).unwrap().to_string();
 
-                        assert!(!marker_hash_map.contains_key(&id), "Found duplicate sequence ID {} in alignment {}", id, alignment_file);
+                        assert!(
+                            !marker_hash_map.contains_key(&id),
+                            "Found duplicate sequence ID {} in alignment {}",
+                            id,
+                            alignment_file
+                        );
                         marker_hash_map.insert(id.clone(), seq.clone());
                         all_ids.insert(id.clone());
                         if marker_to_len.contains_key(&marker) {
-                            assert!(marker_to_len.get(&marker).unwrap() == &seq.len(), "Unexpected length {} for seuqence {} in alignment {}", seq.len(), &id, &alignment_file);
+                            assert!(
+                                marker_to_len.get(&marker).unwrap() == &seq.len(),
+                                "Unexpected length {} for seuqence {} in alignment {}",
+                                seq.len(),
+                                &id,
+                                &alignment_file
+                            );
                         } else {
                             marker_to_len.insert(marker.clone(), seq.len());
                         }
@@ -65,16 +76,18 @@ fn main() {
                     marker_to_id_to_aln.insert(marker, marker_hash_map);
                 }
 
-                let mut id_to_full_seq: HashMap<String,String> = HashMap::new();
+                let mut id_to_full_seq: HashMap<String, String> = HashMap::new();
                 for (marker, id_to_seq) in marker_to_id_to_aln.iter() {
                     for id in &all_ids {
                         let seq = match id_to_seq.get(id) {
                             Some(seq) => (*seq).clone(),
-                            None => "-".repeat(*marker_to_len.get(marker).unwrap())
+                            None => "-".repeat(*marker_to_len.get(marker).unwrap()),
                         };
                         match id_to_full_seq.get_mut(id) {
-                            Some(prev_seq) => {*prev_seq = format!("{}{}", prev_seq, seq)},
-                            None => {id_to_full_seq.insert(id.clone(), seq);}
+                            Some(prev_seq) => *prev_seq = format!("{}{}", prev_seq, seq),
+                            None => {
+                                id_to_full_seq.insert(id.clone(), seq);
+                            }
                         }
                     }
                 }
@@ -82,22 +95,23 @@ fn main() {
                 for (id, seq) in id_to_full_seq {
                     println!(">{}\n{}", id, seq);
                 }
-                
-
             } else {
                 // Expect all FASTA files to have the same num seqs, but don't require IDs to match
-                let first_reader = fasta::Reader::new(
-                    std::fs::File::open(alignment_files[0])
-                        .expect(&format!("Failed to open alignment file {}", alignment_files[0]))
-                );
-                let other_readers = alignment_files[1..].iter().map(|f| 
-                    fasta::Reader::new(
-                        std::fs::File::open(f)
-                            .expect(&format!("Failed to open alignment file {}", f))
+                let first_reader =
+                    fasta::Reader::new(std::fs::File::open(alignment_files[0]).expect(&format!(
+                        "Failed to open alignment file {}",
+                        alignment_files[0]
+                    )));
+                let other_readers = alignment_files[1..]
+                    .iter()
+                    .map(|f| {
+                        fasta::Reader::new(
+                            std::fs::File::open(f)
+                                .expect(&format!("Failed to open alignment file {}", f)),
                         )
-                    )
+                    })
                     .collect::<Vec<_>>();
-                info!("Opened {} FASTA readers", other_readers.len()+1);
+                info!("Opened {} FASTA readers", other_readers.len() + 1);
 
                 let first_record_iter = first_reader.records();
                 let mut other_record_iters = vec![];
@@ -119,8 +133,13 @@ fn main() {
                         assert!(r1.seq().len() == sequence_lengths[0]);
                     }
 
-                    for (i, ref mut current_record_iter) in other_record_iters.iter_mut().enumerate() {
-                        let current_record_res = current_record_iter.next().expect(&format!("Unexpected number of records in {}", alignment_files[i+1]));
+                    for (i, ref mut current_record_iter) in
+                        other_record_iters.iter_mut().enumerate()
+                    {
+                        let current_record_res = current_record_iter.next().expect(&format!(
+                            "Unexpected number of records in {}",
+                            alignment_files[i + 1]
+                        ));
                         let current_record = current_record_res.unwrap();
 
                         if first {
@@ -128,15 +147,22 @@ fn main() {
                         } else {
                             debug!("Sequence lengths: {:?}", sequence_lengths);
                             assert!(
-                                current_record.seq().len() == sequence_lengths[i+1], 
+                                current_record.seq().len() == sequence_lengths[i + 1],
                                 "Unexpected length in {} in alignment #{}: {}, expected {}",
-                                current_record.id(), i+2, current_record.seq().len(), sequence_lengths[i+1]
+                                current_record.id(),
+                                i + 2,
+                                current_record.seq().len(),
+                                sequence_lengths[i + 1]
                             );
                         }
 
                         ids.push(current_record.id().to_string());
                         descriptions.push(current_record.desc().unwrap_or("").to_string());
-                        seqs.push(std::str::from_utf8(current_record.seq()).unwrap().to_string());
+                        seqs.push(
+                            std::str::from_utf8(current_record.seq())
+                                .unwrap()
+                                .to_string(),
+                        );
                     }
 
                     if first {
