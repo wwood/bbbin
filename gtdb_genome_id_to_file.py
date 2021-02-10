@@ -13,6 +13,8 @@ if __name__ == '__main__':
                                action="store_true")
 
     parent_parser.add_argument('-i','--ids', help='input file of NCBI/GTDB/UBA IDs. UBA IDs can be in U_123 or UBA123 form', required=True)
+    parent_parser.add_argument('-r','--release',help='GTDB release [default 95]',default='95')
+    parent_parser.add_argument('--file-type',help='which file from each genome [default fna]', default='fna')
     args = parent_parser.parse_args()
 
     input_accessions = args.ids
@@ -27,7 +29,13 @@ if __name__ == '__main__':
                         format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    genome_dirs = '/srv/db/gtdb/genomes/ncbi/release89/genome_dirs.tsv'
+    if args.release=='95':
+        genome_dirs = '/srv/db/gtdb/genomes/ncbi/release95/genome_dirs.tsv'
+    elif args.release=='89':
+        genome_dirs = '/srv/db/gtdb/genomes/ncbi/release89/genome_dirs.tsv'
+    else:
+        raise Exception("Unexpected gtdb release specified")
+    release = args.release
     uba_mapping_file = os.path.join( os.path.dirname(os.path.realpath(__file__)), 'uba_ncbi_accessions.tsv' )
 
     uba_genomes_base_dir = '/srv/db/gtdb/genomes/user/uqdparks/'
@@ -40,7 +48,7 @@ if __name__ == '__main__':
     with open(genome_dirs) as f:
         csv_reader = csv.reader(f, delimiter="\t")
         for row in csv_reader:
-            if len(row) != 2:
+            if (release=='89' and len(row) != 2) or (release=='95' and len(row) != 3):
                 raise Exception("Unexpected genome_dirs row found: {}".format(row))
 
             id_to_folder[row[0]] = row[1].strip()
@@ -67,6 +75,7 @@ if __name__ == '__main__':
                 q2 = re.sub('^GB_','',re.sub("^RS_",'',q))
                 if q2 in id_to_folder:
                     folder = id_to_folder[q2]
+                    q = q2 # required for prodigal_faa type
                 elif q in gtdb_accession_to_u:
                     folder = os.path.join(uba_genomes_base_dir, gtdb_accession_to_u[q])
                 elif q in uba_accession_to_u:
@@ -74,4 +83,9 @@ if __name__ == '__main__':
                 else:
                     raise Exception("Unable to find accession {}".format(genome_id))
             stub = folder.split('/')[-1]
-            print("\t".join([genome_id, "{}/{}_genomic.fna".format(folder,stub)]))
+            if args.file_type =='fna':
+                print("\t".join([genome_id, "{}/{}_genomic.fna".format(folder,stub)]))
+            elif args.file_type == 'prodigal_faa':
+                print("\t".join([genome_id, "{}/prodigal/{}_protein.faa".format(folder,q)]))
+            else:
+                raise Exception("bad file type")
