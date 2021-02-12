@@ -216,28 +216,53 @@ fn main() {
             let m = matches.subcommand_matches("gc").unwrap();
             set_log_level(m);
 
-            let reader = fastq::Reader::new(io::stdin());
             let mut num_gc: u64 = 0;
             let mut num_at: u64 = 0;
             let mut num_other: u64 = 0;
 
-            for record in reader.records() {
-                for c in record.unwrap().seq() {
-                    match *c as char {
-                        'G' => num_gc += 1,
-                        'g' => num_gc += 1,
-                        'C' => num_gc += 1,
-                        'c' => num_gc += 1,
+            // Poor coding here, duplicating. But annoying to fix
+            if m.is_present("fasta") {
+                let reader = fasta::Reader::new(io::stdin());
 
-                        'A' => num_at += 1,
-                        'a' => num_at += 1,
-                        'T' => num_at += 1,
-                        't' => num_at += 1,
+                for record in reader.records() {
+                    for c in record.unwrap().seq() {
+                        match *c as char {
+                            'G' => num_gc += 1,
+                            'g' => num_gc += 1,
+                            'C' => num_gc += 1,
+                            'c' => num_gc += 1,
 
-                        _ => num_other += 1,
+                            'A' => num_at += 1,
+                            'a' => num_at += 1,
+                            'T' => num_at += 1,
+                            't' => num_at += 1,
+
+                            _ => num_other += 1,
+                        }
                     }
                 }
-            }
+            } else {
+                let reader = fastq::Reader::new(io::stdin());
+
+                for record in reader.records() {
+                    for c in record.unwrap().seq() {
+                        match *c as char {
+                            'G' => num_gc += 1,
+                            'g' => num_gc += 1,
+                            'C' => num_gc += 1,
+                            'c' => num_gc += 1,
+
+                            'A' => num_at += 1,
+                            'a' => num_at += 1,
+                            'T' => num_at += 1,
+                            't' => num_at += 1,
+
+                            _ => num_other += 1,
+                        }
+                    }
+                }
+            };
+
             if num_at + num_gc == 0 {
                 panic!("No A, T, G or Cs found!")
             }
@@ -427,9 +452,12 @@ fn build_cli() -> App<'static, 'static> {
         .about("Utilities for bioinformtics")
         .args_from_usage("-v, --verbose       'Print extra debug logging information'
              -q, --quiet         'Unless there is an error, do not print logging information'")
-             .subcommand(
-                 SubCommand::with_name("gc")
-                     .about("Calculate G+C content of FASTQ sequences piped in"))
+        .subcommand(
+            SubCommand::with_name("gc")
+                .about("Calculate G+C content of FASTA/Q sequences piped in")
+                .arg(Arg::with_name("fasta")
+                .help("Input is FASTA not FASTQ")
+                .long("fasta")))
         .subcommand(
             SubCommand::with_name("describe")
                 .about("Calculate length of each FASTA sequence"))
