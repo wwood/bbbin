@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use Bio::Seq;
 use Bio::SeqIO;
