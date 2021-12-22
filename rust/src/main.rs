@@ -331,7 +331,7 @@ fn main() {
                 }
                 debug!("Wrote {} sequences", count);
             }
-        }
+        },
         Some("msa-sample") => {
             let m = matches.subcommand_matches("msa-sample").unwrap();
             set_log_level(m);
@@ -419,7 +419,25 @@ fn main() {
                 }
                 println!()
             }
-        }
+        },
+        // Some("contig_dereplicate") => {
+        //     panic!();
+        //     // For each line
+        //         if subject name >= query name
+        //             continue
+        //         else
+        //             Query should be masked in this region
+        //             if %id is good enough
+        //                 add it to store of masks (just a pipe to sort?)
+        //     Sort tab-separated file of masks by sequence name
+        //     throw out stretches < 100bp
+        //     Add 20bp buffer
+        //     print fasta if any unmasked regions
+        //     masking algorithm:
+        //     foreach contig, make a priority queue of starts/stops with position
+        //     iterate queue, changing state if necessary
+        //     give last chunk back if open at end
+        // }
         _ => {
             app.print_help().unwrap();
             println!();
