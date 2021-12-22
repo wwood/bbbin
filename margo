@@ -43,6 +43,7 @@ if __name__ == '__main__':
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
 
     parent_parser.add_argument('--namespace','-n',default='argo')
+    parent_parser.add_argument('--context')
 
     args = parent_parser.parse_args()
 
@@ -55,23 +56,29 @@ if __name__ == '__main__':
         loglevel = logging.INFO
     logging.basicConfig(level=loglevel, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    json_list = extern.run(f'argo list -n {args.namespace} -o json')
+    context_arg = ""
+    if args.context:
+        context_arg = f"--context {args.context}"
+    json_list = extern.run(f'argo list {context_arg} -n {args.namespace} -o json')
     j = json.loads(json_list)
     # with open('/tmp/argo.json') as f:
     #     j = json.load(f)
 
     status = {}
     for i in j:
-        nodes = list(sorted(i['status']['nodes'].values(), key=lambda x: x['displayName']))
-        
-        if len(nodes) == 2:
-            current_status = nodes[-1]['phase']
-        elif len(nodes) < 2:
-            raise Exception("Unexpected number of nodes in json object")
+        if 'nodes' in i['status']:
+            nodes = list(sorted(i['status']['nodes'].values(), key=lambda x: x['displayName']))
+            
+            if len(nodes) == 2:
+                current_status = nodes[-1]['phase']
+            elif len(nodes) < 2:
+                raise Exception("Unexpected number of nodes in json object")
+            else:
+                failure_modes = [n['phase'] for n in nodes[1:-1]]
+                current_state = nodes[-1]['phase']
+                current_status = f"Retry after {','.join(sorted(failure_modes))}, now {current_state}"
         else:
-            failure_modes = [n['phase'] for n in nodes[1:-1]]
-            current_state = nodes[-1]['phase']
-            current_status = f"Retry after {','.join(sorted(failure_modes))}, now {current_state}"
+            current_status = 'Submitting'
 
         if current_status not in status:
             status[current_status] = 0
