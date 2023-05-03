@@ -1,0 +1,46 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  # - mamba # Having difficulties installing the newest version of mamba
+  - aria2
+  - assembly-stats
+  - binutils
+  - biopython
+  - curl
+  - extern
+  - git
+  - htop
+  - hck
+  - jupyterlab
+  - nbconvert
+  - ipython
+  - newick_utils
+  # when listed, openssh somehow forces R to version < 4, which causes havoc.
+  # Instead I just install openssh to its own env and add it to the path
+  # - openssh>=9.3p1
+  - pandoc
+  - parallel
+  - polars
+  - psutil
+  - python
+  - r>=4.2
+  - r-ggplot2
+  - r-data.table
+  - ripgrep
+  - r-irkernel
+  - sed
+  - scikit-learn
+  - sqlite
+  - tar
+  - tqdm
+  - xsv
+  - zstd
+  - ncbi-acc-download
+  # - tmux==3.3a
+  - gh
+  - r-svglite
+  - r-lubridate
+  # - jq # Fails to resolve with the other deps, so just have a binary in ~/bin
+    
