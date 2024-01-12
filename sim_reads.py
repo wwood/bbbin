@@ -56,7 +56,10 @@ class ReadSimulator(object):
     @staticmethod
     def simulate_reads(input_io, read_len, read_step_size, insert_size, fout1, fout2):
         """Simulate reads."""
-        fragment_len = 2*read_len + insert_size
+        if fout2 is None:
+            fragment_len = read_len
+        else:
+            fragment_len = 2 * read_len + insert_size
         pair_count = 0
         for _, seq, _ in SequenceIO().each(input_io):
             for i in range(0, len(seq) - fragment_len, read_step_size):
