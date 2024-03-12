@@ -21,6 +21,8 @@ use bio::io::{fasta, fastq};
 extern crate rand;
 use rand::{seq::IteratorRandom, thread_rng};
 
+mod translate;
+
 fn main() {
     let mut app = build_cli();
     let matches = app.clone().get_matches();
@@ -502,6 +504,27 @@ fn main() {
                     .expect("Failed to write FASTA entry");
             }
         },
+        Some("translate") => {
+            let m = matches.subcommand_matches("translate").unwrap();
+            set_log_level(m);
+
+            let reader = fasta::Reader::new(
+                std::fs::File::open(m.value_of("input").unwrap()).expect(&format!(
+                    "Failed to open input file {}",
+                    m.value_of("input").unwrap()
+                )),
+            );
+            let mut writer = fasta::Writer::to_file(m.value_of("output").unwrap())
+                .expect(&format!("Failed to open output file {}", m.value_of("output").unwrap()));
+            for record_res in reader.records() {
+                let record = record_res.expect("Failed to parse FASTA entry");
+                let seq = std::str::from_utf8(record.seq()).unwrap();
+                let new_seq = translate::translate(seq.as_bytes());
+                writer
+                    .write(record.id(), record.desc(), new_seq.as_bytes())
+                    .expect("Failed to write FASTA entry");
+            }
+        },
         _ => {
             app.print_help().unwrap();
             println!();
@@ -599,6 +622,20 @@ fn build_cli() -> App<'static, 'static> {
         .subcommand(
             SubCommand::with_name("backtranslate")
                 .about("Backtranslate a protein sequence to a DNA sequence, guessing the codons")
+                .arg(Arg::with_name("input")
+                    .long("input")
+                    .required(true)
+                    .takes_value(true)
+                    .help("Input file"))
+                .arg(Arg::with_name("output")
+                    .long("output")
+                    .required(true)
+                    .takes_value(true)
+                    .help("Output file"))
+        )
+        .subcommand(
+            SubCommand::with_name("translate")
+                .about("Translate DNA sequences to protein sequences")
                 .arg(Arg::with_name("input")
                     .long("input")
                     .required(true)
