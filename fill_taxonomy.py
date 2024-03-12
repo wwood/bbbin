@@ -42,6 +42,8 @@ if __name__ == '__main__':
     parent_parser.add_argument('--quiet', help='only output errors', action="store_true")
 
     parent_parser.add_argument('--input-taxonomy', help='2 column <ID><tab><taxonomy> with 7 level taxonomy', required=True)
+    # This idea currently buggy
+    parent_parser.add_argument('--no-add-prefixes', help='Do not add prefixes to taxons', action="store_true")
 
     args = parent_parser.parse_args()
 
@@ -58,7 +60,7 @@ if __name__ == '__main__':
     df = pl.read_csv(args.input_taxonomy, separator='\t', has_header=False)
     df.columns = ['id','taxonomy']
 
-    levels = ['k__','p__','c__','o__','f__','g__','s__']
+    levels = ['d__','p__','c__','o__','f__','g__','s__']
 
     # Gather known taxonomies. This checks for duplicates as well as providing a
     # data structure to impute dummy middle rank taxons.
@@ -66,18 +68,22 @@ if __name__ == '__main__':
     for row in df.rows(named=True):
         id = row['id']
         tax = row['taxonomy']
-        taxons = list([t.replace(' ','_') for t in tax.split(';')])
+        taxons = list([t.strip().replace(' ','_') for t in tax.split(';')])
         if len(levels) != len(taxons):
             raise Exception("Unexpected taxon format: %s" % row['taxonomy'])
 
         for i in range(1, len(taxons)):
-            taxon = levels[i]+taxons[i]
-            parent = levels[i-1]+taxons[i-1]
-            if len(taxon) == 3: # ignore this missing rank, this will be filled by lower ranks
+            if args.no_add_prefixes: # This idea currently buggy
+                taxon = taxons[i]
+                parent = taxons[i-1]
+            else:
+                taxon = levels[i]+taxons[i]
+                parent = levels[i-1]+taxons[i-1]
+            if len(taxon) <= 3: # ignore this missing rank, this will be filled by lower ranks
                 if i == 6:
                     raise Exception("Taxon %s has no species" % tax)
                 continue
-            elif len(parent) == 3:
+            elif len(parent) <= 3:
                 # Add a dummy entry for this parent, plus all other parents
                 # which are missing above that
                 j = i-1
@@ -89,7 +95,10 @@ if __name__ == '__main__':
                     taxon_to_parent[last_taxon] = parent_name
                     last_taxon = parent_name
                     j -= 1
-                taxon_to_parent[last_taxon] = levels[j] + taxons[j]
+                if args.no_add_prefixes:
+                    taxon_to_parent[last_taxon] = taxons[j]
+                else:
+                    taxon_to_parent[last_taxon] = levels[j] + taxons[j]
             elif taxon not in taxon_to_parent:
                 taxon_to_parent[taxon] = parent
             elif taxon_to_parent[taxon] != parent:
@@ -104,7 +113,9 @@ if __name__ == '__main__':
         # genome_name = genome.replace('_','')
         id2 = row['id'].split('.')[0].replace('_','')
         # Build the taxonomy from the species up
-        current_taxon = 's__'+row['taxonomy'].split(';')[-1].replace(' ','_')
+        current_taxon = row['taxonomy'].split(';')[-1].strip().replace(' ','_')
+        if not args.no_add_prefixes:
+            current_taxon = levels[-1] + current_taxon
         taxons = [current_taxon]
         while current_taxon in taxon_to_parent:
             current_taxon = taxon_to_parent[current_taxon]
