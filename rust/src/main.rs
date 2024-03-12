@@ -73,7 +73,7 @@ fn main() {
                                 &alignment_file
                             );
                         } else {
-                            marker_to_len.insert(marker.clone(), seq.len());
+                            marker_to_len.insert(marker, seq.len());
                         }
                     }
                     marker_to_id_to_aln.insert(marker, marker_hash_map);
@@ -438,6 +438,69 @@ fn main() {
         //     iterate queue, changing state if necessary
         //     give last chunk back if open at end
         // }
+        Some("backtranslate") => {
+            let m = matches.subcommand_matches("backtranslate").unwrap();
+            set_log_level(m);
+
+            let reader = fasta::Reader::new(
+                std::fs::File::open(m.value_of("input").unwrap()).expect(&format!(
+                    "Failed to open input file {}",
+                    m.value_of("input").unwrap()
+                )),
+            );
+            let mut writer = fasta::Writer::to_file(m.value_of("output").unwrap())
+                .expect(&format!("Failed to open output file {}", m.value_of("output").unwrap()));
+            for record_res in reader.records() {
+                let record = record_res.expect("Failed to parse FASTA entry");
+                let seq = std::str::from_utf8(record.seq()).unwrap();
+                let mut new_seq = String::new();
+                for aa in seq.chars() {
+                    match aa {
+                        // Ala, A	GCT, GCC, GCA, GCG	GCN	Ile, I	ATT, ATC, ATA	ATH
+                        'A' => new_seq.push_str("GCT"),
+                        'I' => new_seq.push_str("ATT"),
+                        // Arg, R	CGT, CGC, CGA, CGG; AGA, AGG	CGN, AGR; or
+                        // CGY, MGR	Leu, L	CTT, CTC, CTA, CTG; TTA, TTG	CTN, TTR; or
+                        // CTY, YTR
+                        'R' => new_seq.push_str("CGT"),
+                        'L' => new_seq.push_str("CTT"),
+                        // Asn, N	AAT, AAC	AAY	Lys, K	AAA, AAG	AAR
+                        'N' => new_seq.push_str("AAT"),
+                        'K' => new_seq.push_str("AAA"),
+                        // Asp, D	GAT, GAC	GAY	Met, M	ATG
+                        'D' => new_seq.push_str("GAT"),
+                        'M' => new_seq.push_str("ATG"),
+                        // Asn or Asp, B	AAT, AAC; GAT, GAC	RAY	Phe, F	TTT, TTC	TTY
+                        'B' => new_seq.push_str("AAT"),
+                        'F' => new_seq.push_str("TTT"),
+                        // Cys, C	TGT, TGC	TGY	Pro, P	CCT, CCC, CCA, CCG	CCN
+                        'C' => new_seq.push_str("TGT"),
+                        'P' => new_seq.push_str("CCT"),
+                        // Gln, Q	CAA, CAG	CAR	Ser, S	TCT, TCC, TCA, TCG; AGT, AGC	TCN, AGY
+                        'Q' => new_seq.push_str("CAA"),
+                        'S' => new_seq.push_str("TCT"),
+                        // Glu, E	GAA, GAG	GAR	Thr, T	ACT, ACC, ACA, ACG	ACN
+                        'E' => new_seq.push_str("GAA"),
+                        'T' => new_seq.push_str("ACT"),
+                        // Gln or Glu, Z	CAA, CAG; GAA, GAG	SAR	Trp, W	TGG
+                        'Z' => new_seq.push_str("CAA"),
+                        'W' => new_seq.push_str("TGG"),
+                        // Gly, G	GGT, GGC, GGA, GGG	GGN	Tyr, Y	TAT, TAC	TAY
+                        'G' => new_seq.push_str("GGT"),
+                        'Y' => new_seq.push_str("TAT"),
+                        // His, H	CAT, CAC	CAY	Val, V	GTT, GTC, GTA, GTG	GTN
+                        'H' => new_seq.push_str("CAT"),
+                        'V' => new_seq.push_str("GTT"),
+                        // START	ATG, CTG, UTG	HTG	STOP	TAA, TGA, TAG	TRA, TAR
+                        '*' => new_seq.push_str("TAA"),
+                        _ => panic!("Unexpected amino acid {}", aa),
+                    }
+                }
+                writer
+                    .write(record.id(), record.desc(), new_seq.as_bytes())
+                    .expect("Failed to write FASTA entry");
+            }
+        },
         _ => {
             app.print_help().unwrap();
             println!();
@@ -531,5 +594,19 @@ fn build_cli() -> App<'static, 'static> {
                     .takes_value(true)
                     .default_value("50")
                     .help("Minimum percentage of taxa required to retain column (inclusive bound) (default: 50)"))
+        )
+        .subcommand(
+            SubCommand::with_name("backtranslate")
+                .about("Backtranslate a protein sequence to a DNA sequence, guessing the codons")
+                .arg(Arg::with_name("input")
+                    .long("input")
+                    .required(true)
+                    .takes_value(true)
+                    .help("Input file"))
+                .arg(Arg::with_name("output")
+                    .long("output")
+                    .required(true)
+                    .takes_value(true)
+                    .help("Output file"))
         );
 }

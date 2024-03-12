@@ -4,9 +4,11 @@ version = "0.1.0-dev"
 authors = ["Ben Woodcroft <donttrustben@gmail.com>"]
 
 [dependencies]
-bio = "0.32.*"
+bio = "1.5.*"
 clap = "2.*"
 log = "0.4.*"
-env_logger = "0.8.*"
+env_logger = "0.11.*"
 rand = "0.8"
 
+[dev-dependencies]
+assert_cli = "0.6.*"
