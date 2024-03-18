@@ -496,6 +496,7 @@ fn main() {
                         // START	ATG, CTG, UTG	HTG	STOP	TAA, TGA, TAG	TRA, TAR
                         '*' => new_seq.push_str("TAA"),
                         'X' => new_seq.push_str("NNN"),
+                        'U' => new_seq.push_str("NNN"),
                         _ => panic!("Unexpected amino acid {}", aa),
                     }
                 }
