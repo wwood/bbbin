@@ -218,16 +218,26 @@ fn main() {
             let m = matches.subcommand_matches("gc").unwrap();
             set_log_level(m);
 
+            let headers = match m.is_present("per-sequence") {
+                true => "Name GC_count AT_count Other_count GC",
+                false => "GC_count AT_count Other_count GC"
+            };
+            println!("{}", headers);
+
             let mut num_gc: u64 = 0;
             let mut num_at: u64 = 0;
             let mut num_other: u64 = 0;
+            let each_sequence = m.is_present("per-sequence");
 
             // Poor coding here, duplicating. But annoying to fix
             if m.is_present("fasta") {
                 let reader = fasta::Reader::new(io::stdin());
 
                 for record in reader.records() {
-                    for c in record.unwrap().seq() {
+                    let r = record.unwrap();
+                    let seq = &r.seq();
+                    let name = &r.id();
+                    for c in *seq {
                         match *c as char {
                             'G' => num_gc += 1,
                             'g' => num_gc += 1,
@@ -241,6 +251,19 @@ fn main() {
 
                             _ => num_other += 1,
                         }
+                    }
+                    if each_sequence {
+                        println!(
+                            "{} {} {} {} {}",
+                            name,
+                            num_gc,
+                            num_at,
+                            num_other,
+                            num_gc as f64 / (num_at + num_gc) as f64
+                        );
+                        num_gc = 0;
+                        num_at = 0;
+                        num_other = 0;
                     }
                 }
             } else {
@@ -265,16 +288,18 @@ fn main() {
                 }
             };
 
-            if num_at + num_gc == 0 {
-                panic!("No A, T, G or Cs found!")
-            }
-            println!(
-                "{} {} {} {}",
-                num_gc,
-                num_at,
-                num_other,
-                num_gc as f64 / (num_at + num_gc) as f64
-            );
+            if !each_sequence {
+                if num_at + num_gc == 0 {
+                    panic!("No A, T, G or Cs found!")
+                }
+                println!(
+                    "{} {} {} {}",
+                    num_gc,
+                    num_at,
+                    num_other,
+                    num_gc as f64 / (num_at + num_gc) as f64
+                );
+            };
         }
         Some("fasta_to_fastq") => {
             let m = matches.subcommand_matches("fasta_to_fastq").unwrap();
@@ -561,9 +586,15 @@ fn build_cli() -> App<'static, 'static> {
         .subcommand(
             SubCommand::with_name("gc")
                 .about("Calculate G+C content of FASTA/Q sequences piped in")
-                .arg(Arg::with_name("fasta")
-                .help("Input is FASTA not FASTQ")
-                .long("fasta")))
+                .arg(
+                    Arg::with_name("fasta")
+                    .help("Input is FASTA not FASTQ")
+                    .long("fasta"))
+                .arg(
+                    Arg::with_name("per-sequence")
+                    .help("Print GC content for each sequence, not the entire file")
+                    .long("per-sequence"))
+                )
         .subcommand(
             SubCommand::with_name("describe")
                 .about("Calculate length of each FASTA sequence"))

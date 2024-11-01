@@ -70,13 +70,13 @@ class ReadSimulator(object):
                     fout2.write('>%d\n' % pair_count)
                     fout2.write('%s\n' % seq[i+read_len+insert_size:i+2*read_len+insert_size])
         if fout2 is None:
-            print("Write %i single-ended reads" % pair_count)
+            print("Write %i single-ended reads" % pair_count, file=sys.stderr)
         else:
-            print("Write %i read pairs" % pair_count)
+            print("Write %i read pairs" % pair_count, file=sys.stderr)
 
 
 if __name__ == '__main__':
-    print(__prog_name__ + ' v' + __version__ + ': ' + __prog_desc__)
+    print(__prog_name__ + ' v' + __version__ + ': ' + __prog_desc__, file=sys.stderr)
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-i', help='file to simulate reads across', required=True)
