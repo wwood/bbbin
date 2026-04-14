@@ -1,0 +1,11 @@
+[workspace]
+authors = ["Ben Woodcroft <donttrustben@gmail.com>"]
+channels = ["conda-forge"]
+name = "pdf_page_counter"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+pypdf = ">=6.10.0,<7"

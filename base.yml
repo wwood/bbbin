@@ -57,3 +57,5 @@ dependencies:
   - polars
   - pandas
   - scikit-learn
+  - plotnine
+  - pyarrow

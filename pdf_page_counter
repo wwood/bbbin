@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+DIR="$(dirname "$(readlink -f "$0")")"/pdf_page_counter_impl
+exec pixi run --manifest-path "$DIR/pixi.toml" python "$DIR/pdf_page_counter.py" "$@"
