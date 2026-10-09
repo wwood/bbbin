@@ -57,5 +57,8 @@ dependencies:
   - polars
   - pandas
   - scikit-learn
+  - tqdm
   - plotnine
   - pyarrow
+  - xgboost
+  - extern
